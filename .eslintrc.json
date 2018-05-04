@@ -1,0 +1,6 @@
+{
+  "env": { "browser": true, "es6": true, "jest": true, "node": true },
+  "extends": "eslint:recommended",
+  "globals": { "__non_webpack_require__": false },
+  "parserOptions": { "ecmaVersion": 8, "sourceType": "module" }
+}

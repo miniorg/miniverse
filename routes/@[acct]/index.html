@@ -1,0 +1,49 @@
+<!--
+  Copyright (C) 2018  Akihiko Odaki <nekomanma@pixiv.co.jp>
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published by
+  the Free Software Foundation, version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+
+<h1>{{person.preferredUsername}}</h1>
+{{#if $user && $user.id != person.id}}
+  <button on:click='follow()'>Follow</button>
+{{/if}}
+<ol>
+  {{#each person.outbox.orderedItems as item}}
+    {{#if item.type == 'Note'}}
+      <li>{{item.content}}</li>
+    {{/if}}
+  {{/each}}
+</ol>
+<script>
+  export default {
+    async preload({ params }) {
+      const personResponse =
+        await this.store.fetchPerson(this.fetch, params.acct);
+
+      if (personResponse.status == 200) {
+        const person = await personResponse.json();
+        await this.store.fetchOutbox(this.fetch, person);
+        return { person };
+      }
+
+      this.error(personResponse.status, personResponse.statusText);
+    },
+
+    methods: {
+      follow() {
+        this.store.follow(fetch, this.get('person'));
+      }
+    }
+  };
+</script>

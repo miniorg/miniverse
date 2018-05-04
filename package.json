@@ -1,0 +1,56 @@
+{
+  "name": "miniverse",
+  "version": "0.0.0",
+  "description": "Miniverse is a microblogging software.",
+  "bin": {
+    "miniverse": "./index.sh"
+  },
+  "scripts": {
+    "dev": "sapper dev",
+    "build": "sapper build",
+    "install": "node-gyp -C key rebuild",
+    "prepare": "sapper build",
+    "start": "sapper start",
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/miniorg/miniverse.git"
+  },
+  "author": "Akihiko Odaki <nekomanma@pixiv.co.jp>",
+  "license": "AGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/miniorg/miniverse/issues"
+  },
+  "homepage": "https://github.com/miniorg/miniverse#readme",
+  "dependencies": {
+    "base64url": "^2.0.0",
+    "body-parser": "^1.18.2",
+    "bull": "^3.3.10",
+    "bull-arena": "^2.4.2",
+    "cookie": "^0.3.1",
+    "db-migrate": "^0.10.7",
+    "db-migrate-pg": "^0.4.0",
+    "express": "^4.16.3",
+    "http-signature": "^1.2.0",
+    "ioredis": "^3.2.2",
+    "nan": "^2.10.0",
+    "node-fetch": "^2.1.2",
+    "pg": "^7.4.1",
+    "sapper": "https://github.com/miniorg/sapper/releases/download/v0.10.5-miniverse-r0/sapper-0.10.5.tgz",
+    "svelte": "^1.57.3",
+    "webfinger.js": "^2.6.6",
+    "ws": "^5.1.1"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.3",
+    "babel-jest": "^22.4.3",
+    "babel-plugin-transform-es2015-modules-commonjs": "^6.26.2",
+    "eslint": "^4.19.1",
+    "extract-text-webpack-plugin": "^3.0.2",
+    "jest": "^22.4.3",
+    "nock": "^9.2.5",
+    "svelte-loader": "^2.3.3",
+    "webpack": "^4.1.0"
+  }
+}

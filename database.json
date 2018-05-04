@@ -1,0 +1,15 @@
+{
+  "default": "universal",
+  "universal": {
+    "driver": "pg",
+    "user": { "ENV": "PGUSER" },
+    "database": { "ENV": "PGDATABASE" },
+    "port": { "ENV": "PGPORT" },
+    "host": { "ENV": "PGHOST" },
+    "password": { "ENV": "PGPASSWORD" },
+    "binary": { "ENV": "PGBINARY" },
+    "client_encoding": { "ENV": "PGCLIENT_ENCODING" },
+    "replication": { "ENV": "PGREPLICATION" },
+    "application_name": { "ENV": "PGAPPNAME" }
+  }
+}
