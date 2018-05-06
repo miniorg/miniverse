@@ -54,12 +54,7 @@ export default (repository, port) => {
 
       asyncAccount.then(async account => {
         if (/^\/bull/i.test(request.path)) {
-          if (!account) {
-            response.sendStatus(401);
-            return;
-          }
-
-          if (!admin) {
+          if (!account || !account.admin) {
             response.sendStatus(401);
             return;
           }

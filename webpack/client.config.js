@@ -16,7 +16,6 @@
 
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
 const LicenseInfoWebpackPlugin = require('license-info-webpack-plugin').default;
-const { resolve } = require('path');
 const { DefinePlugin, HotModuleReplacementPlugin } = require('webpack');
 const { client } = require('sapper/webpack/config');
 
