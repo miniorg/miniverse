@@ -38,6 +38,7 @@ export function get(request, response, next) {
     const message = await body;
 
     message['@context'] = [
+      'https://miniverse.social/ns',
       'https://w3id.org/security/v1',
       'https://www.w3.org/ns/activitystreams'
     ];
