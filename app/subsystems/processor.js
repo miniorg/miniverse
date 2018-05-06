@@ -15,6 +15,7 @@
 */
 
 import { globalAgent } from 'https';
+import { URL } from 'url';
 import ActivityStreams, { TypeNotAllowed } from '../../lib/activitystreams';
 import Key from '../../lib/key';
 import Person from '../../lib/person';
