@@ -22,6 +22,7 @@ import { promisify } from 'util';
 import Challenge from '../../../lib/challenge';
 import Cookie from '../../../lib/cookie';
 import Store from '../../../lib/store';
+import App from '../../app';
 import { routes } from '../../manifest/server';
 import createStreaming from './streaming';
 const Arena = require('bull-arena');
@@ -86,6 +87,7 @@ export default (repository, port) => {
       ]
     }, { basePath: '/bull', disableListen: true }),
     sapper({
+      App,
       routes,
       store({ nonce, user }) {
         return new Store({ nonce, user, streaming: null });

@@ -16,9 +16,13 @@
 
 import { init } from 'sapper/runtime';
 import Store from '../../lib/store';
+import App from '../app';
 import { routes } from '../manifest/client';
 
-export default node => init(node, routes, {
+export default target => init({
+  target,
+  App,
+  routes,
   store(data) {
     return new Store(data);
   }
