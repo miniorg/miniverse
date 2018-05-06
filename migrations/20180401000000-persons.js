@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2018  Akihiko Odaki <nekomanma@pixiv.co.jp>
+  Copyright (C) 2018  Miniverse authors
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU Affero General Public License as published by
@@ -22,7 +22,7 @@ exports.up = (db, callback) => db.createTable('persons', {
   if (error) {
     callback(error);
   } else {
-    db.runSql('CREATE UNIQUE INDEX persons_acct ON persons (lower(host), lower(username))', callback);
+    db.runSql('CREATE UNIQUE INDEX persons_acct ON persons (lower(host), username)', callback);
   }
 });
 

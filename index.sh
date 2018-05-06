@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-# Copyright (C) 2018  Akihiko Odaki <nekomanma@pixiv.co.jp>
+# Copyright (C) 2018  Miniverse authors
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by

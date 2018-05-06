@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2018  Akihiko Odaki <nekomanma@pixiv.co.jp>
+  Copyright (C) 2018  Miniverse authors
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU Affero General Public License as published by
@@ -15,6 +15,8 @@
 */
 
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
+const LicenseInfoWebpackPlugin = require('license-info-webpack-plugin').default;
+const { resolve } = require('path');
 const { DefinePlugin, HotModuleReplacementPlugin } = require('webpack');
 const { client } = require('sapper/webpack/config');
 
@@ -46,6 +48,10 @@ module.exports = {
     new DefinePlugin({
       'process.browser': true,
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV)
+    }),
+    new LicenseInfoWebpackPlugin({
+      output: 'html',
+      outputPath: 'assets'
     })
   ]
 };

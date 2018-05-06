@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2018  Akihiko Odaki <nekomanma@pixiv.co.jp>
+  Copyright (C) 2018  Miniverse authors
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU Affero General Public License as published by
@@ -23,32 +23,36 @@ import ActivityStreams, {
 } from '../../lib/activitystreams';
 import Cookie from '../../lib/cookie';
 import OrderedCollection from '../../lib/ordered_collection';
+import URI from '../../lib/uri';
 
 const middleware = json({
   type: ['application/activity+json', 'application/ld+json']
 });
 
 export function get({ params, repository }, response, next) {
-  const [userpart, host] = params.acct.toLowerCase().split('@', 2);
+  const [userpart, host] = params.acct.split('@', 2);
+  const normalizedHost = URI.normalizeHost(host);
 
-  repository.selectRecentNotesByLowerUsernameAndHost(userpart, host).then(
-    async orderedItems => {
-      const collection = new OrderedCollection({ orderedItems });
-      const { body } = await collection.toActivityStreams(repository);
-      const message = await body;
+  repository.selectRecentNotesByUsernameAndNormalizedHost(userpart, normalizedHost)
+            .then(async orderedItems => {
+              const collection = new OrderedCollection({ orderedItems });
+              const { body } = await collection.toActivityStreams(repository);
+              const message = await body;
 
-      message['@context'] = 'https://www.w3.org/ns/activitystreams';
-      return message;
-      ;
-    }).then(response.json.bind(response), next);
+              message['@context'] = 'https://www.w3.org/ns/activitystreams';
+              return message;
+            }).then(response.json.bind(response), next);
 }
 
 export function post(request, response, next) {
-  const { miniverse } = parse(request.headers.cookie);
+  const { headers, params, repository } = request;
+  const { miniverse } = parse(headers.cookie);
   const digest = Cookie.digest(Cookie.parseToken(miniverse));
 
-  request.repository.selectPersonByDigestOfCookie(digest).then(person => {
-    if (person.username.toLowerCase() != request.params.acct.toLowerCase()) {
+  repository.selectLocalAccountByDigestOfCookie(digest).then(async account => {
+    const person = await account.selectPerson(repository);
+
+    if (person.username != params.acct) {
       response.sendStatus(401);
     }
 
@@ -68,9 +72,9 @@ export function post(request, response, next) {
           delete item.body.id;
           item.normalizedHost = NoHost;
 
-          return item.act(request.repository, person).catch(error => {
+          return item.act(repository, person).catch(error => {
             if (error instanceof TypeNotAllowed) {
-              return item.create(request.repository, person).catch(error => {
+              return item.create(repository, person).catch(error => {
                 if (!(error instanceof TypeNotAllowed)) {
                   throw error;
                 }

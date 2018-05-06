@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2018  Akihiko Odaki <nekomanma@pixiv.co.jp>
+  Copyright (C) 2018  Miniverse authors
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU Affero General Public License as published by
@@ -80,8 +80,8 @@ export function post(request, response, next) {
           return;
         }
 
-        const account = await repository.selectLocalAccountByLowerUsername(
-          username.toString().toLowerCase());
+        const account = await repository.selectLocalAccountByUsername(
+          username.toString());
 
         const auth = Buffer.concat([nonce, account.salt]);
         const clientKey = hmac(account.storedKey, auth);

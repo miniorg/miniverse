@@ -1,0 +1,61 @@
+language: node_js
+stages:
+  - test
+  - name: deploy
+    if: branch = master
+jobs:
+  include:
+  - stage: deploy
+    os: linux
+    dist: trusty
+    sudo: false
+    script:
+      - echo "$SSH_IDENTITY" > ~/.ssh/id_ed25519
+      - chmod 400 ~/.ssh/id_ed25519
+      - npm pack
+      - scp -o UserKnownHostsFile=known_hosts -P 110 miniverse-0.0.0.tgz miniverse@people.miniverse.social:miniverse.tgz
+      - ssh -o UserKnownHostsFile=known_hosts -p 110 miniverse@people.miniverse.social "sudo systemctl stop miniverse && scl enable rh-nodejs8 'npm install miniverse.tgz && PATH=\$PWD/node_modules/.bin:\$PATH PGHOST=/var/run/postgresql ./node_modules/.bin/miniverse db-migrate up' && sudo systemctl start miniverse"
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      sudo: false
+      addons:
+        postgresql: 9.6
+    - os: linux
+      dist: trusty
+      sudo: false
+      addons:
+        postgresql: 9.5
+    - os: linux
+      dist: trusty
+      sudo: false
+      addons:
+        postgresql: 9.4
+    - os: linux
+      dist: trusty
+      sudo: false
+      addons:
+        postgresql: 9.3
+    - os: osx
+      before_install:
+        - initdb -D "$HOME/postgres"
+        - pg_ctl -D "$HOME/postgres" start
+        - brew install redis
+        - redis-server --daemonize yes
+        - pg_isready
+      cache:
+        directories:
+          - "$HOME/Library/Caches/Homebrew"
+services:
+  - redis-server
+cache:
+  directories:
+    - node_modules
+node_js:
+  - lts/*
+  - node
+script:
+  - createdb travis_miniverse_test_1
+  - PGDATABASE=travis_miniverse_test_1 npx db-migrate up
+  - npm test -- -w 1

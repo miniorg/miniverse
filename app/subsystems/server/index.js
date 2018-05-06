@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2018  Akihiko Odaki <nekomanma@pixiv.co.jp>
+  Copyright (C) 2018  Miniverse authors
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU Affero General Public License as published by
@@ -43,30 +43,30 @@ export default (repository, port) => {
     },
     (request, response, next) => {
       const cookie = request.headers.cookie && parse(request.headers.cookie);
-      let asyncPerson;
+      let asyncAccount;
 
       if (cookie && cookie.miniverse) {
         const digest = Cookie.digest(Cookie.parseToken(cookie.miniverse));
-        asyncPerson = repository.selectPersonByDigestOfCookie(digest);
+        asyncAccount = repository.selectLocalAccountByDigestOfCookie(digest);
       } else {
-        asyncPerson = Promise.resolve();
+        asyncAccount = Promise.resolve();
       }
 
-      asyncPerson.then(async person => {
+      asyncAccount.then(async account => {
         if (/^\/bull/i.test(request.path)) {
-          if (!person) {
+          if (!account) {
             response.sendStatus(401);
             return;
           }
 
-          const { admin } = await repository.selectLocalAccountByPerson(person);
           if (!admin) {
             response.sendStatus(401);
             return;
           }
 
           next();
-        } else if (person) {
+        } else if (account) {
+          const person = await account.selectPerson(repository);
           const { body } = await person.toActivityStreams(repository);
           const user = await body;
           user.inbox = [];

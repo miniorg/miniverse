@@ -1,4 +1,4 @@
-# Copyright (C) 2018  Akihiko Odaki <nekomanma@pixiv.co.jp>
+# Copyright (C) 2018  Miniverse authors
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -15,8 +15,8 @@
 {
   'targets': [
     {
-      'target_name': 'key',
-      'sources': ['key.cc'],
+      'target_name': 'index',
+      'sources': ['index.cc'],
       'include_dirs': ['<!(node -e "require(\'nan\')")']
     }
   ]
