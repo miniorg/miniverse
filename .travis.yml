@@ -14,7 +14,7 @@ jobs:
       - chmod 400 ~/.ssh/id_ed25519
       - npm pack
       - scp -o UserKnownHostsFile=known_hosts -P 110 miniverse-0.0.1.tgz miniverse@people.miniverse.social:miniverse.tgz
-      - ssh -o UserKnownHostsFile=known_hosts -p 110 miniverse@people.miniverse.social "sudo systemctl stop miniverse && scl enable rh-nodejs8 'npm install miniverse.tgz && PATH=\$PWD/node_modules/.bin:\$PATH PGHOST=/var/run/postgresql ./node_modules/.bin/miniverse db-migrate up' && sudo systemctl start miniverse"
+      - ssh -o UserKnownHostsFile=known_hosts -p 110 miniverse@pub.miniverse.social "sudo systemctl stop miniverse && scl enable rh-nodejs8 'npm install miniverse.tgz && PATH=\$PWD/node_modules/.bin:\$PATH PGHOST=/var/run/postgresql ./node_modules/.bin/miniverse db-migrate up' && sudo systemctl start miniverse"
 matrix:
   include:
     - os: linux
