@@ -30,8 +30,18 @@ export function get(request, response, next) {
   }
 
   const { params, repository } = request;
-  const [username, host] = /(.*)@(.*)/.exec(decodeURIComponent(params.acct));
-  const normalizedHost = URI.normalizeHost(host);
+  const acct = decodeURIComponent(params.acct);
+  const atIndex = acct.lastIndexOf('@');
+  let username;
+  let normalizedHost;
+
+  if (atIndex < 0) {
+    username = acct;
+    normalizedHost = null;
+  } else {
+    username = acct.slice(atIndex);
+    normalizedHost = URI.normalizeHost(host);
+  }
 
   Person.resolveByUsernameAndNormalizedHost(repository, username, normalizedHost).then(async person => {
     const { body } = await person.toActivityStreams(repository);
@@ -44,5 +54,5 @@ export function get(request, response, next) {
     ];
 
     return message;
-  }, response.json.bind(response), next);
+  }).then(response.json.bind(response), next);
 }
