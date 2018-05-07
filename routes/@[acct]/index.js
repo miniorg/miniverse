@@ -39,8 +39,8 @@ export function get(request, response, next) {
     username = acct;
     normalizedHost = null;
   } else {
-    username = acct.slice(atIndex);
-    normalizedHost = URI.normalizeHost(host);
+    username = acct.slice(0, atIndex);
+    normalizedHost = URI.normalizeHost(acct.slice(atIndex + 1));
   }
 
   Person.resolveByUsernameAndNormalizedHost(repository, username, normalizedHost).then(async person => {
