@@ -16,7 +16,8 @@
 
 import { globalAgent } from 'https';
 import { URL } from 'url';
-import ActivityStreams, { TypeNotAllowed } from '../../lib/activitystreams';
+import ParsedActivityStreams, { TypeNotAllowed }
+  from '../../lib/parsed_activitystreams';
 import Key from '../../lib/key';
 import Person from '../../lib/person';
 import URI from '../../lib/uri';
@@ -31,7 +32,7 @@ export default repository => {
       const { host } = new URL(keyId);
       const normalizedHost = URI.normalizeHost(host);
       const parsed = JSON.parse(data.body);
-      const collection = new ActivityStreams(parsed, normalizedHost);
+      const collection = new ParsedActivityStreams(parsed, normalizedHost);
       const items = await collection.getItems(repository);
 
       await Promise.all(items.map(item =>

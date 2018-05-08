@@ -16,11 +16,11 @@
 
 import { parse } from 'cookie';
 import { json } from 'express';
-import ActivityStreams, {
+import ParsedActivityStreams, {
   AnyHost,
   NoHost,
   TypeNotAllowed
-} from '../../lib/activitystreams';
+} from '../../lib/parsed_activitystreams';
 import Cookie from '../../lib/cookie';
 import OrderedCollection from '../../lib/ordered_collection';
 import URI from '../../lib/uri';
@@ -36,8 +36,7 @@ export function get({ params, repository }, response, next) {
   repository.selectRecentNotesByUsernameAndNormalizedHost(userpart, normalizedHost)
             .then(async orderedItems => {
               const collection = new OrderedCollection({ orderedItems });
-              const { body } = await collection.toActivityStreams(repository);
-              const message = await body;
+              const message = await collection.toActivityStreams(repository);
 
               message['@context'] = 'https://www.w3.org/ns/activitystreams';
               return message;
@@ -62,7 +61,9 @@ export function post(request, response, next) {
         return;
       }
 
-      const collection = new ActivityStreams(request.body, { host: AnyHost });
+      const collection = new ParsedActivityStreams(
+        request.body, { host: AnyHost });
+
       collection.getItems(repository).then(items =>
         Promise.all(items.map(item => {
           if (item.body == 'string') {
