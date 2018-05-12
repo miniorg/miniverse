@@ -36,7 +36,7 @@ NAN_METHOD(extractPublic)
   const auto source = BIO_new_mem_buf(sourceBuf, sourceLength);
   if (!source) {
     Nan::ThrowError("Memory allocation failed");
-    delete sourceBuf;
+    delete[] sourceBuf;
     return;
   }
 
@@ -44,7 +44,7 @@ NAN_METHOD(extractPublic)
     source, nullptr, nullptr, nullptr);
 
   BIO_free(source);
-  delete sourceBuf;
+  delete[] sourceBuf;
 
   if (!rsa) {
     Nan::ThrowError("Decode failed");
