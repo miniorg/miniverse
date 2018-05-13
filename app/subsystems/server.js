@@ -70,6 +70,7 @@ export default (repository, port) => {
 
           if (user) {
             const activityStreams = await user.toActivityStreams();
+            activityStreams.inbox = [];
 
             request.nonce = null;
             request.user = user;
