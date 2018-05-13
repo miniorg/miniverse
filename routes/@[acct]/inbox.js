@@ -16,10 +16,50 @@
 
 import { text } from 'body-parser';
 import { parseRequest } from 'http-signature';
+import OrderedCollection from '../../lib/ordered_collection';
 
 const middleware = text({
   type: ['application/activity+json', 'application/ld+json']
 });
+
+export function get(request, response, next) {
+  const { params, repository, user } = request;
+
+  response.setHeader('Content-Type', 'text/event-stream');
+  response.setHeader('Transfer-Encoding', 'chunked');
+
+  Promise.all([
+    user.selectPerson(repository),
+    repository.selectRecentNotesFromInbox(user)
+  ]).then(async ([person, notes]) => {
+    if (person.username != params.acct) {
+      response.sendStatus(401);
+      return;
+    }
+
+    const initialCollection = new OrderedCollection({
+      orderedItems: notes.reverse()
+    });
+
+    const resolved = await initialCollection.toActivityStreams(repository);
+    const subscribedChannel = repository.getInboxChannel(user);
+
+    function listen(publishedChannel, message) {
+      return response.write(`data:{"@context":"https://www.w3.org/ns/activitystreams","type":"OrderedCollection","orderedItems":[${message}]}\n\n`);
+    }
+
+    resolved['@context'] = 'https://www.w3.org/ns/activitystreams';
+    response.write(`data:${JSON.stringify(resolved)}\n\n`);
+
+    await repository.subscribe(subscribedChannel, listen);
+    const heartbeat = setInterval(() => response.write(':\n'), 16384);
+
+    request.on('close', () => {
+      clearInterval(heartbeat);
+      repository.unsubscribe(subscribedChannel, listen);
+    });
+  }, next);
+};
 
 export function post(request, response, next) {
   request.headers.authorization = 'Signature ' + request.headers.signature;
