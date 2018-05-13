@@ -16,15 +16,13 @@
 
 import { parse } from 'cookie';
 import { randomBytes } from 'crypto';
-import { createServer } from 'http';
 import sapper from 'sapper';
 import { promisify } from 'util';
-import Challenge from '../../../lib/challenge';
-import Cookie from '../../../lib/cookie';
-import Store from '../../../lib/store';
-import App from '../../app';
-import { routes } from '../../manifest/server';
-import createStreaming from './streaming';
+import Challenge from '../../lib/challenge';
+import Cookie from '../../lib/cookie';
+import Store from '../../lib/store';
+import App from '../app';
+import { routes } from '../manifest/server';
 const Arena = require('bull-arena');
 const express = require('express');
 
@@ -32,9 +30,6 @@ const promisifiedRandomBytes = promisify(randomBytes);
 
 export default (repository, port) => {
   const application = express();
-  const server = createServer(application);
-
-  createStreaming(repository, server);
 
   application.use(
     express.static('assets'),
@@ -91,11 +86,11 @@ export default (repository, port) => {
       App,
       routes,
       store({ nonce, userActivityStreams }) {
-        return new Store({ nonce, user: userActivityStreams, streaming: null });
+        return new Store({ nonce, user: userActivityStreams, events: null });
       }
     }));
 
-  server.listen(port).on('error', repository.console.error);
+  application.listen(port).on('error', repository.console.error);
 
-  return server;
+  return application;
 };
