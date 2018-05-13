@@ -38,9 +38,7 @@ export default (repository, httpServer) => {
         orderedItems: notes.reverse()
       });
 
-      const { body } = await initialCollection.toActivityStreams(repository);
-      const resolved = await body;
-
+      const resolved = await initialCollection.toActivityStreams(repository);
       const subscribedChannel = repository.getInboxChannel(account);
 
       function listen(publishedChannel, message) {
