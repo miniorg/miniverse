@@ -16,7 +16,7 @@
 
 import { text } from 'body-parser';
 import { parseRequest } from 'http-signature';
-import OrderedCollection from '../../lib/ordered_collection';
+import OrderedCollectionPage from '../../lib/ordered_collection_page';
 
 const middleware = text({
   type: ['application/activity+json', 'application/ld+json']
@@ -36,15 +36,15 @@ export function get(request, response, next) {
       return;
     }
 
-    const initialCollection = new OrderedCollection({
+    const firstPage = new OrderedCollectionPage({
       orderedItems: notes.reverse()
     });
 
-    const resolved = await initialCollection.toActivityStreams(repository);
+    const resolved = await firstPage.toActivityStreams(repository);
     const subscribedChannel = repository.getInboxChannel(user);
 
     function listen(publishedChannel, message) {
-      return response.write(`data:{"@context":"https://www.w3.org/ns/activitystreams","type":"OrderedCollection","orderedItems":[${message}]}\n\n`);
+      return response.write(`data:{"@context":"https://www.w3.org/ns/activitystreams","type":"OrderedCollectionPage","orderedItems":[${message}]}\n\n`);
     }
 
     resolved['@context'] = 'https://www.w3.org/ns/activitystreams';
