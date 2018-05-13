@@ -66,7 +66,7 @@ export function post(request, response, next) {
       object.act(repository, person)
             .catch(error => {
               if (error instanceof TypeNotAllowed) {
-                return item.create(repository, person).catch(error => {
+                return object.create(repository, person).catch(error => {
                   if (!(error instanceof TypeNotAllowed)) {
                     throw error;
                   }
