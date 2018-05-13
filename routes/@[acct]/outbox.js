@@ -61,30 +61,36 @@ export function post(request, response, next) {
         return;
       }
 
-      const collection = new ParsedActivityStreams(
-        request.body, { host: AnyHost });
+      const object = new ParsedActivityStreams(request.body, { host: AnyHost });
 
-      collection.getItems(repository).then(items =>
-        Promise.all(items.map(item => {
-          if (item.body == 'string') {
-            return;
-          }
+      object.act(repository, person)
+            .catch(error => {
+              if (error instanceof TypeNotAllowed) {
+                return item.create(repository, person).catch(error => {
+                  if (!(error instanceof TypeNotAllowed)) {
+                    throw error;
+                  }
+                });
+              }
 
-          delete item.body.id;
-          item.normalizedHost = NoHost;
+              throw error;
+            })
+            .then(result => result && result.getUri && result.getUri())
+            .then(location => {
+              /*
+                ActivityPub
+                6. Client to Server Interactions
+                https://www.w3.org/TR/activitypub/#client-to-server-interactions
+                > Servers MUST return a 201 Created HTTP code, and unless the
+                > activity is transient, MUST include the new id in the Location
+                > header.
+              */
+              if (location) {
+                response.location(location);
+              }
 
-          return item.act(repository, person).catch(error => {
-            if (error instanceof TypeNotAllowed) {
-              return item.create(repository, person).catch(error => {
-                if (!(error instanceof TypeNotAllowed)) {
-                  throw error;
-                }
-              });
-            }
-
-            throw error;
-          });
-        }))).then(() => response.sendStatus(201), next);
+              response.sendStatus(201);
+            }, next);
     });
   }).catch(next);
 }
