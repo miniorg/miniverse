@@ -63,17 +63,19 @@ export default (repository, port) => {
           next();
         } else if (account) {
           const person = await account.selectPerson(repository);
-          const user = await person.toActivityStreams(repository);
-          user.inbox = [];
+          const activityStreams = await person.toActivityStreams(repository);
+          activityStreams.inbox = [];
 
           request.nonce = null;
-          request.user = user;
+          request.user = account;
+          request.userActivityStreams = activityStreams;
           next();
         } else {
           const bytes = await promisifiedRandomBytes(64);
 
           request.nonce = Challenge.getToken(bytes);
           request.user = null;
+          request.userActivityStreams = null;
 
           await Challenge.create(repository, bytes);
           next();
@@ -88,8 +90,8 @@ export default (repository, port) => {
     sapper({
       App,
       routes,
-      store({ nonce, user }) {
-        return new Store({ nonce, user, streaming: null });
+      store({ nonce, userActivityStreams }) {
+        return new Store({ nonce, user: userActivityStreams, streaming: null });
       }
     }));
 

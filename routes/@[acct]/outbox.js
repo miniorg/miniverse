@@ -14,14 +14,12 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { parse } from 'cookie';
 import { json } from 'express';
 import ParsedActivityStreams, {
   AnyHost,
   NoHost,
   TypeNotAllowed
 } from '../../lib/parsed_activitystreams';
-import Cookie from '../../lib/cookie';
 import OrderedCollection from '../../lib/ordered_collection';
 import URI from '../../lib/uri';
 
@@ -44,13 +42,9 @@ export function get({ params, repository }, response, next) {
 }
 
 export function post(request, response, next) {
-  const { headers, params, repository } = request;
-  const { miniverse } = parse(headers.cookie);
-  const digest = Cookie.digest(Cookie.parseToken(miniverse));
+  const { user, params, repository } = request;
 
-  repository.selectLocalAccountByDigestOfCookie(digest).then(async account => {
-    const person = await account.selectPerson(repository);
-
+  user.selectPerson(repository).then(person => {
     if (person.username != params.acct) {
       response.sendStatus(401);
     }
