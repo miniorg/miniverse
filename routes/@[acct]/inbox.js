@@ -58,7 +58,7 @@ export function get(request, response, next) {
       repository.unsubscribe(subscribedChannel, listen);
     });
   }, next);
-};
+}
 
 export function post(request, response, next) {
   request.headers.authorization = 'Signature ' + request.headers.signature;

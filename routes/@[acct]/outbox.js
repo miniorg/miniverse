@@ -17,7 +17,6 @@
 import { json } from 'express';
 import ParsedActivityStreams, {
   AnyHost,
-  NoHost,
   TypeNotAllowed
 } from '../../lib/parsed_activitystreams';
 import OrderedCollection from '../../lib/ordered_collection';
