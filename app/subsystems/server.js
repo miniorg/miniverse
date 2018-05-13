@@ -78,7 +78,12 @@ export default (repository, port) => {
     },
     Arena({
       queues: [
-        { hostId: repository.host, name: 'HTTP', url: repository.redis.url }
+        {
+          hostId: repository.host,
+          name: 'HTTP',
+          prefix: repository.redis.prefix + 'bull',
+          url: repository.redis.url
+        }
       ]
     }, { basePath: '/bull', disableListen: true }),
     sapper({
