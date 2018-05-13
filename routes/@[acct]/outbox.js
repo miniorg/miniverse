@@ -66,9 +66,15 @@ export function get({ params, repository }, response, next) {
 export function post(request, response, next) {
   const { user, params, repository } = request;
 
+  if (!user) {
+    response.sendStatus(401);
+    return;
+  }
+
   user.selectPerson(repository).then(person => {
     if (person.username != params.acct) {
       response.sendStatus(401);
+      return;
     }
 
     middleware(request, response, error => {

@@ -16,6 +16,7 @@
 
 import { text } from 'body-parser';
 import { parseRequest } from 'http-signature';
+import { HttpSignatureError } from 'http-signature/lib/utils';
 import OrderedCollectionPage from '../../lib/ordered_collection_page';
 
 const middleware = text({
@@ -25,13 +26,18 @@ const middleware = text({
 export function get(request, response, next) {
   const { params, repository, user } = request;
 
+  if (!user) {
+    response.sendStatus(401);
+    return;
+  }
+
   response.setHeader('Content-Type', 'text/event-stream');
 
   Promise.all([
     user.selectPerson(repository),
     repository.selectRecentNotesFromInbox(user)
   ]).then(async ([person, notes]) => {
-    if (person.username != params.acct) {
+    if (!person || person.username != params.acct) {
       response.sendStatus(401);
       return;
     }
@@ -68,8 +74,20 @@ export function get(request, response, next) {
   > behaviour described in Delivery.
 */
 export function post(request, response, next) {
+  let signature;
+
   request.headers.authorization = 'Signature ' + request.headers.signature;
-  const signature = parseRequest(request);
+
+  try {
+    signature = parseRequest(request);
+  } catch (error) {
+    if (error instanceof HttpSignatureError) {
+      response.sendStatus(401);
+      return;
+    }
+
+    throw error;
+  }
 
   middleware(request, response,
     () => request.repository
