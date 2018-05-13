@@ -92,6 +92,6 @@ export function post(request, response, next) {
   middleware(request, response,
     () => request.repository
                  .queue
-                 .add({ signature, body: request.body })
+                 .add({ type: 'processInbox', signature, body: request.body })
                  .then(() => response.sendStatus(202), next));
 }

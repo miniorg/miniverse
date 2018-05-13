@@ -1,0 +1,55 @@
+/*
+  Copyright (C) 2018  Miniverse authors
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published by
+  the Free Software Foundation, version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+import { URL } from 'url';
+import Key from '../../../../lib/key';
+import ParsedActivityStreams, { TypeNotAllowed }
+  from '../../../../lib/parsed_activitystreams';
+import Person from '../../../../lib/person';
+import TemporaryError from '../../../../lib/temporary_error';
+import URI from '../../../../lib/uri';
+
+export default async (repository, { data }) => {
+  const { body, signature } = data;
+  const owner = await Person.resolveByKeyUri(repository, signature.keyId);
+  const key = new Key({ owner });
+
+  if (await key.verifySignature(repository, signature)) {
+    const { host } = new URL(signature.keyId);
+    const normalizedHost = URI.normalizeHost(host);
+    const parsed = JSON.parse(body);
+    const collection = new ParsedActivityStreams(parsed, normalizedHost);
+    const items = await collection.getItems(repository);
+    const errors = [];
+
+    await Promise.all(items.map(item =>
+      item.act(repository, owner).catch(error => {
+        if (!(error instanceof TypeNotAllowed)) {
+          errors.push(error);
+        }
+      })));
+
+    if (errors.length) {
+      const error = new (
+        errors.some(error => error instanceof TemporaryError) ?
+          TemporaryError : Error);
+
+      error.originals = errors;
+
+      throw error;
+    }
+  }
+};

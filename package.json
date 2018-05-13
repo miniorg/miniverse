@@ -34,7 +34,7 @@
     "http-signature": "^1.2.0",
     "ioredis": "^3.2.2",
     "nan": "^2.10.0",
-    "node-fetch": "^2.1.2",
+    "node-fetch": "https://github.com/miniorg/node-fetch/releases/download/v2.1.2-miniverse-r0/node-fetch-2.1.2.tgz",
     "pg": "^7.4.1",
     "sapper": "^0.12.0",
     "svelte": "^2.4.4",
