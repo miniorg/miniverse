@@ -26,7 +26,6 @@ export function get(request, response, next) {
   const { params, repository, user } = request;
 
   response.setHeader('Content-Type', 'text/event-stream');
-  response.setHeader('Transfer-Encoding', 'chunked');
 
   Promise.all([
     user.selectPerson(repository),
