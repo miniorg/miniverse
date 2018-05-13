@@ -60,6 +60,13 @@ export function get(request, response, next) {
   }, next);
 }
 
+/*
+  ActivityPub
+  5.2 Inbox
+  https://www.w3.org/TR/activitypub/#inbox
+  > The inboxes of actors on federated servers accepts HTTP POST requests, with
+  > behaviour described in Delivery.
+*/
 export function post(request, response, next) {
   request.headers.authorization = 'Signature ' + request.headers.signature;
   const signature = parseRequest(request);

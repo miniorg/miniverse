@@ -23,6 +23,15 @@ import OrderedCollection from '../../lib/ordered_collection';
 import URI from '../../lib/uri';
 
 const middleware = json({
+  /*
+    ActivityPub
+    6. Client to Server Interactions
+    https://www.w3.org/TR/activitypub/#client-to-server-interactions
+    > Servers MAY interpret a Content-Type or Accept header of
+    > application/activity+json as equivalent to
+    > application/ld+json; profile="https://www.w3.org/ns/activitystreams"
+    > for client-to-server interactions.
+  */
   type: ['application/activity+json', 'application/ld+json']
 });
 
@@ -32,7 +41,14 @@ export function get({ params, repository }, response, next) {
 
   repository.selectRecentNotesByUsernameAndNormalizedHost(userpart, normalizedHost)
             .then(async orderedItems => {
+              /*
+                ActivityPub
+                5.1 Outbox
+                https://www.w3.org/TR/activitypub/#outbox
+                > The outbox MUST be an OrderedCollection.
+              */
               const collection = new OrderedCollection({ orderedItems });
+
               const message = await collection.toActivityStreams(repository);
 
               message['@context'] = 'https://www.w3.org/ns/activitystreams';
@@ -40,6 +56,13 @@ export function get({ params, repository }, response, next) {
             }).then(response.json.bind(response), next);
 }
 
+/*
+  ActivityPub
+  5.1 Outbox
+  https://www.w3.org/TR/activitypub/#outbox
+  > The outbox accepts HTTP POST requests, with behaviour described in Client
+  > to Server Interactions.
+*/
 export function post(request, response, next) {
   const { user, params, repository } = request;
 
@@ -56,6 +79,14 @@ export function post(request, response, next) {
 
       const object = new ParsedActivityStreams(request.body, { host: AnyHost });
 
+      /*
+        ActivityPub
+        6. Client to Server Interactions
+        https://www.w3.org/TR/activitypub/#client-to-server-interactions
+        > The body of the POST request MUST contain a single Activity (which MAY
+        > contain embedded objects), or a single non-Activity object which will
+        > be wrapped in a Create activity by the server.
+      */
       object.act(repository, person)
             .catch(error => {
               if (error instanceof TypeNotAllowed) {
