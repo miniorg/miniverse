@@ -23,7 +23,10 @@ const repository = new Repository({
   fingerHost: process.env.FINGER_HOST,
   host: process.env.HOST,
   pg: new Pool,
-  redis: [process.env.REDIS]
+  redis: {
+    prefix: process.env.REDIS_PREFIX,
+    url: process.env.REDIS_URL
+  }
 });
 
 processJobs(repository);
