@@ -147,7 +147,7 @@ ewIDAQAB
 
   await expect(processInbox(repository, {
     data: { signature, body: '{ "type": "Unknown" }' }
-  })).resolves;
+  })).resolves.toBe(undefined);
 });
 
 test('rejects without TemporaryError if all rejections are not temporary', async () => {
