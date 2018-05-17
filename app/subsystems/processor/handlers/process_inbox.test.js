@@ -109,12 +109,12 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 
   await repository.insertRemoteAccount(actor.account);
 
-  await expect(processInbox(repository, {
+  await processInbox(repository, {
     data: {
       signature,
       body: '{ "type": "Create", "object": { "type": "Note", "content": "内容" } }',
     }
-  }));
+  });
 
   await expect(repository.selectRecentNotesByUsernameAndNormalizedHost(
     'aCtOr', 'finger.actor.xn--kgbechtv')).resolves.toEqual([]);
