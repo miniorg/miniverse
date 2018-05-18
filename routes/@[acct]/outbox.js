@@ -64,7 +64,12 @@ export function get({ params, repository }, response, next) {
   > to Server Interactions.
 */
 export function post(request, response, next) {
-  const { user, params, repository } = request;
+  const { headers, user, params, repository } = request;
+
+  if (headers.origin.toLowerCase() != 'https://' + URI.normalizeHost(repository.host)) {
+    response.sendStatus(403);
+    return;
+  }
 
   if (!user) {
     response.sendStatus(401);
