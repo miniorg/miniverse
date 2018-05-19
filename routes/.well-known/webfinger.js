@@ -16,7 +16,7 @@
 
 import URI from '../../lib/uri';
 
-export function get({ query, repository }, response) {
+export function get({ query, repository }, response, next) {
   const lowerResource = query.resource;
   const [, userpart, host] = /(?:acct:)?(.*)@(.*)/.exec(lowerResource);
 
@@ -29,8 +29,5 @@ export function get({ query, repository }, response) {
 
   repository.selectLocalAccountByUsername(username).then(async account => {
     response.json(await account.toWebFinger(repository));
-  }).catch(error => {
-    console.error(error);
-    response.sendStatus(500);
-  });
+  }).catch(next);
 }
