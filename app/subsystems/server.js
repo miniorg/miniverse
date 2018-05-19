@@ -48,6 +48,13 @@ export default (repository, port) => {
         asyncAccount = Promise.resolve();
       }
 
+      if (process.env.NODE_ENV != 'development') {
+        response.set({
+          'Content-Security-Policy': 'default-src \'none\'; connect-src \'self\' data:; script-src \'self\' \'unsafe-inline\'',
+          'Referrer-Policy': 'no-referrer'
+        });
+      }
+
       asyncAccount.then(async account => {
         if (/^\/bull/i.test(request.path)) {
           if (!account || !account.admin) {
