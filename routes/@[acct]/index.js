@@ -44,7 +44,7 @@ export function get(request, response, next) {
   }
 
   Person.resolveByUsernameAndNormalizedHost(repository, username, normalizedHost).then(async person => {
-    const message = await person.toActivityStreams(repository);
+    const message = await person.toActivityStreams();
 
     message['@context'] = [
       'https://miniverse.social/ns',

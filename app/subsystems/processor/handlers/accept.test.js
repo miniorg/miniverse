@@ -25,7 +25,9 @@ import nock from 'nock';
 async function fabricateFollow() {
   const follow = new Follow({
     actor: new Person({
+      repository,
       account: new RemoteAccount({
+        repository,
         inbox: { uri: 'https://AcToR.إختبار/?inbox' },
         publicKey: { uri: '', publicKeyPem: '' },
         uri: ''
@@ -34,7 +36,9 @@ async function fabricateFollow() {
       host: 'FiNgEr.AcToR.إختبار'
     }),
     object: new Person({
+      repository,
       account: new LocalAccount({
+        repository,
         admin: true,
         privateKeyPem: `-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGT

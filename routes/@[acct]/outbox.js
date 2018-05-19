@@ -49,7 +49,7 @@ export function get({ params, repository }, response, next) {
               */
               const collection = new OrderedCollection({ orderedItems });
 
-              const message = await collection.toActivityStreams(repository);
+              const message = await collection.toActivityStreams();
 
               message['@context'] = 'https://www.w3.org/ns/activitystreams';
               return message;
@@ -76,7 +76,7 @@ export function post(request, response, next) {
     return;
   }
 
-  user.selectPerson(repository).then(person => {
+  user.selectPerson().then(person => {
     if (person.username != params.acct) {
       response.sendStatus(401);
       return;
@@ -88,7 +88,8 @@ export function post(request, response, next) {
         return;
       }
 
-      const object = new ParsedActivityStreams(request.body, { host: AnyHost });
+      const object =
+        new ParsedActivityStreams(repository, request.body, { host: AnyHost });
 
       /*
         ActivityPub
@@ -98,10 +99,10 @@ export function post(request, response, next) {
         > contain embedded objects), or a single non-Activity object which will
         > be wrapped in a Create activity by the server.
       */
-      object.act(repository, person)
+      object.act(person)
             .catch(error => {
               if (error instanceof TypeNotAllowed) {
-                return object.create(repository, person).catch(error => {
+                return object.create(person).catch(error => {
                   if (!(error instanceof TypeNotAllowed)) {
                     throw error;
                   }

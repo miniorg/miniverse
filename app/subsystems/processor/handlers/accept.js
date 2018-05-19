@@ -23,23 +23,22 @@ import Follow from '../../../../lib/follow';
 import Key from '../../../../lib/key';
 
 export default async (repository, { data: { id } }) => {
-  const accept = new Accept({ object: new Follow({ id }) });
+  const accept = new Accept({
+    object: new Follow({ id, repository }),
+    repository
+  });
 
   const [
     activityStreams,
     [[keyId, privateKeyPem], objectAccount]
   ] = await Promise.all([
-    accept.toActivityStreams(repository),
-    accept.selectFollowByObject(repository).then(follow => Promise.all([
-      follow.selectPersonByObject(repository).then(actor => {
-        const key = new Key({ owner: actor });
-
-        return Promise.all([
-          key.getUri(repository),
-          key.selectPrivateKeyPem(repository)
-        ]);
+    accept.toActivityStreams(),
+    accept.selectFollowByObject().then(follow => Promise.all([
+      follow.selectPersonByObject().then(actor => {
+        const key = new Key({ owner: actor, repository });
+        return Promise.all([key.getUri(), key.selectPrivateKeyPem()]);
       }),
-      follow.selectRemoteAccountByActor(repository)
+      follow.selectRemoteAccountByActor()
     ]))
   ]);
 

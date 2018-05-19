@@ -34,7 +34,7 @@ export function get(request, response, next) {
   response.setHeader('Content-Type', 'text/event-stream');
 
   Promise.all([
-    user.selectPerson(repository),
+    user.selectPerson(),
     repository.selectRecentNotesFromInbox(user)
   ]).then(async ([person, notes]) => {
     if (!person || person.username != params.acct) {
@@ -46,7 +46,7 @@ export function get(request, response, next) {
       orderedItems: notes.reverse()
     });
 
-    const resolved = await firstPage.toActivityStreams(repository);
+    const resolved = await firstPage.toActivityStreams();
     const subscribedChannel = repository.getInboxChannel(user);
 
     function listen(publishedChannel, message) {

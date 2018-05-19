@@ -64,8 +64,8 @@ export default (repository, port) => {
 
           next();
         } else if (account) {
-          const person = await account.selectPerson(repository);
-          const activityStreams = await person.toActivityStreams(repository);
+          const person = await account.selectPerson();
+          const activityStreams = await person.toActivityStreams();
 
           request.nonce = null;
           request.user = account;

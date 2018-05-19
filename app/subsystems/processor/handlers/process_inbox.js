@@ -25,22 +25,23 @@ import URI from '../../../../lib/uri';
 export default async (repository, { data }) => {
   const { body, signature } = data;
   const owner = await Person.resolveByKeyUri(repository, signature.keyId);
-  const key = new Key({ owner });
+  const key = new Key({ owner, repository });
 
-  if (await key.verifySignature(repository, signature)) {
+  if (await key.verifySignature(signature)) {
     const { host } = new URL(signature.keyId);
     const normalizedHost = URI.normalizeHost(host);
     const parsed = JSON.parse(body);
-    const collection = new ParsedActivityStreams(parsed, normalizedHost);
-    const items = await collection.getItems(repository);
+    const collection =
+      new ParsedActivityStreams(repository, parsed, normalizedHost);
+
+    const items = await collection.getItems();
     const errors = [];
 
-    await Promise.all(items.map(item =>
-      item.act(repository, owner).catch(error => {
-        if (!(error instanceof TypeNotAllowed)) {
-          errors.push(error);
-        }
-      })));
+    await Promise.all(items.map(item => item.act(owner).catch(error => {
+      if (!(error instanceof TypeNotAllowed)) {
+        errors.push(error);
+      }
+    })));
 
     if (errors.length) {
       const error = new (

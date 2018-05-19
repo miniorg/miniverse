@@ -50,7 +50,9 @@ content-type: application/activity+json`,
 
 test('performs activities', async () => {
   const actor = new Person({
+    repository,
     account: new RemoteAccount({
+      repository,
       inbox: { uri: '' },
       publicKey: {
         uri: 'https://AcToR.إختبار/users/admin#main-key',
@@ -87,7 +89,9 @@ ewIDAQAB
 
 test('does not perform activities if signature verification failed', async () => {
   const actor = new Person({
+    repository,
     account: new RemoteAccount({
+      repository,
       inbox: { uri: '' },
       publicKey: {
         uri: 'https://AcToR.إختبار/users/admin#main-key',
@@ -122,7 +126,9 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 
 test('resolves even if object with unsupported type is given', async () => {
   const actor = new Person({
+    repository,
     account: new RemoteAccount({
+      repository,
       inbox: { uri: '' },
       publicKey: {
         uri: 'https://AcToR.إختبار/users/admin#main-key',
@@ -152,8 +158,11 @@ ewIDAQAB
 
 test('rejects without TemporaryError if all rejections are not temporary', async () => {
   const follow = new Follow({
+    repository,
     actor: new Person({
+      repository,
       account: new RemoteAccount({
+        repository,
         inbox: { uri: '' },
         publicKey: {
           uri: 'https://AcToR.إختبار/users/admin#main-key',
@@ -174,7 +183,9 @@ ewIDAQAB
       host: 'FiNgEr.AcToR.xn--kgbechtv',
     }),
     object: new Person({
+      repository,
       account: new LocalAccount({
+        repository,
         admin: true,
         privateKeyPem: '',
         salt: '',
@@ -206,7 +217,9 @@ ewIDAQAB
 
 test('rejects with TemporaryError if some rejection is temporary', async () => {
   const actor = new Person({
+    repository,
     account: new RemoteAccount({
+      repository,
       inbox: { uri: '' },
       publicKey: {
         uri: 'https://AcToR.إختبار/users/admin#main-key',
