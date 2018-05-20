@@ -28,7 +28,7 @@ NAN_METHOD(extractPublic)
     return;
   }
 
-  size_t sourceLength = sourceString->Length();
+  const auto sourceLength = sourceString->Length();
   const auto sourceBuf = new char[sourceLength];
 
   Nan::DecodeWrite(sourceBuf, sourceLength, sourceString);
