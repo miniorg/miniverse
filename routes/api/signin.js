@@ -16,7 +16,7 @@
 
 import { raw } from 'body-parser';
 import { createHash, createHmac, timingSafeEqual } from 'crypto';
-import Challenge from '../../lib/challenge';
+import { digest } from '../../lib/challenge';
 import cookie from './_cookie';
 
 const middleware = raw();
@@ -69,7 +69,7 @@ export function post(request, response, next) {
     const { body, repository } = request;
     const nonce = body.slice(0, 128);
     const serverNonce = body.slice(64, 128);
-    const serverNonceDigest = Challenge.digest(serverNonce);
+    const serverNonceDigest = digest(serverNonce);
     const clientProof = body.slice(128, 160);
     const username = body.slice(160);
 

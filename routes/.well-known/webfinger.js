@@ -14,13 +14,13 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import URI from '../../lib/uri';
+import { normalizeHost } from '../../lib/uri';
 
 export function get({ query, repository }, response, next) {
   const lowerResource = query.resource;
   const [, userpart, host] = /(?:acct:)?(.*)@(.*)/.exec(lowerResource);
 
-  if (URI.normalizeHost(host) != URI.normalizeHost(repository.fingerHost)) {
+  if (normalizeHost(host) != normalizeHost(repository.fingerHost)) {
     response.sendStatus(404);
     return;
   }

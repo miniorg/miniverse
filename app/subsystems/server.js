@@ -18,8 +18,8 @@ import { parse } from 'cookie';
 import { randomBytes } from 'crypto';
 import sapper from 'sapper';
 import { promisify } from 'util';
-import Challenge from '../../lib/challenge';
-import Cookie from '../../lib/cookie';
+import Challenge, { getToken } from '../../lib/challenge';
+import { digestToken } from '../../lib/cookie';
 import Store from '../../lib/store';
 import App from '../app';
 import { routes } from '../manifest/server';
@@ -42,7 +42,7 @@ export default (repository, port) => {
       let asyncAccount;
 
       if (cookie && cookie.miniverse) {
-        const digest = Cookie.digest(Cookie.parseToken(cookie.miniverse));
+        const digest = digestToken(cookie.miniverse);
         asyncAccount = repository.selectLocalAccountByDigestOfCookie(digest);
       } else {
         asyncAccount = Promise.resolve();
@@ -74,7 +74,7 @@ export default (repository, port) => {
         } else {
           const bytes = await promisifiedRandomBytes(64);
 
-          request.nonce = Challenge.getToken(bytes);
+          request.nonce = getToken(bytes);
           request.user = null;
           request.userActivityStreams = null;
 

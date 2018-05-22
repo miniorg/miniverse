@@ -16,7 +16,7 @@
 
 import { randomBytes } from 'crypto';
 import { promisify } from 'util';
-import Cookie from '../../lib/cookie';
+import Cookie, { getToken } from '../../lib/cookie';
 
 const promisifiedRandomBytes = promisify(randomBytes);
 
@@ -25,7 +25,7 @@ export default async (repository, account, response) => {
 
   await Cookie.create(repository, account, secret);
 
-  response.cookie('miniverse', Cookie.getToken(secret), {
+  response.cookie('miniverse', getToken(secret), {
     httpOnly: true,
     sameSite: 'Lax',
     secure: true

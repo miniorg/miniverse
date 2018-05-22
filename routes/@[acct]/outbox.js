@@ -20,7 +20,7 @@ import ParsedActivityStreams, {
   TypeNotAllowed
 } from '../../lib/parsed_activitystreams';
 import OrderedCollection from '../../lib/ordered_collection';
-import URI from '../../lib/uri';
+import { normalizeHost } from '../../lib/uri';
 
 const middleware = json({
   /*
@@ -37,7 +37,7 @@ const middleware = json({
 
 export function get({ params, repository }, response, next) {
   const [userpart, host] = params.acct.split('@', 2);
-  const normalizedHost = URI.normalizeHost(host);
+  const normalizedHost = normalizeHost(host);
 
   repository.selectRecentNotesByUsernameAndNormalizedHost(userpart, normalizedHost)
             .then(async orderedItems => {
@@ -66,7 +66,7 @@ export function get({ params, repository }, response, next) {
 export function post(request, response, next) {
   const { headers: { origin }, user, params, repository } = request;
 
-  if (origin.toLowerCase() != 'https://' + URI.normalizeHost(repository.host)) {
+  if (origin.toLowerCase() != 'https://' + normalizeHost(repository.host)) {
     response.sendStatus(403);
     return;
   }

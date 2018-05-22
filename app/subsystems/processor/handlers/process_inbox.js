@@ -20,7 +20,7 @@ import ParsedActivityStreams, { TypeNotAllowed }
   from '../../../../lib/parsed_activitystreams';
 import Person from '../../../../lib/person';
 import TemporaryError from '../../../../lib/temporary_error';
-import URI from '../../../../lib/uri';
+import { normalizeHost } from '../../../../lib/uri';
 
 export default async (repository, { data }) => {
   const { body, signature } = data;
@@ -29,7 +29,7 @@ export default async (repository, { data }) => {
 
   if (await key.verifySignature(signature)) {
     const { host } = new URL(signature.keyId);
-    const normalizedHost = URI.normalizeHost(host);
+    const normalizedHost = normalizeHost(host);
     const parsed = JSON.parse(body);
     const collection =
       new ParsedActivityStreams(repository, parsed, normalizedHost);

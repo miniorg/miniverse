@@ -15,7 +15,7 @@
 */
 
 import Person from '../../lib/person';
-import URI from '../../lib/uri';
+import { normalizeHost } from '../../lib/uri';
 
 export function get(request, response, next) {
   const accepted = request.accepts([
@@ -40,7 +40,7 @@ export function get(request, response, next) {
     normalizedHost = null;
   } else {
     username = acct.slice(0, atIndex);
-    normalizedHost = URI.normalizeHost(acct.slice(atIndex + 1));
+    normalizedHost = normalizeHost(acct.slice(atIndex + 1));
   }
 
   Person.resolveByUsernameAndNormalizedHost(repository, username, normalizedHost).then(async person => {
