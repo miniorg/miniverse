@@ -24,27 +24,29 @@ import Key from '../../../../lib/key';
 
 export default async (repository, { data: { id } }) => {
   const accept = new Accept({
-    object: new Follow({ id, repository }),
+    object: new Follow(repository, id),
     repository
   });
 
   const [
     activityStreams,
-    [[keyId, privateKeyPem], objectAccount]
+    [keyId, privateKeyPem, { inbox }]
   ] = await Promise.all([
     accept.toActivityStreams(),
-    accept.selectFollowByObject().then(follow => Promise.all([
-      follow.selectPersonByObject().then(actor => {
-        const key = new Key({ owner: actor, repository });
-        return Promise.all([key.getUri(), key.selectPrivateKeyPem()]);
-      }),
-      follow.selectRemoteAccountByActor()
-    ]))
+    accept.object.get().then(({ object, actor }) => {
+      const key = new Key({ owner: object, repository });
+
+      return Promise.all([
+        key.getUri(),
+        key.selectPrivateKeyPem(),
+        actor.selectComplete().then(complete => complete.get())
+      ]);
+    })
   ]);
 
   activityStreams['@context'] = 'https://www.w3.org/ns/activitystreams';
 
-  const response = await fetch(repository, objectAccount.inbox.uri, {
+  const response = await fetch(repository, inbox.uri, {
     method: 'POST',
     body: JSON.stringify(activityStreams),
     size: -1,

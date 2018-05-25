@@ -15,32 +15,24 @@
 */
 
 import Follow from '../../../../lib/follow';
-import LocalAccount from '../../../../lib/local_account';
-import Person from '../../../../lib/person';
-import RemoteAccount from '../../../../lib/remote_account';
+import LocalPerson from '../../../../lib/local_person';
+import RemotePerson from '../../../../lib/remote_person';
 import repository from '../../../../lib/test_repository';
 import accept from './accept';
 import nock from 'nock';
 
 async function fabricateFollow() {
-  const follow = new Follow({
-    actor: new Person({
-      repository,
-      account: new RemoteAccount({
-        repository,
-        inbox: { uri: 'https://AcToR.إختبار/?inbox' },
-        publicKey: { uri: '', publicKeyPem: '' },
-        uri: ''
-      }),
-      username: '行動者',
-      host: 'FiNgEr.AcToR.إختبار'
-    }),
-    object: new Person({
-      repository,
-      account: new LocalAccount({
-        repository,
-        admin: true,
-        privateKeyPem: `-----BEGIN RSA PRIVATE KEY-----
+  const actor = new RemotePerson(repository, null, {
+    inbox: { uri: 'https://AcToR.إختبار/?inbox' },
+    publicKey: { uri: '', publicKeyPem: '' },
+    uri: '',
+    username: '行動者',
+    host: 'FiNgEr.AcToR.إختبار'
+  });
+
+  const object = new LocalPerson(repository, null, {
+    admin: true,
+    privateKeyPem: `-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGT
 rcO6S16XQ3tffCo0QA7G1MOzTeOEJHMiNM4jQQuY0NgDGMs3KEgo0J4ik75VnlyO
 iSyFZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2
@@ -68,26 +60,26 @@ PtM8uICJERUD+p/WiEmEyC3Pd8F7db3zxt34L5BhQ5w2HnPpumDTGNUeuV4byF4z
 OyJRYe+sFKZ6lXqnwdWuTrxTNucFuhw+6BVyzNn6lI5cNXLr1reH
 -----END RSA PRIVATE KEY-----
 `,
-        salt: '',
-        serverKey: '',
-        storedKey: ''
-      }),
-      username: '被行動者',
-      host: null
-    })
+    salt: '',
+    serverKey: '',
+    storedKey: '',
+    username: '被行動者',
+    host: null
   });
 
   await Promise.all([
-    repository.insertRemoteAccount(follow.actor.account),
-    repository.insertLocalAccount(follow.object.account)
+    repository.insertRemotePerson(actor),
+    repository.insertLocalPerson(object)
   ]);
+
+  const follow = new Follow(repository, null, { actor, object });
 
   await repository.insertFollow(follow);
 
   return follow;
 }
 
-test('delivers to remote account', async () => {
+test('delivers to remote person', async () => {
   const { id } = await fabricateFollow();
 
   /*

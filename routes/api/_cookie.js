@@ -20,10 +20,10 @@ import Cookie, { getToken } from '../../lib/cookie';
 
 const promisifiedRandomBytes = promisify(randomBytes);
 
-export default async (repository, account, response) => {
+export default async (repository, person, response) => {
   const secret = await promisifiedRandomBytes(64);
 
-  await Cookie.create(repository, account, secret);
+  await Cookie.create(repository, person, secret);
 
   response.cookie('miniverse', getToken(secret), {
     httpOnly: true,

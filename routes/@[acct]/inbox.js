@@ -34,10 +34,10 @@ export function get(request, response, next) {
   response.setHeader('Content-Type', 'text/event-stream');
 
   Promise.all([
-    user.selectPerson(),
+    user.get(),
     repository.selectRecentNotesFromInbox(user)
-  ]).then(async ([person, notes]) => {
-    if (!person || person.username != params.acct) {
+  ]).then(async ([{ username }, notes]) => {
+    if (username != params.acct) {
       response.sendStatus(401);
       return;
     }

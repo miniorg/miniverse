@@ -15,7 +15,7 @@
 */
 
 import { raw } from 'body-parser';
-import LocalAccount from '../../lib/local_account';
+import LocalPerson from '../../lib/local_person';
 import cookie from './_cookie';
 
 const middleware = raw();
@@ -33,8 +33,8 @@ export function post(request, response, next) {
     const storedKey = body.slice(96, 128);
     const username = body.slice(128).toString();
 
-    LocalAccount.create(repository, username, false, salt, serverKey, storedKey)
-                .then(account => cookie(repository, account, response))
-                .then(() => response.sendStatus(204), next);
+    LocalPerson.create(repository, username, false, salt, serverKey, storedKey)
+               .then(person => cookie(repository, person, response))
+               .then(() => response.sendStatus(204), next);
   });
 }

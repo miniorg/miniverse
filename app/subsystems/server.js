@@ -39,13 +39,13 @@ export default (repository, port) => {
     },
     (request, response, next) => {
       const cookie = request.headers.cookie && parse(request.headers.cookie);
-      let asyncAccount;
+      let asyncUser;
 
       if (cookie && cookie.miniverse) {
         const digest = digestToken(cookie.miniverse);
-        asyncAccount = repository.selectLocalAccountByDigestOfCookie(digest);
+        asyncUser = repository.selectLocalPersonByDigestOfCookie(digest);
       } else {
-        asyncAccount = Promise.resolve();
+        asyncUser = Promise.resolve();
       }
 
       if (process.env.NODE_ENV != 'development') {
@@ -55,20 +55,19 @@ export default (repository, port) => {
         });
       }
 
-      asyncAccount.then(async account => {
+      asyncUser.then(async user => {
         if (/^\/bull/i.test(request.path)) {
-          if (!account || !account.admin) {
+          if (!user || !user.admin) {
             response.sendStatus(401);
             return;
           }
 
           next();
-        } else if (account) {
-          const person = await account.selectPerson();
-          const activityStreams = await person.toActivityStreams();
+        } else if (user) {
+          const activityStreams = await user.toActivityStreams();
 
           request.nonce = null;
-          request.user = account;
+          request.user = user;
           request.userActivityStreams = activityStreams;
           next();
         } else {
