@@ -39,6 +39,7 @@ CREATE FUNCTION insert_remote_person(
   username TEXT, host TEXT, uri TEXT, inbox_uri TEXT,
   key_uri TEXT, public_key_pem TEXT)
 RETURNS RECORD AS $$
+  DECLARE result RECORD;
   DECLARE inbox_uri_id BIGINT;
   DECLARE key_uri_id BIGINT;
   DECLARE id BIGINT;
@@ -61,7 +62,8 @@ RETURNS RECORD AS $$
         VALUES ($1, $2, $3, inbox_uri_id, key_uri_id, $6)
         RETURNING remote_persons.id INTO id;
 
-    RETURN (id, inbox_uri_id, key_uri_id);
+    result := (id, inbox_uri_id, key_uri_id);
+    RETURN result;
   END
 $$ LANGUAGE plpgsql;
 `, callback);
