@@ -57,7 +57,14 @@ export default (repository, port) => {
 
       asyncUser.then(async user => {
         if (/^\/bull/i.test(request.path)) {
-          if (!user || !user.admin) {
+          if (!user) {
+            response.sendStatus(401);
+            return;
+          }
+
+          const { admin } = await user.get();
+
+          if (!admin) {
             response.sendStatus(401);
             return;
           }
