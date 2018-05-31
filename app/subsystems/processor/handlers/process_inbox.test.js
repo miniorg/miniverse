@@ -19,6 +19,7 @@ import LocalPerson from '../../../../lib/local_person';
 import RemotePerson from '../../../../lib/remote_person';
 import TemporaryError from '../../../../lib/temporary_error';
 import repository from '../../../../lib/test_repository';
+import URI from '../../../../lib/uri';
 import processInbox from './process_inbox';
 const nock = require('nock');
 
@@ -49,9 +50,11 @@ content-type: application/activity+json`,
 
 test('performs activities', async () => {
   await repository.insertRemotePerson(new RemotePerson(repository, null, {
-    inbox: { uri: '' },
+    inbox: { uri: new URI(repository, null, { uri: '' }) },
     publicKey: {
-      uri: 'https://AcToR.إختبار/users/admin#main-key',
+      uri: new URI(repository, null, {
+        uri: 'https://AcToR.إختبار/users/admin#main-key'
+      }),
       publicKeyPem: `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
@@ -83,9 +86,11 @@ ewIDAQAB
 
 test('does not perform activities if signature verification failed', async () => {
   await repository.insertRemotePerson(new RemotePerson(repository, null, {
-    inbox: { uri: '' },
+    inbox: { uri: new URI(repository, null, { uri: '' }) },
     publicKey: {
-      uri: 'https://AcToR.إختبار/users/admin#main-key',
+      uri: new URI(repository, null, {
+        uri: 'https://AcToR.إختبار/users/admin#main-key'
+      }),
       publicKeyPem: `-----BEGIN RSA PUBLIC KEY-----
 MIIBCgKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGTrcO6
 S16XQ3tffCo0QA7G1MOzTeOEJHMiNM4jQQuY0NgDGMs3KEgo0J4ik75VnlyOiSyF
@@ -114,9 +119,11 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 
 test('resolves even if object with unsupported type is given', async () => {
   await repository.insertRemotePerson(new RemotePerson(repository, null, {
-    inbox: { uri: '' },
+    inbox: { uri: new URI(repository, null, { uri: '' }) },
     publicKey: {
-      uri: 'https://AcToR.إختبار/users/admin#main-key',
+      uri: new URI(repository, null, {
+        uri: 'https://AcToR.إختبار/users/admin#main-key'
+      }),
       publicKeyPem: `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
@@ -140,9 +147,11 @@ ewIDAQAB
 
 test('rejects without TemporaryError if all rejections are not temporary', async () => {
   const actor = new RemotePerson(repository, null, {
-    inbox: { uri: '' },
+    inbox: { uri: new URI(repository, null, { uri: '' }) },
     publicKey: {
-      uri: 'https://AcToR.إختبار/users/admin#main-key',
+      uri: new URI(repository, null, {
+        uri: 'https://AcToR.إختبار/users/admin#main-key'
+      }),
       publicKeyPem: `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
@@ -190,9 +199,11 @@ ewIDAQAB
 
 test('rejects with TemporaryError if some rejection is temporary', async () => {
   await repository.insertRemotePerson(new RemotePerson(repository, null, {
-    inbox: { uri: '' },
+    inbox: { uri: new URI(repository, null, { uri: '' }) },
     publicKey: {
-      uri: 'https://AcToR.إختبار/users/admin#main-key',
+      uri: new URI(repository, null, {
+        uri: 'https://AcToR.إختبار/users/admin#main-key'
+      }),
       publicKeyPem: `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx

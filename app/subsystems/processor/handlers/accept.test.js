@@ -18,13 +18,19 @@ import Follow from '../../../../lib/follow';
 import LocalPerson from '../../../../lib/local_person';
 import RemotePerson from '../../../../lib/remote_person';
 import repository from '../../../../lib/test_repository';
+import URI from '../../../../lib/uri';
 import accept from './accept';
 import nock from 'nock';
 
 async function fabricateFollow() {
   const actor = new RemotePerson(repository, null, {
-    inbox: { uri: 'https://AcToR.إختبار/?inbox' },
-    publicKey: { uri: '', publicKeyPem: '' },
+    inbox: {
+      uri: new URI(repository, null, { uri: 'https://AcToR.إختبار/?inbox' })
+    },
+    publicKey: {
+      uri: new URI(repository, null, { uri: '' }),
+      publicKeyPem: ''
+    },
     uri: '',
     username: '行動者',
     host: 'FiNgEr.AcToR.إختبار'

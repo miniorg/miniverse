@@ -30,7 +30,7 @@ export default async (repository, { data: { id } }) => {
 
   const [
     activityStreams,
-    [keyId, privateKeyPem, { inbox }]
+    [keyId, privateKeyPem, inbox]
   ] = await Promise.all([
     accept.toActivityStreams(),
     accept.object.get().then(({ object, actor }) => {
@@ -39,7 +39,9 @@ export default async (repository, { data: { id } }) => {
       return Promise.all([
         key.getUri(),
         key.selectPrivateKeyPem(),
-        actor.selectComplete().then(complete => complete.get())
+        actor.selectComplete()
+             .then(complete => complete.get())
+             .then(({ inbox }) => inbox.uri.get())
       ]);
     })
   ]);
