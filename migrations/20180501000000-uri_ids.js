@@ -87,8 +87,8 @@ CREATE UNIQUE INDEX persons_acct ON persons (lower(host), username);
 
 DROP TABLE old_uris;
 
-DROP FUNCTION insert_local_account;
-DROP FUNCTION insert_remote_account;
+DROP FUNCTION insert_local_account(TEXT, BOOLEAN, TEXT, BYTEA, BYTEA, BYTEA);
+DROP FUNCTION insert_remote_account(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT);
 `, callback);
 
 exports._meta = { version: 1 };
