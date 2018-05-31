@@ -48,12 +48,7 @@ export default (repository, port) => {
         asyncUser = Promise.resolve();
       }
 
-      if (process.env.NODE_ENV != 'development') {
-        response.set({
-          'Content-Security-Policy': 'default-src \'none\'; connect-src \'self\' data:; script-src \'self\' \'unsafe-inline\'',
-          'Referrer-Policy': 'no-referrer'
-        });
-      }
+      response.set('Referrer-Policy', 'no-referrer');
 
       asyncUser.then(async user => {
         if (/^\/bull/i.test(request.path)) {
@@ -68,25 +63,29 @@ export default (repository, port) => {
             response.sendStatus(401);
             return;
           }
-
-          next();
-        } else if (user) {
-          const activityStreams = await user.toActivityStreams();
-
-          request.nonce = null;
-          request.user = user;
-          request.userActivityStreams = activityStreams;
-          next();
         } else {
-          const bytes = await promisifiedRandomBytes(64);
+          if (process.env.NODE_ENV != 'development') {
+            response.set('Content-Security-Policy', 'default-src \'none\'; connect-src \'self\' data:; script-src \'self\' \'unsafe-inline\'');
+          }
 
-          request.nonce = getToken(bytes);
-          request.user = null;
-          request.userActivityStreams = null;
+          if (user) {
+            const activityStreams = await user.toActivityStreams();
 
-          await Challenge.create(repository, bytes);
-          next();
+            request.nonce = null;
+            request.user = user;
+            request.userActivityStreams = activityStreams;
+          } else {
+            const bytes = await promisifiedRandomBytes(64);
+
+            request.nonce = getToken(bytes);
+            request.user = null;
+            request.userActivityStreams = null;
+
+            await Challenge.create(repository, bytes);
+          }
         }
+
+        next();
       }).catch(next);
     },
     Arena({
