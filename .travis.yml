@@ -56,6 +56,6 @@ node_js:
   - lts/*
   - node
 script:
-  - createdb travis_miniverse_test_1
-  - PGDATABASE=travis_miniverse_test_1 npx db-migrate up
+  - createdb travis_test_1
+  - PGDATABASE=travis_test_1 npx db-migrate up
   - npm test -- -w 1
