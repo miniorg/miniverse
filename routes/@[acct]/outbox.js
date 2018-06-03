@@ -76,8 +76,8 @@ export function post(request, response, next) {
     return;
   }
 
-  user.get().then(({ username }) => {
-    if (username != params.acct) {
+  user.selectPerson().then(person => {
+    if (person.username != params.acct) {
       response.sendStatus(401);
       return;
     }
@@ -99,10 +99,10 @@ export function post(request, response, next) {
         > contain embedded objects), or a single non-Activity object which will
         > be wrapped in a Create activity by the server.
       */
-      object.act(user)
+      object.act(person)
             .catch(error => {
               if (error instanceof TypeNotAllowed) {
-                return object.create(user).catch(error => {
+                return object.create(person).catch(error => {
                   if (!(error instanceof TypeNotAllowed)) {
                     throw error;
                   }

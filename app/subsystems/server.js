@@ -39,41 +39,34 @@ export default (repository, port) => {
     },
     (request, response, next) => {
       const cookie = request.headers.cookie && parse(request.headers.cookie);
-      let asyncUser;
+      let asyncAccount;
 
       if (cookie && cookie.miniverse) {
         const digest = digestToken(cookie.miniverse);
-        asyncUser = repository.selectLocalPersonByDigestOfCookie(digest);
+        asyncAccount = repository.selectLocalAccountByDigestOfCookie(digest);
       } else {
-        asyncUser = Promise.resolve();
+        asyncAccount = Promise.resolve();
       }
 
       response.set('Referrer-Policy', 'no-referrer');
 
-      asyncUser.then(async user => {
+      asyncAccount.then(async account => {
         if (/^\/bull/i.test(request.path)) {
-          if (!user) {
+          if (!account || !account.admin) {
             response.sendStatus(401);
-            return;
-          }
-
-          const { admin } = await user.get();
-
-          if (!admin) {
-            response.sendStatus(401);
-            return;
           }
         } else {
           if (process.env.NODE_ENV != 'development') {
             response.set('Content-Security-Policy', 'default-src \'none\'; connect-src \'self\' data:; script-src \'self\' \'unsafe-inline\'');
           }
 
-          if (user) {
-            const activityStreams = await user.toActivityStreams();
+          if (account) {
+            const person = await account.selectPerson();
+            const activityStreams = await person.toActivityStreams();
             activityStreams.inbox = [];
 
             request.nonce = null;
-            request.user = user;
+            request.user = account;
             request.userActivityStreams = activityStreams;
           } else {
             const bytes = await promisifiedRandomBytes(64);
@@ -85,9 +78,7 @@ export default (repository, port) => {
             await Challenge.create(repository, bytes);
           }
         }
-
-        next();
-      }).catch(next);
+      }).then(next, next);
     },
     Arena({
       queues: [

@@ -80,22 +80,20 @@ export function post(request, response, next) {
           return;
         }
 
-        const person = await repository.selectLocalPersonByUsername(
+        const account = await repository.selectLocalAccountByUsername(
           username.toString());
 
-        const { salt, storedKey, serverKey } = await person.get();
-
-        const auth = Buffer.concat([nonce, salt]);
-        const clientKey = hmac(storedKey, auth);
+        const auth = Buffer.concat([nonce, account.salt]);
+        const clientKey = hmac(account.storedKey, auth);
         xor(clientKey, clientProof);
 
-        if (!timingSafeEqual(hash(clientKey), storedKey)) {
+        if (!timingSafeEqual(hash(clientKey), account.storedKey)) {
           response.sendStatus(401);
           return;
         }
 
-        await cookie(repository, person, response);
-        response.send(hmac(serverKey, auth));
+        await cookie(repository, account, response);
+        response.send(hmac(account.serverKey, auth));
       }, next);
   });
 }

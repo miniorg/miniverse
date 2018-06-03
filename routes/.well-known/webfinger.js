@@ -27,7 +27,7 @@ export function get({ query, repository }, response, next) {
 
   const username = decodeURI(userpart);
 
-  repository.selectLocalPersonByUsername(username).then(async person => {
-    response.json(await person.toWebFinger());
+  repository.selectLocalAccountByUsername(username).then(async account => {
+    response.json(await account.toWebFinger());
   }).catch(next);
 }
