@@ -71,7 +71,7 @@ ewIDAQAB
 -----END PUBLIC KEY-----
 `
       },
-      uri: ''
+      uri: new URI({ repository, uri: '' })
     }),
     username: 'aCtOr',
     host: 'FiNgEr.AcToR.xn--kgbechtv',
@@ -112,7 +112,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `
       },
-      uri: ''
+      uri: new URI({ repository, uri: '' })
     }),
     username: 'aCtOr',
     host: 'FiNgEr.AcToR.xn--kgbechtv',
@@ -153,7 +153,7 @@ ewIDAQAB
 -----END PUBLIC KEY-----
 `
       },
-      uri: ''
+      uri: new URI({ repository, uri: '' })
     }),
     username: 'aCtOr',
     host: 'FiNgEr.AcToR.xn--kgbechtv',
@@ -190,7 +190,7 @@ ewIDAQAB
 -----END PUBLIC KEY-----
 `
         },
-        uri: ''
+        uri: new URI({ repository, uri: '' })
       }),
       username: 'aCtOr',
       host: 'FiNgEr.AcToR.xn--kgbechtv',
@@ -250,7 +250,7 @@ ewIDAQAB
 -----END PUBLIC KEY-----
 `
       },
-      uri: ''
+      uri: new URI({ repository, uri: '' })
     }),
     username: 'aCtOr',
     host: 'FiNgEr.AcToR.xn--kgbechtv',

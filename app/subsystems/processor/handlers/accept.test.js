@@ -33,7 +33,7 @@ async function fabricateFollow() {
           uri: new URI({ repository, uri: 'https://AcToR.إختبار/?inbox' })
         },
         publicKey: { uri: new URI({ repository, uri: '' }), publicKeyPem: '' },
-        uri: ''
+        uri: new URI({ repository, uri: '' })
       }),
       username: '行動者',
       host: 'FiNgEr.AcToR.إختبار'
