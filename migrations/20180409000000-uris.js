@@ -42,7 +42,7 @@ $$ LANGUAGE plpgsql;
 
 ALTER TABLE local_accounts ALTER person_id TYPE BIGINT;
 
-DROP FUNCTION insert_local_account;
+DROP FUNCTION insert_local_account(TEXT, BOOLEAN, TEXT, BYTEA, BYTEA, BYTEA);
 CREATE FUNCTION insert_local_account(username TEXT, admin BOOLEAN, private_key_pem TEXT, salt BYTEA, server_key BYTEA, stored_key BYTEA)
 RETURNS BIGINT AS $$
   DECLARE person_id BIGINT;
@@ -76,7 +76,7 @@ ALTER TABLE remote_accounts
   DROP inbox_uri,
   DROP key_uri;
 
-DROP FUNCTION insert_remote_account;
+DROP FUNCTION insert_remote_account(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT);
 
 CREATE FUNCTION insert_remote_account(
   username TEXT,
