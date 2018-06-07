@@ -14,16 +14,26 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Person from '../person';
+exports.up = (db, callback) => db.runSql(`ALTER TABLE local_accounts RENAME person_id TO id;
 
-export default {
-  async selectPersonById(id) {
-    const { rows: [ { username, host } ] } = await this.pg.query({
-      name: 'selectPersonById',
-      text: 'SELECT * FROM persons WHERE id = $1',
-      values: [id]
-    });
+CREATE OR REPLACE FUNCTION insert_local_account(
+  username TEXT,
+  admin BOOLEAN,
+  private_key_pem TEXT,
+  salt BYTEA,
+  server_key BYTEA,
+  stored_key BYTEA
+) RETURNS BIGINT AS $$
+  DECLARE id BIGINT;
+  BEGIN
+    INSERT INTO persons (username, host) VALUES ($1, '')
+      RETURNING persons.id INTO id;
 
-    return new Person({ repository: this, id, username, host: host || null });
-  }
-};
+    INSERT INTO local_accounts
+        (id, admin, private_key_pem, salt, server_key, stored_key)
+      VALUES (id, $2, $3, $4, $5, $6);
+
+    RETURN id;
+  END
+$$ LANGUAGE plpgsql;
+`, callback);

@@ -107,7 +107,7 @@ test('delivers to remote account', async () => {
     .reply(200);
 
   try {
-    await accept(repository, { data: { id } });
+    await accept(repository, { data: { objectId: id } });
     expect(post.isDone()).toBe(true);
   } finally {
     nock.cleanAll();
@@ -121,7 +121,7 @@ test('rejects if failed to deliver to remote object', async () => {
     .replyWithError('');
 
   try {
-    await expect(accept(repository, { data: { id } }))
+    await expect(accept(repository, { data: { objectId: id } }))
      .rejects
      .toBeInstanceOf(Error);
 
@@ -147,7 +147,7 @@ test('resolves even if response has body', async () => {
     .reply(200, 'body');
 
   try {
-    await accept(repository, { data: { id } });
+    await accept(repository, { data: { objectId: id } });
     expect(post.isDone()).toBe(true);
   } finally {
     nock.cleanAll();

@@ -76,7 +76,7 @@ export function post(request, response, next) {
     return;
   }
 
-  user.selectPerson().then(person => {
+  user.select('person').then(person => {
     if (person.username != params.acct) {
       response.sendStatus(401);
       return;

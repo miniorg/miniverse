@@ -19,27 +19,24 @@ import { FetchError } from 'node-fetch';
 import { sign } from 'http-signature';
 import Accept from '../../../../lib/accept';
 import fetch from '../../../../lib/fetch';
-import Follow from '../../../../lib/follow';
 import Key from '../../../../lib/key';
 
-export default async (repository, { data: { id } }) => {
-  const accept = new Accept({
-    object: new Follow({ id, repository }),
-    repository
-  });
+export default async (repository, { data: { objectId } }) => {
+  const accept = new Accept({ objectId, repository });
 
   const [
     activityStreams,
     [[keyId, privateKeyPem], inboxUri]
   ] = await Promise.all([
     accept.toActivityStreams(),
-    accept.selectFollowByObject().then(follow => Promise.all([
-      follow.selectPersonByObject().then(actor => {
+    accept.select('object').then(follow => Promise.all([
+      follow.select('object').then(actor => {
         const key = new Key({ owner: actor, repository });
         return Promise.all([key.getUri(), key.selectPrivateKeyPem()]);
       }),
-      follow.selectRemoteAccountByActor().then(
-        objectActor => objectActor.selectInboxUri())
+      follow.select('actor')
+            .then(person => person.select('account'))
+            .then(account => account.select('inboxURI'))
     ]))
   ]);
 
