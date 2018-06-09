@@ -30,7 +30,7 @@ test('delivers to remote account', async () => {
       repository,
       inboxURI: new URI({ repository, uri: 'https://AcToR.إختبار/?inbox' }),
       publicKeyURI: new URI({ repository, uri: '' }),
-      publicKey: { publicKeyPem: '' },
+      publicKeyPem: '',
       uri: new URI({ repository, uri: '' })
     }),
     username: '行動者',

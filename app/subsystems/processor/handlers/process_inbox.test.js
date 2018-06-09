@@ -59,8 +59,7 @@ test('performs activities', async () => {
         repository,
         uri: 'https://AcToR.إختبار/users/admin#main-key'
       }),
-      publicKey: {
-        publicKeyPem: `-----BEGIN PUBLIC KEY-----
+      publicKeyPem: `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
 1Iu2LbvQ6iE19RM01An3kBA/MPelQATPv832/pWxdCjWPP8i2snPbzPZ5gSJP55v
@@ -69,8 +68,7 @@ aiM3niRO1Dwz7XPszQ8ygbLWdqM/2pAvckp/lIUm0ufVz5ONGcqjZDVUNh/ZQ5tO
 AOc6sswdQZB3Q0FHFgaM5FkAeB07OSK+ndZffVfqfe5YM39470E9uGqC3NQYVkGH
 ewIDAQAB
 -----END PUBLIC KEY-----
-`
-      },
+`,
       uri: new URI({ repository, uri: '' })
     }),
     username: 'aCtOr',
@@ -101,8 +99,7 @@ test('does not perform activities if signature verification failed', async () =>
         repository,
         uri: 'https://AcToR.إختبار/users/admin#main-key'
       }),
-      publicKey: {
-        publicKeyPem: `-----BEGIN RSA PUBLIC KEY-----
+      publicKeyPem: `-----BEGIN RSA PUBLIC KEY-----
 MIIBCgKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGTrcO6
 S16XQ3tffCo0QA7G1MOzTeOEJHMiNM4jQQuY0NgDGMs3KEgo0J4ik75VnlyOiSyF
 ZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2/POH
@@ -110,8 +107,7 @@ ZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2/POH
 ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 +DHYFaVXQy60WzCEFjiQPZ8XdNQKvDyjKwIDAQAB
 -----END RSA PUBLIC KEY-----
-`
-      },
+`,
       uri: new URI({ repository, uri: '' })
     }),
     username: 'aCtOr',
@@ -141,8 +137,7 @@ test('resolves even if object with unsupported type is given', async () => {
         repository,
         uri: 'https://AcToR.إختبار/users/admin#main-key'
       }),
-      publicKey: {
-        publicKeyPem: `-----BEGIN PUBLIC KEY-----
+      publicKeyPem: `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
 1Iu2LbvQ6iE19RM01An3kBA/MPelQATPv832/pWxdCjWPP8i2snPbzPZ5gSJP55v
@@ -151,8 +146,7 @@ aiM3niRO1Dwz7XPszQ8ygbLWdqM/2pAvckp/lIUm0ufVz5ONGcqjZDVUNh/ZQ5tO
 AOc6sswdQZB3Q0FHFgaM5FkAeB07OSK+ndZffVfqfe5YM39470E9uGqC3NQYVkGH
 ewIDAQAB
 -----END PUBLIC KEY-----
-`
-      },
+`,
       uri: new URI({ repository, uri: '' })
     }),
     username: 'aCtOr',
@@ -178,8 +172,7 @@ test('rejects without TemporaryError if all rejections are not temporary', async
           repository,
           uri: 'https://AcToR.إختبار/users/admin#main-key'
         }),
-        publicKey: {
-          publicKeyPem: `-----BEGIN PUBLIC KEY-----
+        publicKeyPem: `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
 1Iu2LbvQ6iE19RM01An3kBA/MPelQATPv832/pWxdCjWPP8i2snPbzPZ5gSJP55v
@@ -188,8 +181,7 @@ aiM3niRO1Dwz7XPszQ8ygbLWdqM/2pAvckp/lIUm0ufVz5ONGcqjZDVUNh/ZQ5tO
 AOc6sswdQZB3Q0FHFgaM5FkAeB07OSK+ndZffVfqfe5YM39470E9uGqC3NQYVkGH
 ewIDAQAB
 -----END PUBLIC KEY-----
-`
-        },
+`,
         uri: new URI({ repository, uri: '' })
       }),
       username: 'aCtOr',
@@ -238,8 +230,7 @@ test('rejects with TemporaryError if some rejection is temporary', async () => {
         repository,
         uri: 'https://AcToR.إختبار/users/admin#main-key'
       }),
-      publicKey: {
-        publicKeyPem: `-----BEGIN PUBLIC KEY-----
+      publicKeyPem: `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
 1Iu2LbvQ6iE19RM01An3kBA/MPelQATPv832/pWxdCjWPP8i2snPbzPZ5gSJP55v
@@ -248,8 +239,7 @@ aiM3niRO1Dwz7XPszQ8ygbLWdqM/2pAvckp/lIUm0ufVz5ONGcqjZDVUNh/ZQ5tO
 AOc6sswdQZB3Q0FHFgaM5FkAeB07OSK+ndZffVfqfe5YM39470E9uGqC3NQYVkGH
 ewIDAQAB
 -----END PUBLIC KEY-----
-`
-      },
+`,
       uri: new URI({ repository, uri: '' })
     }),
     username: 'aCtOr',

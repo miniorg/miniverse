@@ -33,7 +33,7 @@ test('delivers to remote account', async () => {
     }),
     inboxURI: new URI({ repository, uri: 'https://ReCiPiEnT.إختبار/?inbox' }),
     publicKeyURI: new URI({ repository, uri: '' }),
-    publicKey: { publicKeyPem: '' },
+    publicKeyPem: '',
     uri: new URI({ repository, uri: '' })
   });
 
