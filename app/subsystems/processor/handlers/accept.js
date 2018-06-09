@@ -14,7 +14,6 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 import { FetchError } from 'node-fetch';
 import { sign } from 'http-signature';
 import Accept from '../../../../lib/accept';
