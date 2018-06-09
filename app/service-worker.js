@@ -40,7 +40,7 @@ self.addEventListener('fetch', event => {
 	// ignore dev server requests
 	if (url.hostname === self.location.hostname && url.port !== self.location.port) return;
 
-	if (url.pathname === '/api/events') return;
+	if (url.pathname === '/api/events' || url.origin !== self.origin) return;
 
 	// always serve assets and webpack-generated files from cache
 	if (url.host === self.location.host && cached.has(url.pathname)) {
