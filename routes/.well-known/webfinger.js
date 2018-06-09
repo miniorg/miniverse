@@ -20,10 +20,15 @@ import { normalizeHost } from '../../lib/uri';
 export function get({ query, repository }, response, next) {
   const lowerResource = query.resource;
   const [, userpart, host] = /(?:acct:)?(.*)@(.*)/.exec(lowerResource);
+  const normalizedHost = normalizeHost(host);
 
-  Person.resolveByUsernameAndNormalizedHost(
-    repository, decodeURI(userpart), normalizeHost(host))
-      .then(person => person.select('account'))
-      .then(account => account.toWebFinger())
-      .then(response.json.bind(response), next);
+  const asyncPerson = host == normalizeHost(repository.fingerHost) ?
+    repository.selectPersonByUsernameAndNormalizedHost(
+      decodeURI(userpart), null) :
+    Person.resolveByUsernameAndNormalizedHost(
+      repository, decodeURI(userpart), host);
+
+  asyncPerson.then(person => person.select('account'))
+             .then(account => account.toWebFinger())
+             .then(response.json.bind(response), next);
 }
