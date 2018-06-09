@@ -94,7 +94,12 @@ export default (repository, port) => {
       App,
       routes,
       store({ nonce, userActivityStreams }) {
-        return new Store({ nonce, user: userActivityStreams, events: null });
+        return new Store({
+          nonce,
+          user: userActivityStreams,
+          events: null,
+          fingerHost: repository.fingerHost
+        });
       }
     }));
 
