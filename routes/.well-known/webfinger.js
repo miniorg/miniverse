@@ -30,5 +30,5 @@ export function get({ query, repository }, response, next) {
   repository.selectPersonByUsernameAndNormalizedHost(username, null)
             .then(person => person.select('account'))
             .then(account => account.toWebFinger())
-            .then(response.json.bind(this), next);
+            .then(response.json.bind(response), next);
 }
