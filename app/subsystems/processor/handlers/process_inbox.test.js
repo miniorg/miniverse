@@ -210,7 +210,7 @@ ewIDAQAB
   await repository.insertFollow(follow);
 
   const promise = processInbox(repository, {
-    data: { signature, body: '{ "type": "Follow", "object": "https://xn--kgbechtv@oBjEcT" }' }
+    data: { signature, body: '{ "type": "Follow", "object": "https://xn--kgbechtv/@oBjEcT" }' }
   });
 
   await Promise.all([

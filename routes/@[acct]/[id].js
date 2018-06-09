@@ -15,7 +15,7 @@
 */
 
 import { normalizeHost } from '../../lib/uri';
-import sendActivityStreams from './_send_activitystreams';
+import sendActivityStreams from '../_send_activitystreams';
 
 export function get(request, response, next) {
   const { params, repository } = request;

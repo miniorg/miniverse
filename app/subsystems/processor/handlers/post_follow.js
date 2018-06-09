@@ -14,9 +14,16 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import accept from './accept';
-import postFollow from './post_follow';
-import postNote from './post_note';
-import processInbox from './process_inbox';
+import postToInbox from '../../../../lib/post_to_inbox';
 
-export default { accept, postFollow, postNote, processInbox };
+export default async (repository, { data: { id } }) => {
+  const follow = await repository.selectFollowIncludingActorAndObjectById(id);
+  const [sender, inboxURI] = await Promise.all([
+    follow.select('actor').then(person => person.select('account')),
+    follow.select('object')
+          .then(person => person.select('account'))
+          .then(account => account.select('inboxURI'))
+  ]);
+
+  await postToInbox(repository, sender, inboxURI, follow);
+};

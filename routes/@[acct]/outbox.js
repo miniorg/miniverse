@@ -22,7 +22,7 @@ import ParsedActivityStreams, {
 import { create } from '../../lib/create';
 import OrderedCollection from '../../lib/ordered_collection';
 import { normalizeHost } from '../../lib/uri';
-import sendActivityStreams from './_send_activitystreams';
+import sendActivityStreams from '../_send_activitystreams';
 
 const middleware = json({
   /*

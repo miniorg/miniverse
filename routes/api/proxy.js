@@ -14,16 +14,26 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { urlencoded } from 'express';
+import ParsedActivityStreams,
+       { NoHost } from '../../lib/parsed_activitystreams';
 import Person from '../../lib/person';
-import { normalizeHost } from '../../lib/uri';
+import sendActivityStreams from '../_send_activitystreams';
 
-export function get({ query, repository }, response, next) {
-  const lowerResource = query.resource;
-  const [, userpart, host] = /(?:acct:)?(.*)@(.*)/.exec(lowerResource);
+const middleware = urlencoded({ extended: false });
 
-  Person.resolveByUsernameAndNormalizedHost(
-    repository, decodeURI(userpart), normalizeHost(host))
-      .then(person => person.select('account'))
-      .then(account => account.toWebFinger())
-      .then(response.json.bind(response), next);
+export function post(request, response, next) {
+  middleware(request, response, error => {
+    if (error) {
+      next(error);
+      return;
+    }
+
+    const { body, repository } = request;
+    const parsed = new ParsedActivityStreams(repository, body.id, NoHost);
+
+    Person.fromParsedActivityStreams(repository, parsed)
+          .then(person => sendActivityStreams(response, person))
+          .catch(next);
+  });
 }

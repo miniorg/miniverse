@@ -28,16 +28,14 @@
 <script>
   export default {
     async preload({ params }) {
-      const personResponse =
-        await this.store.fetchPerson(this.fetch, params.acct);
+      const person = await this.store.fetchPerson(this.fetch, params.acct);
 
-      if (personResponse.status == 200) {
-        const person = await personResponse.json();
+      if (person) {
         await this.store.fetchOutbox(this.fetch, person);
         return { person };
       }
 
-      this.error(personResponse.status, personResponse.statusText);
+      this.error(404, 'Not Found');
     },
 
     methods: {

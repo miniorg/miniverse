@@ -16,6 +16,7 @@
 
 const { join } = require('path');
 const { server } = require('sapper/webpack/config');
+const { ProvidePlugin } = require('webpack');
 const { dependencies } = require('../package');
 
 module.exports = {
@@ -44,5 +45,6 @@ module.exports = {
         }
       }
     ]
-  }
+  },
+  plugins: [new ProvidePlugin({ URLSearchParams: ['url', 'URLSearchParams'] })]
 };
