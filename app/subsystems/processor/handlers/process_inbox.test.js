@@ -54,12 +54,12 @@ test('performs activities', async () => {
     repository,
     account: new RemoteAccount({
       repository,
-      inbox: { uri: new URI({ repository, uri: '' }) },
+      inboxURI: new URI({ repository, uri: '' }),
+      publicKeyURI: new URI({
+        repository,
+        uri: 'https://AcToR.إختبار/users/admin#main-key'
+      }),
       publicKey: {
-        uri: new URI({
-          repository,
-          uri: 'https://AcToR.إختبار/users/admin#main-key'
-        }),
         publicKeyPem: `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
@@ -96,12 +96,12 @@ test('does not perform activities if signature verification failed', async () =>
     repository,
     account: new RemoteAccount({
       repository,
-      inbox: { uri: new URI({ repository, uri: '' }) },
+      inboxURI: new URI({ repository, uri: '' }),
+      publicKeyURI: new URI({
+        repository,
+        uri: 'https://AcToR.إختبار/users/admin#main-key'
+      }),
       publicKey: {
-        uri: new URI({
-         repository,
-         uri: 'https://AcToR.إختبار/users/admin#main-key'
-        }),
         publicKeyPem: `-----BEGIN RSA PUBLIC KEY-----
 MIIBCgKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGTrcO6
 S16XQ3tffCo0QA7G1MOzTeOEJHMiNM4jQQuY0NgDGMs3KEgo0J4ik75VnlyOiSyF
@@ -136,12 +136,12 @@ test('resolves even if object with unsupported type is given', async () => {
     repository,
     account: new RemoteAccount({
       repository,
-      inbox: { uri: new URI({ repository, uri: '' }) },
+      inboxURI: new URI({ repository, uri: '' }),
+      publicKeyURI: new URI({
+        repository,
+        uri: 'https://AcToR.إختبار/users/admin#main-key'
+      }),
       publicKey: {
-        uri: new URI({
-          repository,
-          uri: 'https://AcToR.إختبار/users/admin#main-key'
-        }),
         publicKeyPem: `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
@@ -173,12 +173,12 @@ test('rejects without TemporaryError if all rejections are not temporary', async
       repository,
       account: new RemoteAccount({
         repository,
-        inbox: { uri: new URI({ repository, uri: '' }) },
+        inboxURI: new URI({ repository, uri: '' }),
+        publicKeyURI: new URI({
+          repository,
+          uri: 'https://AcToR.إختبار/users/admin#main-key'
+        }),
         publicKey: {
-          uri: new URI({
-            repository,
-            uri: 'https://AcToR.إختبار/users/admin#main-key'
-          }),
           publicKeyPem: `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
@@ -233,12 +233,12 @@ test('rejects with TemporaryError if some rejection is temporary', async () => {
     repository,
     account: new RemoteAccount({
       repository,
-      inbox: { uri: new URI({ repository, uri: '' }) },
+      inboxURI: new URI({ repository, uri: '' }),
+      publicKeyURI: new URI({
+        repository,
+        uri: 'https://AcToR.إختبار/users/admin#main-key'
+      }),
       publicKey: {
-        uri: new URI({
-          repository,
-          uri: 'https://AcToR.إختبار/users/admin#main-key'
-        }),
         publicKeyPem: `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
