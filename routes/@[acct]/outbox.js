@@ -19,6 +19,7 @@ import ParsedActivityStreams, {
   AnyHost,
   TypeNotAllowed
 } from '../../lib/parsed_activitystreams';
+import { create } from '../../lib/create';
 import OrderedCollection from '../../lib/ordered_collection';
 import { normalizeHost } from '../../lib/uri';
 
@@ -102,7 +103,7 @@ export function post(request, response, next) {
       object.act(person)
             .catch(error => {
               if (error instanceof TypeNotAllowed) {
-                return object.create(person).catch(error => {
+                return create(repository, person, object).catch(error => {
                   if (!(error instanceof TypeNotAllowed)) {
                     throw error;
                   }

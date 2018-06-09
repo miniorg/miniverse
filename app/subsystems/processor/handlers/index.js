@@ -15,6 +15,7 @@
 */
 
 import accept from './accept';
+import postNote from './post_note';
 import processInbox from './process_inbox';
 
-export default { accept, processInbox };
+export default { accept, postNote, processInbox };

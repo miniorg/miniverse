@@ -14,19 +14,17 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Accept from '../../../../lib/accept';
+import Create from '../../../../lib/create';
 import postToInbox from '../../../../lib/post_to_inbox';
 
-export default async (repository, { data: { objectId } }) => {
-  const accept = new Accept({ objectId, repository });
-
-  const object = await accept.select('object');
-  const [sender, inboxURI] = await Promise.all([
-    object.select('object').then(person => person.select('account')),
-    object.select('actor')
-          .then(person => person.select('account'))
-          .then(account => account.select('inboxURI'))
+export default async (repository, { data: { noteId, inboxURIId } }) => {
+  const [[create, sender], inboxURI] = await Promise.all([
+    repository.selectNoteById(noteId).then(object => Promise.all([
+      new Create({ object }),
+      object.select('attributedTo').then(person => person.select('account'))
+    ])),
+    repository.selectURIById(inboxURIId)
   ]);
 
-  await postToInbox(repository, sender, inboxURI, accept);
+  await postToInbox(repository, sender, inboxURI, create);
 };

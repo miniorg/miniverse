@@ -14,30 +14,30 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Follow from '../../../../lib/follow';
 import LocalAccount from '../../../../lib/local_account';
+import Note from '../../../../lib/note';
 import Person from '../../../../lib/person';
 import RemoteAccount from '../../../../lib/remote_account';
 import repository from '../../../../lib/test_repository';
 import URI from '../../../../lib/uri';
-import accept from './accept';
+import postNote from './post_note';
 import nock from 'nock';
 
 test('delivers to remote account', async () => {
-  const actor = new Person({
+  const recipient = new RemoteAccount({
     repository,
-    account: new RemoteAccount({
+    person: new Person({
       repository,
-      inboxURI: new URI({ repository, uri: 'https://AcToR.إختبار/?inbox' }),
-      publicKeyURI: new URI({ repository, uri: '' }),
-      publicKey: { publicKeyPem: '' },
-      uri: new URI({ repository, uri: '' })
+      username: '行動者',
+      host: 'FiNgEr.ReCiPiEnT.إختبار'
     }),
-    username: '行動者',
-    host: 'FiNgEr.AcToR.إختبار'
+    inboxURI: new URI({ repository, uri: 'https://ReCiPiEnT.إختبار/?inbox' }),
+    publicKeyURI: new URI({ repository, uri: '' }),
+    publicKey: { publicKeyPem: '' },
+    uri: new URI({ repository, uri: '' })
   });
 
-  const object = new Person({
+  const attributedTo = new Person({
     repository,
     account: new LocalAccount({
       repository,
@@ -79,17 +79,20 @@ OyJRYe+sFKZ6lXqnwdWuTrxTNucFuhw+6BVyzNn6lI5cNXLr1reH
   });
 
   await Promise.all([
-    repository.insertRemoteAccount(actor.account),
-    repository.insertLocalAccount(object.account)
+    repository.insertRemoteAccount(recipient),
+    repository.insertLocalAccount(attributedTo.account)
   ]);
 
-  const follow = new Follow({ actor, object });
-  await repository.insertFollow(follow);
+  const note = new Note({ repository, content: '', attributedTo });
+  await repository.insertNote(note);
 
-  const post = nock('https://AcToR.إختبار').post('/?inbox').reply(200);
+  const post = nock('https://ReCiPiEnT.إختبار').post('/?inbox').reply(200);
 
   try {
-    await accept(repository, { data: { objectId: follow.id } });
+    await postNote(repository, {
+      data: { noteId: note.id, inboxURIId: recipient.inboxURIId }
+    });
+
     expect(post.isDone()).toBe(true);
   } finally {
     nock.cleanAll();
