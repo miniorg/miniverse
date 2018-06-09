@@ -79,7 +79,14 @@ ewIDAQAB
   await processInbox(repository, {
     data: {
       signature,
-      body: '{"type": "Create", "object": { "type": "Note", "content": "内容" } }',
+      body: `{
+  "type": "Create",
+  "object": {
+    "type": "Note",
+    "to": "https://www.w3.org/ns/activitystreams#Public",
+    "content": "内容"
+  }
+}`
     }
   });
 
