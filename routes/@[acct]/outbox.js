@@ -22,6 +22,7 @@ import ParsedActivityStreams, {
 import { create } from '../../lib/create';
 import OrderedCollection from '../../lib/ordered_collection';
 import { normalizeHost } from '../../lib/uri';
+import sendActivityStreams from './_send_activitystreams';
 
 const middleware = json({
   /*
@@ -41,7 +42,7 @@ export function get({ params, repository }, response, next) {
   const normalizedHost = normalizeHost(host);
 
   repository.selectRecentNotesByUsernameAndNormalizedHost(userpart, normalizedHost)
-            .then(async orderedItems => {
+            .then(orderedItems => {
               /*
                 ActivityPub
                 5.1 Outbox
@@ -50,11 +51,8 @@ export function get({ params, repository }, response, next) {
               */
               const collection = new OrderedCollection({ orderedItems });
 
-              const message = await collection.toActivityStreams();
-
-              message['@context'] = 'https://www.w3.org/ns/activitystreams';
-              return message;
-            }).then(response.json.bind(response), next);
+              return sendActivityStreams(response, collection);
+            }).catch(next);
 }
 
 /*

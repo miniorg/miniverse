@@ -16,6 +16,7 @@
 
 import Person from '../../lib/person';
 import { normalizeHost } from '../../lib/uri';
+import sendActivityStreams from './_send_activitystreams';
 
 export function get(request, response, next) {
   const accepted = request.accepts([
@@ -43,15 +44,7 @@ export function get(request, response, next) {
     normalizedHost = normalizeHost(acct.slice(atIndex + 1));
   }
 
-  Person.resolveByUsernameAndNormalizedHost(repository, username, normalizedHost).then(async person => {
-    const message = await person.toActivityStreams();
-
-    message['@context'] = [
-      'https://miniverse.social/ns',
-      'https://w3id.org/security/v1',
-      'https://www.w3.org/ns/activitystreams'
-    ];
-
-    return message;
-  }).then(response.json.bind(response), next);
+  Person.resolveByUsernameAndNormalizedHost(repository, username, normalizedHost)
+        .then(person => sendActivityStreams(response, person))
+        .catch(next);
 }

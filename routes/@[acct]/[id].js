@@ -15,6 +15,7 @@
 */
 
 import { normalizeHost } from '../../lib/uri';
+import sendActivityStreams from './_send_activitystreams';
 
 export function get(request, response, next) {
   const { params, repository } = request;
@@ -37,10 +38,7 @@ export function get(request, response, next) {
       return;
     }
 
-    const [attributedTo, message] = await Promise.all([
-      note.select('attributedTo'),
-      note.toActivityStreams()
-    ]);
+    const attributedTo = await note.select('attributedTo');
 
     if (!attributedTo ||
         attributedTo.username != username ||
@@ -50,7 +48,6 @@ export function get(request, response, next) {
       return;
     }
 
-    message['@context'] = 'https://www.w3.org/ns/activitystreams';
-    return message;
-  }).then(response.json.bind(response), next);
+    await sendActivityStreams(response, note);
+  }).catch(next);
 }
