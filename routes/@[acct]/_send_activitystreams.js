@@ -32,10 +32,5 @@ export default async (response, object) => {
   */
   response.set('Content-Type', 'application/activity+json');
 
-  /*
-    Express.js kindly adds charset=utf-8 to Content-Type when string or object
-    is fed, but Mastodon requires exact match of Content-Type. Disable the
-    feature by feeding the response as binary.
-  */
-  response.send(Buffer.from(JSON.stringify(message)));
+  response.send(message);
 };
