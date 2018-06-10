@@ -5,6 +5,41 @@ stages:
     if: branch = master
 jobs:
   include:
+  - stage: test
+    os: linux
+    dist: trusty
+    sudo: false
+    addons:
+      postgresql: 9.6
+  - stage: test
+    os: linux
+    dist: trusty
+    sudo: false
+    addons:
+      postgresql: 9.5
+  - stage: test
+    os: linux
+    dist: trusty
+    sudo: false
+    addons:
+      postgresql: 9.4
+  - stage: test
+    os: linux
+    dist: trusty
+    sudo: false
+    addons:
+      postgresql: 9.3
+  - stage: test
+    os: osx
+    before_install:
+      - initdb -D "$HOME/postgres"
+      - pg_ctl -D "$HOME/postgres" start
+      - brew install redis
+      - redis-server --daemonize yes
+      - pg_isready
+    cache:
+      directories:
+        - "$HOME/Library/Caches/Homebrew"
   - stage: deploy
     os: linux
     dist: trusty
@@ -15,38 +50,6 @@ jobs:
       - npm pack
       - scp -o UserKnownHostsFile=known_hosts -P 110 miniverse-0.0.1.tgz miniverse@pub.miniverse.social:miniverse.tgz
       - ssh -o UserKnownHostsFile=known_hosts -p 110 miniverse@pub.miniverse.social "sudo systemctl stop miniverse && scl enable rh-nodejs8 'npm install miniverse.tgz && PATH=\$PWD/node_modules/.bin:\$PATH PGDATABASE=miniverse PGHOST=/var/run/postgresql ./node_modules/.bin/miniverse db-migrate up' && sudo systemctl start miniverse"
-matrix:
-  include:
-    - os: linux
-      dist: trusty
-      sudo: false
-      addons:
-        postgresql: 9.6
-    - os: linux
-      dist: trusty
-      sudo: false
-      addons:
-        postgresql: 9.5
-    - os: linux
-      dist: trusty
-      sudo: false
-      addons:
-        postgresql: 9.4
-    - os: linux
-      dist: trusty
-      sudo: false
-      addons:
-        postgresql: 9.3
-    - os: osx
-      before_install:
-        - initdb -D "$HOME/postgres"
-        - pg_ctl -D "$HOME/postgres" start
-        - brew install redis
-        - redis-server --daemonize yes
-        - pg_isready
-      cache:
-        directories:
-          - "$HOME/Library/Caches/Homebrew"
 services:
   - redis-server
 cache:
