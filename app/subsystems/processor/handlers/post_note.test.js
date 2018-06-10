@@ -83,7 +83,13 @@ OyJRYe+sFKZ6lXqnwdWuTrxTNucFuhw+6BVyzNn6lI5cNXLr1reH
     repository.insertLocalAccount(attributedTo.account)
   ]);
 
-  const note = new Note({ repository, content: '', attributedTo });
+  const note = new Note({
+    repository,
+    content: '',
+    attributedTo,
+    mentions: []
+  });
+
   await repository.insertNote(note);
 
   const post = nock('https://ReCiPiEnT.إختبار').post('/?inbox').reply(200);

@@ -84,7 +84,8 @@ ewIDAQAB
   "object": {
     "type": "Note",
     "to": "https://www.w3.org/ns/activitystreams#Public",
-    "content": "内容"
+    "content": "内容",
+    "tag": []
   }
 }`
     }
