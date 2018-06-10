@@ -22,7 +22,7 @@ export function get(request, response, next) {
   response.setHeader('Content-Type', 'text/event-stream');
   response.setHeader('Transfer-Encoding', 'chunked');
 
-  repository.selectRecentNotesFromInbox(user).then(async notes => {
+  user.select('inbox').then(async notes => {
     const initialCollection = new OrderedCollection({
       orderedItems: notes.reverse()
     });
