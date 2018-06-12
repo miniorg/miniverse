@@ -19,6 +19,21 @@ import Store from '../../lib/store';
 import App from '../app';
 import { routes } from '../manifest/client';
 
+window.ga = function() {
+  ga.q.push(arguments);
+};
+
+ga.q = [];
+
+document.addEventListener('securitypolicyviolation',
+  ({ blockedURI, violatedDirective }) => ga(
+    'send',
+    'event',
+    'Security Policy Violation',
+    violatedDirective,
+    blockedURI,
+    { nonInteraction: true }));
+
 export default target => init({
   target,
   App,

@@ -57,7 +57,7 @@ export default (repository, port) => {
           }
         } else {
           if (process.env.NODE_ENV != 'development') {
-            response.set('Content-Security-Policy', 'default-src \'none\'; connect-src \'self\' data:; script-src \'self\' \'unsafe-inline\'');
+            response.set('Content-Security-Policy', `default-src 'none'; connect-src 'self' data:; img-src ${repository.analytics.image.sourceList}; script-src 'self' 'unsafe-inline' ${repository.analytics.script.sourceList}`);
           }
 
           if (account) {
@@ -95,6 +95,7 @@ export default (repository, port) => {
       routes,
       store({ nonce, userActivityStreams }) {
         return new Store({
+          analytics: repository.analytics,
           nonce,
           user: userActivityStreams,
           events: null,

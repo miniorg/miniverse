@@ -15,5 +15,26 @@
 -->
 
 <main><svelte:component this={Page} {...props} /></main>
-<p>Copyright (C) 2018  Miniverse authors. Licensed under <a href='/agpl-3.0-standalone.html'>AGPL-3.0</a>.</p>
-<p>See <a href='/license-main.html'>licenses of third parties</a> as well.</p>
+{#if $analytics.script.source}
+  <p>This site sends various data potentially private to third party. Block
+     <code>{$analytics.script.source}</code> to prevent this.</p>
+{/if}
+<script>
+  export default {
+    oncreate() {
+      const { script, trackingId } = this.store.get().analytics;
+
+      if (script.source) {
+        const element = document.createElement('script');
+
+        ga.l = +new Date;
+        ga('create', trackingId, 'auto');
+        ga('send', 'pageview');
+
+        element.async = true;
+        element.src = script.source;
+        document.getElementsByTagName('head')[0].appendChild(element);
+      }
+    }
+  };
+</script>

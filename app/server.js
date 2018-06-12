@@ -20,6 +20,14 @@ import processJobs from './subsystems/processor';
 import serve from './subsystems/server';
 
 const repository = new Repository({
+  analytics: {
+    image: { sourceList: process.env.ANALYTICS_IMAGE_SOURCE_LIST },
+    script: {
+      sourceList: process.env.ANALYTICS_SCRIPT_SOURCE_LIST,
+      source: process.env.ANALYTICS_SCRIPT_SOURCE
+    },
+    trackingId: process.env.ANALYTICS_TRACKING_ID
+  },
   console,
   fingerHost: process.env.FINGER_HOST,
   host: process.env.HOST,
