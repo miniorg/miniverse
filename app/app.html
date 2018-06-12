@@ -28,8 +28,7 @@
         const element = document.createElement('script');
 
         ga.l = +new Date;
-        ga('create', trackingId, 'auto');
-        ga('send', 'pageview');
+        ga.q.unshift(['create', trackingId, 'auto'], ['send', 'pageview']);
 
         element.async = true;
         element.src = script.source;
