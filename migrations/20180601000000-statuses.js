@@ -31,7 +31,7 @@ CREATE FUNCTION delete_status(
   attributed_to_id BIGINT
 ) RETURNS VOID AS $$
   BEGIN
-    IF EXISTS (SELECT FROM statuses WHERE statuses.id = $1 AND attributed_to_id = $2) THEN
+    IF EXISTS (SELECT TRUE FROM statuses WHERE statuses.id = $1 AND attributed_to_id = $2) THEN
       DELETE FROM statuses USING announces
         WHERE statuses.id = announces.id AND announces.object_id = $1;
       DELETE FROM statuses WHERE statuses.id = $1;
