@@ -18,6 +18,7 @@ import LocalAccount from '../../../../lib/local_account';
 import Note from '../../../../lib/note';
 import Person from '../../../../lib/person';
 import RemoteAccount from '../../../../lib/remote_account';
+import Status from '../../../../lib/status';
 import repository from '../../../../lib/test_repository';
 import URI from '../../../../lib/uri';
 import postNote from './post_note';
@@ -37,7 +38,7 @@ test('delivers to remote account', async () => {
     uri: new URI({ repository, uri: '' })
   });
 
-  const attributedTo = new Person({
+  const person = new Person({
     repository,
     account: new LocalAccount({
       repository,
@@ -80,13 +81,13 @@ OyJRYe+sFKZ6lXqnwdWuTrxTNucFuhw+6BVyzNn6lI5cNXLr1reH
 
   await Promise.all([
     repository.insertRemoteAccount(recipient),
-    repository.insertLocalAccount(attributedTo.account)
+    repository.insertLocalAccount(person.account)
   ]);
 
   const note = new Note({
     repository,
+    status: new Status({ repository, person }),
     content: '',
-    attributedTo,
     mentions: []
   });
 

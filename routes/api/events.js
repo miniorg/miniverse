@@ -22,9 +22,10 @@ export function get(request, response, next) {
   response.setHeader('Content-Type', 'text/event-stream');
   response.setHeader('Transfer-Encoding', 'chunked');
 
-  user.select('inbox').then(async notes => {
+  user.select('inbox').then(async statuses => {
     const initialCollection = new OrderedCollection({
-      orderedItems: notes.reverse()
+      orderedItems: await Promise.all(
+        statuses.reverse().map(status => status.select('extension')))
     });
 
     const resolved = await initialCollection.toActivityStreams(repository);

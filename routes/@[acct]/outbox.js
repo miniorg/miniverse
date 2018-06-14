@@ -41,7 +41,9 @@ export function get({ params, repository }, response, next) {
   const [userpart, host] = params.acct.split('@', 2);
   const normalizedHost = normalizeHost(host);
 
-  repository.selectRecentNotesByUsernameAndNormalizedHost(userpart, normalizedHost)
+  repository.selectRecentStatusesIncludingExtensionsAndPersonsByUsernameAndNormalizedHost(userpart, normalizedHost)
+            .then(statuses =>
+              Promise.all(statuses.map(status => status.select('extension'))))
             .then(orderedItems => {
               /*
                 ActivityPub

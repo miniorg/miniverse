@@ -38,12 +38,17 @@ export function get(request, response, next) {
       return;
     }
 
-    const attributedTo = await note.select('attributedTo');
+    const status = await note.select('status');
+    if (!status) {
+      response.sendStatus(404);
+      return;
+    }
 
-    if (!attributedTo ||
-        attributedTo.username != username ||
-        (attributedTo.host != normalizedHost &&
-         normalizeHost(attributedTo.host) != normalizedHost)) {
+    const person = await status.select('person');
+    if (!person ||
+        person.username != username ||
+        (person.host != normalizedHost &&
+         normalizeHost(person.host) != normalizedHost)) {
       response.sendStatus(404);
       return;
     }

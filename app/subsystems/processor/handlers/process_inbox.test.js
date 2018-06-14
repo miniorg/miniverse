@@ -91,10 +91,10 @@ ewIDAQAB
     }
   });
 
-  const notes = await repository.selectRecentNotesByUsernameAndNormalizedHost(
+  const notes = await repository.selectRecentStatusesIncludingExtensionsAndPersonsByUsernameAndNormalizedHost(
     'aCtOr', 'finger.actor.xn--kgbechtv');
 
-  expect(notes[0]).toHaveProperty('content', '内容');
+  expect(notes[0]).toHaveProperty(['extension', 'content'], '内容');
 });
 
 test('does not perform activities if signature verification failed', async () => {
@@ -131,7 +131,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
     }
   });
 
-  await expect(repository.selectRecentNotesByUsernameAndNormalizedHost(
+  await expect(repository.selectRecentStatusesIncludingExtensionsAndPersonsByUsernameAndNormalizedHost(
     'aCtOr', 'finger.actor.xn--kgbechtv')).resolves.toEqual([]);
 });
 
