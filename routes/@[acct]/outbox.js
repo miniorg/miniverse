@@ -41,7 +41,8 @@ export function get({ params, repository }, response, next) {
   const [userpart, host] = params.acct.split('@', 2);
   const normalizedHost = normalizeHost(host);
 
-  repository.selectRecentStatusesIncludingExtensionsAndPersonsByUsernameAndNormalizedHost(userpart, normalizedHost)
+  repository.selectPersonByUsernameAndNormalizedHost(userpart, normalizedHost)
+            .then(person => person.select('statuses'))
             .then(statuses =>
               Promise.all(statuses.map(status => status.select('extension'))))
             .then(orderedItems => {

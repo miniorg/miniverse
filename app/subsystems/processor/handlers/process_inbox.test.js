@@ -91,8 +91,7 @@ ewIDAQAB
     }
   });
 
-  const notes = await repository.selectRecentStatusesIncludingExtensionsAndPersonsByUsernameAndNormalizedHost(
-    'aCtOr', 'finger.actor.xn--kgbechtv');
+  const notes = await repository.selectRecentStatusesIncludingExtensionsByPersonId(actor.id);
 
   expect(notes[0]).toHaveProperty(['extension', 'content'], '内容');
 });
@@ -131,8 +130,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
     }
   });
 
-  await expect(repository.selectRecentStatusesIncludingExtensionsAndPersonsByUsernameAndNormalizedHost(
-    'aCtOr', 'finger.actor.xn--kgbechtv')).resolves.toEqual([]);
+  await expect(repository.selectRecentStatusesIncludingExtensionsByPersonId(actor.id)).resolves.toEqual([]);
 });
 
 test('resolves even if object with unsupported type is given', async () => {
