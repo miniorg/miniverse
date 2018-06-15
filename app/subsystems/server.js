@@ -57,7 +57,7 @@ export default (repository, port) => {
           }
         } else {
           if (process.env.NODE_ENV != 'development') {
-            response.set('Content-Security-Policy', `default-src 'none'; connect-src 'self' data:; img-src ${repository.analytics.image.sourceList}; script-src 'self' 'unsafe-inline' ${repository.analytics.script.sourceList}`);
+            response.set('Content-Security-Policy', `default-src 'none'; connect-src 'self' data:; frame-src ${repository.content.frame.sourceList}; img-src ${repository.content.image.sourceList}; script-src 'self' 'unsafe-inline' ${repository.content.script.sourceList}`);
           }
 
           if (account) {
@@ -96,7 +96,9 @@ export default (repository, port) => {
       store({ nonce, userActivityStreams }) {
         return new Store({
           analytics: repository.analytics,
+          captcha: repository.captcha.site,
           nonce,
+          scripts: repository.content.script.sources,
           user: userActivityStreams,
           events: null,
           fingerHost: repository.fingerHost

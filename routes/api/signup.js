@@ -15,6 +15,8 @@
 */
 
 import { raw } from 'body-parser';
+import { URLSearchParams } from 'url';
+import fetch from '../../lib/fetch';
 import LocalAccount from '../../lib/local_account';
 import cookie from './_cookie';
 
@@ -31,10 +33,27 @@ export function post(request, response, next) {
     const salt = body.slice(0, 64);
     const serverKey = body.slice(64, 96);
     const storedKey = body.slice(96, 128);
-    const username = body.slice(128).toString();
+    const [token, username] = body.slice(128).toString().split('\0');
+    const verification = repository.captcha.verifier ?
+      fetch(repository, repository.captcha.verifier, {
+        method: 'POST',
+        body: new URLSearchParams(
+          { secret: repository.captcha.secret, token, hashes: '1024' })
+      }).then(verification => verification.json())
+        .then(({ success }) => success) :
+      Promise.resolve(true);
 
-    LocalAccount.create(repository, username, false, salt, serverKey, storedKey)
-                .then(account => cookie(repository, account, response))
-                .then(() => response.sendStatus(204), next);
+    verification.then(async success => {
+      if (!success) {
+        response.sendStatus(401);
+        return;
+      }
+
+      const account = await LocalAccount.create(
+        repository, username, false, salt, serverKey, storedKey);
+
+      cookie(repository, account, response);
+      response.sendStatus(204);
+    }).catch(next);
   });
 }

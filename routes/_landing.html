@@ -23,6 +23,11 @@
   <form on:submit='signup(event)'>
     <input name='username' placeholder='Username' type='text' />
     <input name='password' placeholder='Password' type='password' />
+    {#if $captcha}
+      <div class='coinhive-captcha' data-hashes='1024' data-key={$captcha}>
+        <em>Loading Captcha...<br>If it doesn't load, please disable Adblock!</em>
+      </div>
+    {/if}
     <button>Sign up</button>
   </form>
 </div>
@@ -41,9 +46,11 @@
       signup(event) {
         const username = event.target.elements.username.value;
         const password = event.target.elements.password.value;
+        const captcha = event.target.elements['coinhive-captcha-token'] &&
+          event.target.elements['coinhive-captcha-token'].value;
 
         event.preventDefault();
-        this.store.signup(fetch, username, password);
+        this.store.signup(fetch, username, password, captcha);
       }
     }
   };

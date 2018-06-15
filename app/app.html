@@ -15,24 +15,27 @@
 -->
 
 <main><svelte:component this={Page} {...props} /></main>
-{#if $analytics.script.source}
-  <p>This site sends various data potentially private to third party. Block
-     <code>{$analytics.script.source}</code> to prevent this.</p>
+{#if $analytics.trackingId}
+  <p>This site sends various data potentially private to third party. Check
+     loaded scripts and block them if you don't want.</p>
 {/if}
 <script>
   export default {
     oncreate() {
-      const { script, trackingId } = this.store.get().analytics;
+      const { analytics, scripts } = this.store.get();
+      const head = document.getElementsByTagName('head')[0];
 
-      if (script.source) {
+      ga.l = +new Date;
+      ga.q.unshift(
+        ['create', analytics.trackingId, 'auto'], ['send', 'pageview']);
+
+      for (const script of scripts) {
         const element = document.createElement('script');
 
-        ga.l = +new Date;
-        ga.q.unshift(['create', trackingId, 'auto'], ['send', 'pageview']);
-
         element.async = true;
-        element.src = script.source;
-        document.getElementsByTagName('head')[0].appendChild(element);
+        element.src = script;
+
+        head.appendChild(element);
       }
     }
   };
