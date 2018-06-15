@@ -14,26 +14,17 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import URI from '../uri';
-
-export default {
-  async selectURIById(id) {
-    const { rows } = await this.pg.query({
-      name: 'selectURIById',
-      text: 'SELECT * FROM uris WHERE id = $1',
-      values: [id]
-    });
-
-    return new URI({ id, uri: rows[0].uri });
-  },
-
-  async selectURI(uri) {
-    const { rows } = await this.pg.query({
-      name: 'selectURI',
-      text: 'SELECT * FROM uris WHERE uri = $1',
-      values: [uri]
-    });
-
-    return rows[0] ? new URI({ repository: this, id: rows[0].id, uri }) : null;
+exports.up = (db, callback) => db.createTable('tombstones', {
+  id: {
+    type: 'bigint',
+    primaryKey: true,
+    foreignKey: {
+      name: 'id',
+      table: 'uris',
+      rules: { onDelete: 'CASCADE', onUpdate: 'CASCADE' },
+      mapping: 'id',
+    }
   }
-};
+}, callback);
+
+exports._meta = { version: 1 };
