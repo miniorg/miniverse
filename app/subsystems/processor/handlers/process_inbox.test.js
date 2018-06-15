@@ -14,13 +14,13 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Follow from '../../../../lib/follow';
-import LocalAccount from '../../../../lib/local_account';
-import Person from '../../../../lib/person';
-import RemoteAccount from '../../../../lib/remote_account';
 import TemporaryError from '../../../../lib/temporary_error';
-import repository from '../../../../lib/test_repository';
-import URI from '../../../../lib/uri';
+import {
+  fabricateFollow,
+  fabricateLocalAccount,
+  fabricateRemoteAccount
+} from '../../../../lib/test/fabricator';
+import repository from '../../../../lib/test/repository';
 import processInbox from './process_inbox';
 const nock = require('nock');
 
@@ -50,16 +50,9 @@ content-type: application/activity+json`,
 };
 
 test('performs activities', async () => {
-  const actor = new Person({
-    repository,
-    account: new RemoteAccount({
-      repository,
-      inboxURI: new URI({ repository, uri: '' }),
-      publicKeyURI: new URI({
-        repository,
-        uri: 'https://AcToR.إختبار/users/admin#main-key'
-      }),
-      publicKeyPem: `-----BEGIN PUBLIC KEY-----
+  const { person } = await fabricateRemoteAccount({
+    publicKeyURI: { uri: 'https://AcToR.إختبار/users/admin#main-key' },
+    publicKeyPem: `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
 1Iu2LbvQ6iE19RM01An3kBA/MPelQATPv832/pWxdCjWPP8i2snPbzPZ5gSJP55v
@@ -68,14 +61,9 @@ aiM3niRO1Dwz7XPszQ8ygbLWdqM/2pAvckp/lIUm0ufVz5ONGcqjZDVUNh/ZQ5tO
 AOc6sswdQZB3Q0FHFgaM5FkAeB07OSK+ndZffVfqfe5YM39470E9uGqC3NQYVkGH
 ewIDAQAB
 -----END PUBLIC KEY-----
-`,
-      uri: new URI({ repository, uri: '' })
-    }),
-    username: 'aCtOr',
-    host: 'FiNgEr.AcToR.xn--kgbechtv',
+`
   });
 
-  await repository.insertRemoteAccount(actor.account);
   await processInbox(repository, {
     data: {
       signature,
@@ -91,22 +79,15 @@ ewIDAQAB
     }
   });
 
-  const notes = await repository.selectRecentStatusesIncludingExtensionsByPersonId(actor.id);
+  const notes = await repository.selectRecentStatusesIncludingExtensionsByPersonId(person.id);
 
   expect(notes[0]).toHaveProperty(['extension', 'content'], '内容');
 });
 
 test('does not perform activities if signature verification failed', async () => {
-  const actor = new Person({
-    repository,
-    account: new RemoteAccount({
-      repository,
-      inboxURI: new URI({ repository, uri: '' }),
-      publicKeyURI: new URI({
-        repository,
-        uri: 'https://AcToR.إختبار/users/admin#main-key'
-      }),
-      publicKeyPem: `-----BEGIN RSA PUBLIC KEY-----
+  const { person } = await fabricateRemoteAccount({
+    publicKeyURI: { uri: 'https://AcToR.إختبار/users/admin#main-key' },
+    publicKeyPem: `-----BEGIN RSA PUBLIC KEY-----
 MIIBCgKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGTrcO6
 S16XQ3tffCo0QA7G1MOzTeOEJHMiNM4jQQuY0NgDGMs3KEgo0J4ik75VnlyOiSyF
 ZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2/POH
@@ -114,14 +95,8 @@ ZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2/POH
 ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 +DHYFaVXQy60WzCEFjiQPZ8XdNQKvDyjKwIDAQAB
 -----END RSA PUBLIC KEY-----
-`,
-      uri: new URI({ repository, uri: '' })
-    }),
-    username: 'aCtOr',
-    host: 'FiNgEr.AcToR.xn--kgbechtv',
+`
   });
-
-  await repository.insertRemoteAccount(actor.account);
 
   await processInbox(repository, {
     data: {
@@ -130,19 +105,33 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
     }
   });
 
-  await expect(repository.selectRecentStatusesIncludingExtensionsByPersonId(actor.id)).resolves.toEqual([]);
+  await expect(repository.selectRecentStatusesIncludingExtensionsByPersonId(person.id)).resolves.toEqual([]);
 });
 
 test('resolves even if object with unsupported type is given', async () => {
-  const actor = new Person({
-    repository,
-    account: new RemoteAccount({
-      repository,
-      inboxURI: new URI({ repository, uri: '' }),
-      publicKeyURI: new URI({
-        repository,
-        uri: 'https://AcToR.إختبار/users/admin#main-key'
-      }),
+  await fabricateRemoteAccount({
+    publicKeyURI: { uri: 'https://AcToR.إختبار/users/admin#main-key' },
+    publicKeyPem: `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
+BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
+1Iu2LbvQ6iE19RM01An3kBA/MPelQATPv832/pWxdCjWPP8i2snPbzPZ5gSJP55v
+Qj2TY8ZUxWq8rVaCB1+87Kiq88Q/ShS6nCgnph4JSLhAcvSGuSbd+YI8/i1ArQZr
+aiM3niRO1Dwz7XPszQ8ygbLWdqM/2pAvckp/lIUm0ufVz5ONGcqjZDVUNh/ZQ5tO
+AOc6sswdQZB3Q0FHFgaM5FkAeB07OSK+ndZffVfqfe5YM39470E9uGqC3NQYVkGH
+ewIDAQAB
+-----END PUBLIC KEY-----
+`
+  });
+
+  await expect(processInbox(repository, {
+    data: { signature, body: '{ "type": "Unknown" }' }
+  })).resolves.toBe(undefined);
+});
+
+test('rejects without TemporaryError if all rejections are not temporary', async () => {
+  const [actor, object] = await Promise.all([
+    fabricateRemoteAccount({
+      publicKeyURI: { uri: 'https://AcToR.إختبار/users/admin#main-key' },
       publicKeyPem: `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
@@ -153,67 +142,11 @@ AOc6sswdQZB3Q0FHFgaM5FkAeB07OSK+ndZffVfqfe5YM39470E9uGqC3NQYVkGH
 ewIDAQAB
 -----END PUBLIC KEY-----
 `,
-      uri: new URI({ repository, uri: '' })
     }),
-    username: 'aCtOr',
-    host: 'FiNgEr.AcToR.xn--kgbechtv',
-  });
-
-  await repository.insertRemoteAccount(actor.account);
-
-  await expect(processInbox(repository, {
-    data: { signature, body: '{ "type": "Unknown" }' }
-  })).resolves.toBe(undefined);
-});
-
-test('rejects without TemporaryError if all rejections are not temporary', async () => {
-  const follow = new Follow({
-    repository,
-    actor: new Person({
-      repository,
-      account: new RemoteAccount({
-        repository,
-        inboxURI: new URI({ repository, uri: '' }),
-        publicKeyURI: new URI({
-          repository,
-          uri: 'https://AcToR.إختبار/users/admin#main-key'
-        }),
-        publicKeyPem: `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
-BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
-1Iu2LbvQ6iE19RM01An3kBA/MPelQATPv832/pWxdCjWPP8i2snPbzPZ5gSJP55v
-Qj2TY8ZUxWq8rVaCB1+87Kiq88Q/ShS6nCgnph4JSLhAcvSGuSbd+YI8/i1ArQZr
-aiM3niRO1Dwz7XPszQ8ygbLWdqM/2pAvckp/lIUm0ufVz5ONGcqjZDVUNh/ZQ5tO
-AOc6sswdQZB3Q0FHFgaM5FkAeB07OSK+ndZffVfqfe5YM39470E9uGqC3NQYVkGH
-ewIDAQAB
------END PUBLIC KEY-----
-`,
-        uri: new URI({ repository, uri: '' })
-      }),
-      username: 'aCtOr',
-      host: 'FiNgEr.AcToR.xn--kgbechtv',
-    }),
-    object: new Person({
-      repository,
-      account: new LocalAccount({
-        repository,
-        admin: true,
-        privateKeyPem: '',
-        salt: '',
-        serverKey: '',
-        storedKey: ''
-      }),
-      username: 'oBjEcT',
-      host: null
-    })
-  });
-
-  await Promise.all([
-    repository.insertRemoteAccount(follow.actor.account),
-    repository.insertLocalAccount(follow.object.account)
+    fabricateLocalAccount({ person: { username: 'oBjEcT' } })
   ]);
 
-  await repository.insertFollow(follow);
+  await fabricateFollow({ actor: actor.person, object: object.person });
 
   const promise = processInbox(repository, {
     data: { signature, body: '{ "type": "Follow", "object": "https://xn--kgbechtv/@oBjEcT" }' }
@@ -227,16 +160,9 @@ ewIDAQAB
 });
 
 test('rejects with TemporaryError if some rejection is temporary', async () => {
-  const actor = new Person({
-    repository,
-    account: new RemoteAccount({
-      repository,
-      inboxURI: new URI({ repository, uri: '' }),
-      publicKeyURI: new URI({
-        repository,
-        uri: 'https://AcToR.إختبار/users/admin#main-key'
-      }),
-      publicKeyPem: `-----BEGIN PUBLIC KEY-----
+  await fabricateRemoteAccount({
+    publicKeyURI: { uri: 'https://AcToR.إختبار/users/admin#main-key' },
+    publicKeyPem: `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
 1Iu2LbvQ6iE19RM01An3kBA/MPelQATPv832/pWxdCjWPP8i2snPbzPZ5gSJP55v
@@ -245,14 +171,8 @@ aiM3niRO1Dwz7XPszQ8ygbLWdqM/2pAvckp/lIUm0ufVz5ONGcqjZDVUNh/ZQ5tO
 AOc6sswdQZB3Q0FHFgaM5FkAeB07OSK+ndZffVfqfe5YM39470E9uGqC3NQYVkGH
 ewIDAQAB
 -----END PUBLIC KEY-----
-`,
-      uri: new URI({ repository, uri: '' })
-    }),
-    username: 'aCtOr',
-    host: 'FiNgEr.AcToR.xn--kgbechtv',
+`
   });
-
-  await repository.insertRemoteAccount(actor.account);
 
   nock('https://uNrEaChAbLe.إختبار').get('/').replyWithError('');
 
