@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import OrderedCollection from '../../lib/ordered_collection';
+import OrderedCollectionPage from '../../lib/ordered_collection_page';
 
 export function get(request, response, next) {
   const { repository, user } = request;
@@ -23,7 +23,7 @@ export function get(request, response, next) {
   response.setHeader('Transfer-Encoding', 'chunked');
 
   user.select('inbox').then(async statuses => {
-    const initialCollection = new OrderedCollection({
+    const initialCollection = new OrderedCollectionPage({
       orderedItems: await Promise.all(
         statuses.reverse().map(status => status.select('extension')))
     });
@@ -32,7 +32,7 @@ export function get(request, response, next) {
     const subscribedChannel = repository.getInboxChannel(user);
 
     function listen(publishedChannel, message) {
-      return response.write(`data:{"@context":"https://www.w3.org/ns/activitystreams","type":"OrderedCollection","orderedItems":[${message}]}\n\n`);
+      return response.write(`data:{"@context":"https://www.w3.org/ns/activitystreams","type":"OrderedCollectionPage","orderedItems":[${message}]}\n\n`);
     }
 
     resolved['@context'] = 'https://www.w3.org/ns/activitystreams';
