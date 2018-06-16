@@ -14,12 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-export default {
-  insertCookie(cookie) {
-    return this.pg.query({
-      name: 'insertCookie',
-      text: 'INSERT INTO cookies (digest, account_id) VALUES ($1, $2)',
-      values: [cookie.digest, cookie.accountId]
-    });
-  }
-};
+exports.up = (db, callback) =>
+  db.renameColumn('cookies', 'person_id', 'account_id', callback);
+
+exports._meta = { version: 1 };
