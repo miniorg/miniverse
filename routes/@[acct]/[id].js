@@ -33,20 +33,15 @@ export const get = secure(async (request, response) => {
     normalizedHost = normalizeHost(acct.slice(atIndex + 1));
   }
 
-  const note = await repository.selectNoteById(params.id);
-  if (!note) {
-    response.sendStatus(404);
-    return;
-  }
-
-  const status = await note.select('status');
+  const status = await repository.selectStatusIncludingExtensionById(params.id);
   if (!status) {
     response.sendStatus(404);
     return;
   }
 
-  const person = await status.select('person');
-  if (!person ||
+  const [extension, person] =
+    await Promise.all([status.select('extension'), status.select('person')]);
+  if (!extension || !person ||
       person.username != username ||
       (person.host != normalizedHost &&
        normalizeHost(person.host) != normalizedHost)) {
@@ -54,5 +49,5 @@ export const get = secure(async (request, response) => {
     return;
   }
 
-  await sendActivityStreams(response, note);
+  await sendActivityStreams(response, extension);
 });
