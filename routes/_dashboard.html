@@ -19,6 +19,10 @@
   <textarea name='content' />
   <button>Post</button>
 </form>
+<form on:submit='announce(event)'>
+  <input name='object' />
+  <button>Share</button>
+</form>
 <ol>
   {#each $user.inbox as item}
     <li>{JSON.stringify(item)}</li>
@@ -34,6 +38,11 @@
       post(event) {
         event.preventDefault();
         this.store.createNote(fetch, event.target.elements.content.value);
+      },
+
+      announce(event) {
+        event.preventDefault();
+        this.store.announce(fetch, event.target.elements.object.value);
       }
     }
   };
