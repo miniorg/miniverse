@@ -17,8 +17,8 @@
 import { raw } from 'body-parser';
 import { URLSearchParams } from 'url';
 import { promisify } from 'util';
-import fetch from '../../lib/fetch';
 import LocalAccount from '../../lib/local_account';
+import fetch from '../../lib/transfer/fetch';
 import secure from '../_secure';
 import cookie from './_cookie';
 

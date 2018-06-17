@@ -15,18 +15,19 @@
 */
 
 import Create from '../../../../lib/create';
-import postToInbox from '../../../../lib/post_to_inbox';
+import Note from '../../../../lib/note';
+import postToInbox from '../../../../lib/transfer/post_to_inbox';
 
-export default async (repository, { data: { noteId, inboxURIId } }) => {
-  const [[create, sender], inboxURI] = await Promise.all([
-    repository.selectNoteById(noteId).then(object => Promise.all([
-      new Create({ object }),
-      object.select('status')
-            .then(status => status.select('person'))
-            .then(person => person.select('account'))
-    ])),
+export default async (repository, { data: { statusId, inboxURIId } }) => {
+  const [[activity, sender], inboxURI] = await Promise.all([
+    repository.selectStatusIncludingExtensionById(statusId).then(status =>
+      Promise.all([
+        status.select('extension').then(object =>
+          object instanceof Note ? new Create({ object }) : object),
+        status.select('person').then(person => person.select('account'))
+      ])),
     repository.selectURIById(inboxURIId)
   ]);
 
-  await postToInbox(repository, sender, inboxURI, create);
+  await postToInbox(repository, sender, inboxURI, activity);
 };

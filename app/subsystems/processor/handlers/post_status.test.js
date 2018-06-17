@@ -15,15 +15,38 @@
 */
 
 import {
+  fabricateAnnounce,
   fabricateLocalAccount,
   fabricateNote,
   fabricateRemoteAccount
 } from '../../../../lib/test/fabricator';
 import repository from '../../../../lib/test/repository';
-import postNote from './post_note';
+import postStatus from './post_status';
 import nock from 'nock';
 
-test('delivers to remote account', async () => {
+test('delivers announce to remote account', async () => {
+  const [recipient, person] = await Promise.all([
+    fabricateRemoteAccount(
+      { inboxURI: { uri: 'https://ReCiPiEnT.إختبار/?inbox' } }),
+    fabricateLocalAccount()
+  ]);
+
+  const announce = await fabricateAnnounce({ status: { person } });
+
+  const post = nock('https://ReCiPiEnT.إختبار').post('/?inbox').reply(200);
+
+  try {
+    await postStatus(repository, {
+      data: { statusId: announce.status.id, inboxURIId: recipient.inboxURIId }
+    });
+
+    expect(post.isDone()).toBe(true);
+  } finally {
+    nock.cleanAll();
+  }
+});
+
+test('delivers note to remote account', async () => {
   const [recipient, person] = await Promise.all([
     fabricateRemoteAccount(
       { inboxURI: { uri: 'https://ReCiPiEnT.إختبار/?inbox' } }),
@@ -35,8 +58,8 @@ test('delivers to remote account', async () => {
   const post = nock('https://ReCiPiEnT.إختبار').post('/?inbox').reply(200);
 
   try {
-    await postNote(repository, {
-      data: { noteId: note.id, inboxURIId: recipient.inboxURIId }
+    await postStatus(repository, {
+      data: { statusId: note.status.id, inboxURIId: recipient.inboxURIId }
     });
 
     expect(post.isDone()).toBe(true);

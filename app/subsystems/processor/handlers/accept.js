@@ -15,7 +15,7 @@
 */
 
 import Accept from '../../../../lib/accept';
-import postToInbox from '../../../../lib/post_to_inbox';
+import postToInbox from '../../../../lib/transfer/post_to_inbox';
 
 export default async (repository, { data: { objectId } }) => {
   const accept = new Accept({ objectId, repository });
