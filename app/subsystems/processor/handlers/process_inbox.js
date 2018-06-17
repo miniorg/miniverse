@@ -46,7 +46,7 @@ export default async (repository, { data }) => {
     if (errors.length) {
       const error = new (
         errors.some(error => error instanceof TemporaryError) ?
-          TemporaryError : Error);
+          TemporaryError : Error)(errors.join());
 
       error.originals = errors;
 
