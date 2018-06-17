@@ -15,25 +15,21 @@
 */
 
 import { urlencoded } from 'express';
+import { promisify } from 'util';
 import ParsedActivityStreams,
        { NoHost } from '../../lib/parsed_activitystreams';
 import Person from '../../lib/person';
+import secure from '../_secure';
 import sendActivityStreams from '../_send_activitystreams';
 
-const middleware = urlencoded({ extended: false });
+const setBody = promisify(urlencoded({ extended: false }));
 
-export function post(request, response, next) {
-  middleware(request, response, error => {
-    if (error) {
-      next(error);
-      return;
-    }
+export const post = secure(async (request, response) => {
+  await setBody(request, response);
 
-    const { body, repository } = request;
-    const parsed = new ParsedActivityStreams(repository, body.id, NoHost);
+  const { body, repository } = request;
+  const parsed = new ParsedActivityStreams(repository, body.id, NoHost);
+  const person = await Person.fromParsedActivityStreams(repository, parsed);
 
-    Person.fromParsedActivityStreams(repository, parsed)
-          .then(person => sendActivityStreams(response, person))
-          .catch(next);
-  });
-}
+  await sendActivityStreams(response, person);
+});

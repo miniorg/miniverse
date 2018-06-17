@@ -16,9 +16,10 @@
 
 import Person from '../../lib/person';
 import { normalizeHost } from '../../lib/uri';
+import secure from '../_secure';
 import sendActivityStreams from '../_send_activitystreams';
 
-export function get(request, response, next) {
+export const get = secure(async (request, response, next) => {
   const accepted = request.accepts([
     'html',
     'application/activity+json',
@@ -30,8 +31,7 @@ export function get(request, response, next) {
     return;
   }
 
-  const { params, repository } = request;
-  const acct = decodeURIComponent(params.acct);
+  const acct = decodeURIComponent(request.params.acct);
   const atIndex = acct.lastIndexOf('@');
   let username;
   let normalizedHost;
@@ -44,7 +44,8 @@ export function get(request, response, next) {
     normalizedHost = normalizeHost(acct.slice(atIndex + 1));
   }
 
-  Person.resolveByUsernameAndNormalizedHost(repository, username, normalizedHost)
-        .then(person => sendActivityStreams(response, person))
-        .catch(next);
-}
+  const person = await Person.resolveByUsernameAndNormalizedHost(
+    request.repository, username, normalizedHost);
+
+  await sendActivityStreams(response, person);
+});

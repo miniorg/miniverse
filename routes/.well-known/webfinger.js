@@ -16,19 +16,20 @@
 
 import Person from '../../lib/person';
 import { normalizeHost } from '../../lib/uri';
+import secure from '../_secure';
 
-export function get({ query, repository }, response, next) {
+export const get = secure(async ({ query, repository }, response) => {
   const lowerResource = query.resource;
   const [, userpart, host] = /(?:acct:)?(.*)@(.*)/.exec(lowerResource);
   const normalizedHost = normalizeHost(host);
 
-  const asyncPerson = host == normalizeHost(repository.fingerHost) ?
+  const person = await (host == normalizeHost(repository.fingerHost) ?
     repository.selectPersonByUsernameAndNormalizedHost(
       decodeURI(userpart), null) :
     Person.resolveByUsernameAndNormalizedHost(
-      repository, decodeURI(userpart), host);
+      repository, decodeURI(userpart), host));
 
-  asyncPerson.then(person => person.select('account'))
-             .then(account => account.toWebFinger())
-             .then(response.json.bind(response), next);
-}
+  const account = await person.select('account');
+
+  response.json(await account.toWebFinger());
+});

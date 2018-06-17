@@ -15,6 +15,7 @@
 */
 
 import { json } from 'express';
+import { promisify } from 'util';
 import ParsedActivityStreams, {
   AnyHost,
   TypeNotAllowed
@@ -22,9 +23,10 @@ import ParsedActivityStreams, {
 import { create } from '../../lib/create';
 import OrderedCollection from '../../lib/ordered_collection';
 import { normalizeHost } from '../../lib/uri';
+import secure from '../_secure';
 import sendActivityStreams from '../_send_activitystreams';
 
-const middleware = json({
+const setBody = promisify(json({
   /*
     ActivityPub
     6. Client to Server Interactions
@@ -35,28 +37,30 @@ const middleware = json({
     > for client-to-server interactions.
   */
   type: ['application/activity+json', 'application/ld+json']
-});
+}));
 
-export function get({ params, repository }, response, next) {
+export const get = secure(async ({ params, repository }, response) => {
   const [userpart, host] = params.acct.split('@', 2);
   const normalizedHost = normalizeHost(host);
 
-  repository.selectPersonByUsernameAndNormalizedHost(userpart, normalizedHost)
-            .then(person => person.select('statuses'))
-            .then(statuses =>
-              Promise.all(statuses.map(status => status.select('extension'))))
-            .then(orderedItems => {
-              /*
-                ActivityPub
-                5.1 Outbox
-                https://www.w3.org/TR/activitypub/#outbox
-                > The outbox MUST be an OrderedCollection.
-              */
-              const collection = new OrderedCollection({ orderedItems });
+  const person = await repository.selectPersonByUsernameAndNormalizedHost(
+    userpart, normalizedHost);
 
-              return sendActivityStreams(response, collection);
-            }).catch(next);
-}
+  const statuses = await person.select('statuses');
+
+  const orderedItems =
+    await Promise.all(statuses.map(status => status.select('extension')));
+
+  /*
+    ActivityPub
+    5.1 Outbox
+    https://www.w3.org/TR/activitypub/#outbox
+    > The outbox MUST be an OrderedCollection.
+  */
+  const collection = new OrderedCollection({ orderedItems });
+
+  await sendActivityStreams(response, collection);
+});
 
 /*
   ActivityPub
@@ -65,7 +69,7 @@ export function get({ params, repository }, response, next) {
   > The outbox accepts HTTP POST requests, with behaviour described in Client
   > to Server Interactions.
 */
-export function post(request, response, next) {
+export const post = secure(async (request, response) => {
   const { headers: { origin }, user, params, repository } = request;
 
   if (origin.toLowerCase() != 'https://' + normalizeHost(repository.host)) {
@@ -78,57 +82,58 @@ export function post(request, response, next) {
     return;
   }
 
-  user.select('person').then(person => {
-    if (person.username != params.acct) {
-      response.sendStatus(401);
-      return;
+  const person = await user.select('person');
+  if (person.username != params.acct) {
+    response.sendStatus(401);
+    return;
+  }
+
+  await setBody(request, response);
+
+  const object =
+    new ParsedActivityStreams(repository, request.body, { host: AnyHost });
+
+  let result;
+
+  /*
+    ActivityPub
+    6. Client to Server Interactions
+    https://www.w3.org/TR/activitypub/#client-to-server-interactions
+    > The body of the POST request MUST contain a single Activity (which MAY
+    > contain embedded objects), or a single non-Activity object which will
+    > be wrapped in a Create activity by the server.
+  */
+  try {
+    result = await object.act(person);
+  } catch (error) {
+    if (!(error instanceof TypeNotAllowed)) {
+      throw error;
     }
 
-    middleware(request, response, error => {
-      if (error) {
-        next(error);
-        return;
+    try {
+      await create(repository, person, object);
+    } catch(error) {
+      if (!(error instanceof TypeNotAllowed)) {
+        throw error;
       }
+    }
+  }
 
-      const object =
-        new ParsedActivityStreams(repository, request.body, { host: AnyHost });
+  if (result && result.getUri) {
+    const location = await result.getUri();
 
-      /*
-        ActivityPub
-        6. Client to Server Interactions
-        https://www.w3.org/TR/activitypub/#client-to-server-interactions
-        > The body of the POST request MUST contain a single Activity (which MAY
-        > contain embedded objects), or a single non-Activity object which will
-        > be wrapped in a Create activity by the server.
-      */
-      object.act(person)
-            .catch(error => {
-              if (error instanceof TypeNotAllowed) {
-                return create(repository, person, object).catch(error => {
-                  if (!(error instanceof TypeNotAllowed)) {
-                    throw error;
-                  }
-                });
-              }
+    /*
+      ActivityPub
+      6. Client to Server Interactions
+      https://www.w3.org/TR/activitypub/#client-to-server-interactions
+      > Servers MUST return a 201 Created HTTP code, and unless the
+      > activity is transient, MUST include the new id in the Location
+      > header.
+    */
+    if (location) {
+      response.location(location);
+    }
+  }
 
-              throw error;
-            })
-            .then(result => result && result.getUri && result.getUri())
-            .then(location => {
-              /*
-                ActivityPub
-                6. Client to Server Interactions
-                https://www.w3.org/TR/activitypub/#client-to-server-interactions
-                > Servers MUST return a 201 Created HTTP code, and unless the
-                > activity is transient, MUST include the new id in the Location
-                > header.
-              */
-              if (location) {
-                response.location(location);
-              }
-
-              response.sendStatus(201);
-            }, next);
-    });
-  }).catch(next);
-}
+ response.sendStatus(201);
+});

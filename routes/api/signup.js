@@ -16,44 +16,39 @@
 
 import { raw } from 'body-parser';
 import { URLSearchParams } from 'url';
+import { promisify } from 'util';
 import fetch from '../../lib/fetch';
 import LocalAccount from '../../lib/local_account';
+import secure from '../_secure';
 import cookie from './_cookie';
 
-const middleware = raw();
+const setBody = promisify(raw());
 
-export function post(request, response, next) {
-  middleware(request, response, error => {
-    if (error) {
-      next(error);
-      return;
-    }
+export const post = secure(async (request, response) => {
+  await setBody(request, response);
 
-    const { body, repository } = request;
-    const salt = body.slice(0, 64);
-    const serverKey = body.slice(64, 96);
-    const storedKey = body.slice(96, 128);
-    const [token, username] = body.slice(128).toString().split('\0');
-    const verification = repository.captcha.verifier ?
-      fetch(repository, repository.captcha.verifier, {
-        method: 'POST',
-        body: new URLSearchParams(
-          { secret: repository.captcha.secret, token, hashes: '1024' })
-      }).then(verification => verification.json())
-        .then(({ success }) => success) :
-      Promise.resolve(true);
+  const { body, repository } = request;
+  const salt = body.slice(0, 64);
+  const serverKey = body.slice(64, 96);
+  const storedKey = body.slice(96, 128);
+  const [token, username] = body.slice(128).toString().split('\0');
+  const verified = repository.captcha.verifier ?
+    await fetch(repository, repository.captcha.verifier, {
+      method: 'POST',
+      body: new URLSearchParams(
+        { secret: repository.captcha.secret, token, hashes: '1024' })
+    }).then(verification => verification.json())
+      .then(({ success }) => success) :
+    true;
 
-    verification.then(async success => {
-      if (!success) {
-        response.sendStatus(401);
-        return;
-      }
+  if (!verified) {
+    response.sendStatus(401);
+    return;
+  }
 
-      const account = await LocalAccount.create(
-        repository, username, false, salt, serverKey, storedKey);
+  const account = await LocalAccount.create(
+    repository, username, false, salt, serverKey, storedKey);
 
-      cookie(repository, account, response);
-      response.sendStatus(204);
-    }).catch(next);
-  });
-}
+  cookie(repository, account, response);
+  response.sendStatus(204);
+});

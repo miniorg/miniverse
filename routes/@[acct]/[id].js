@@ -15,9 +15,10 @@
 */
 
 import { normalizeHost } from '../../lib/uri';
+import secure from '../_secure';
 import sendActivityStreams from '../_send_activitystreams';
 
-export function get(request, response, next) {
+export const get = secure(async (request, response) => {
   const { params, repository } = request;
   const acct = decodeURIComponent(params.acct);
   const atIndex = acct.lastIndexOf('@');
@@ -32,27 +33,26 @@ export function get(request, response, next) {
     normalizedHost = normalizeHost(acct.slice(atIndex + 1));
   }
 
-  repository.selectNoteById(params.id).then(async note => {
-    if (!note) {
-      response.sendStatus(404);
-      return;
-    }
+  const note = await repository.selectNoteById(params.id);
+  if (!note) {
+    response.sendStatus(404);
+    return;
+  }
 
-    const status = await note.select('status');
-    if (!status) {
-      response.sendStatus(404);
-      return;
-    }
+  const status = await note.select('status');
+  if (!status) {
+    response.sendStatus(404);
+    return;
+  }
 
-    const person = await status.select('person');
-    if (!person ||
-        person.username != username ||
-        (person.host != normalizedHost &&
-         normalizeHost(person.host) != normalizedHost)) {
-      response.sendStatus(404);
-      return;
-    }
+  const person = await status.select('person');
+  if (!person ||
+      person.username != username ||
+      (person.host != normalizedHost &&
+       normalizeHost(person.host) != normalizedHost)) {
+    response.sendStatus(404);
+    return;
+  }
 
-    await sendActivityStreams(response, note);
-  }).catch(next);
-}
+  await sendActivityStreams(response, note);
+});

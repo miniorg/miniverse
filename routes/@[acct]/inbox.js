@@ -17,10 +17,12 @@
 import { text } from 'body-parser';
 import { parseRequest } from 'http-signature';
 import { HttpSignatureError } from 'http-signature/lib/utils';
+import { promisify } from 'util';
+import secure from '../_secure';
 
-const middleware = text({
+const setBody = promisify(text({
   type: ['application/activity+json', 'application/ld+json']
-});
+}));
 
 /*
   ActivityPub
@@ -29,7 +31,7 @@ const middleware = text({
   > The inboxes of actors on federated servers accepts HTTP POST requests, with
   > behaviour described in Delivery.
 */
-export function post(request, response, next) {
+export const post = secure(async (request, response) => {
   let signature;
 
   request.headers.authorization = 'Signature ' + request.headers.signature;
@@ -45,9 +47,13 @@ export function post(request, response, next) {
     throw error;
   }
 
-  middleware(request, response,
-    () => request.repository
-                 .queue
-                 .add({ type: 'processInbox', signature, body: request.body })
-                 .then(() => response.sendStatus(202), next));
-}
+  await setBody(request, response);
+
+  await request.repository.queue.add({
+    type: 'processInbox',
+    signature,
+    body: request.body
+  });
+
+  response.sendStatus(202)
+});

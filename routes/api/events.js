@@ -15,35 +15,36 @@
 */
 
 import OrderedCollectionPage from '../../lib/ordered_collection_page';
+import secure from '../_secure';
 
-export function get(request, response, next) {
+export const get = secure(async (request, response) => {
   const { repository, user } = request;
 
   response.setHeader('Content-Type', 'text/event-stream');
   response.setHeader('Transfer-Encoding', 'chunked');
 
-  user.select('inbox').then(async statuses => {
-    const initialCollection = new OrderedCollectionPage({
-      orderedItems: await Promise.all(
-        statuses.reverse().map(status => status.select('extension')))
-    });
+  const statuses = await user.select('inbox');
 
-    const resolved = await initialCollection.toActivityStreams(repository);
-    const subscribedChannel = repository.getInboxChannel(user);
+  const initialCollection = new OrderedCollectionPage({
+    orderedItems: await Promise.all(
+      statuses.reverse().map(status => status.select('extension')))
+  });
 
-    function listen(publishedChannel, message) {
-      return response.write(`data:{"@context":"https://www.w3.org/ns/activitystreams","type":"OrderedCollectionPage","orderedItems":[${message}]}\n\n`);
-    }
+  const resolved = await initialCollection.toActivityStreams(repository);
+  const subscribedChannel = repository.getInboxChannel(user);
 
-    resolved['@context'] = 'https://www.w3.org/ns/activitystreams';
-    response.write(`data:${JSON.stringify(resolved)}\n\n`);
+  function listen(publishedChannel, message) {
+    return response.write(`data:{"@context":"https://www.w3.org/ns/activitystreams","type":"OrderedCollectionPage","orderedItems":[${message}]}\n\n`);
+  }
 
-    await repository.subscribe(subscribedChannel, listen);
-    const heartbeat = setInterval(() => response.write(':\n'), 16384);
+  resolved['@context'] = 'https://www.w3.org/ns/activitystreams';
+  response.write(`data:${JSON.stringify(resolved)}\n\n`);
 
-    request.on('close', () => {
-      clearInterval(heartbeat);
-      repository.unsubscribe(subscribedChannel, listen);
-    });
-  }, next);
-}
+  await repository.subscribe(subscribedChannel, listen);
+  const heartbeat = setInterval(() => response.write(':\n'), 16384);
+
+  request.on('close', () => {
+    clearInterval(heartbeat);
+    repository.unsubscribe(subscribedChannel, listen);
+  });
+});

@@ -16,10 +16,12 @@
 
 import { raw } from 'body-parser';
 import { createHash, createHmac, timingSafeEqual } from 'crypto';
+import { promisify } from 'util';
 import { digest } from '../../lib/challenge';
+import secure from '../_secure';
 import cookie from './_cookie';
 
-const middleware = raw();
+const setBody = promisify(raw());
 
 /*
   RFC 5802 - Salted Challenge Response Authentication Mechanism (SCRAM) SASL and GSS-API Mechanisms
@@ -59,42 +61,35 @@ function xor(a, b) {
   b.forEach((byte, index) => a[index] ^= byte);
 }
 
-export function post(request, response, next) {
-  middleware(request, response, error => {
-    if (error) {
-      next(error);
-      return;
-    }
+export const post = secure(async (request, response) => {
+  await setBody(request, response);
 
-    const { body, repository } = request;
-    const nonce = body.slice(0, 128);
-    const serverNonce = body.slice(64, 128);
-    const serverNonceDigest = digest(serverNonce);
-    const clientProof = body.slice(128, 160);
-    const username = body.slice(160);
+  const { body, repository } = request;
+  const nonce = body.slice(0, 128);
+  const serverNonce = body.slice(64, 128);
+  const serverNonceDigest = digest(serverNonce);
+  const clientProof = body.slice(128, 160);
+  const username = body.slice(160);
+  const challenge = await repository.selectChallengeByDigest(serverNonceDigest);
 
-    repository.selectChallengeByDigest(serverNonceDigest).then(
-      async challenge => {
-        if (!challenge) {
-          response.sendStatus(401);
-          return;
-        }
+  if (!challenge) {
+    response.sendStatus(401);
+    return;
+  }
 
-        const person = await repository.selectPersonByUsernameAndNormalizedHost(
-          username.toString(), null);
+  const person = await repository.selectPersonByUsernameAndNormalizedHost(
+    username.toString(), null);
 
-        const account = await person.select('account');
-        const auth = Buffer.concat([nonce, account.salt]);
-        const clientKey = hmac(account.storedKey, auth);
-        xor(clientKey, clientProof);
+  const account = await person.select('account');
+  const auth = Buffer.concat([nonce, account.salt]);
+  const clientKey = hmac(account.storedKey, auth);
+  xor(clientKey, clientProof);
 
-        if (!timingSafeEqual(hash(clientKey), account.storedKey)) {
-          response.sendStatus(401);
-          return;
-        }
+  if (!timingSafeEqual(hash(clientKey), account.storedKey)) {
+    response.sendStatus(401);
+    return;
+  }
 
-        await cookie(repository, account, response);
-        response.send(hmac(account.serverKey, auth));
-      }, next);
-  });
-}
+  await cookie(repository, account, response);
+  response.send(hmac(account.serverKey, auth));
+});
