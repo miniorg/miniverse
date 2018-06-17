@@ -21,9 +21,7 @@
 </form>
 <ol>
   {#each $user.inbox as item}
-    {#if item.type == 'Note'}
-      <li>{item.content}</li>
-    {/if}
+    <li>{JSON.stringify(item)}</li>
   {/each}
 </ol>
 <script>
