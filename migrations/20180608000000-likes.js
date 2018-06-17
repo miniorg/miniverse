@@ -14,10 +14,11 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import accept from './accept';
-import postFollow from './post_follow';
-import postLike from './post_like';
-import postStatus from './post_status';
-import processInbox from './process_inbox';
+exports.up = (db, callback) => db.runSql(`CREATE TABLE likes (
+  id BIGSERIAL PRIMARY KEY,
+  actor_id BIGINT REFERENCES persons (id) ON DELETE CASCADE ON UPDATE CASCADE,
+  object_id BIGINT REFERENCES notes (id) ON DELETE CASCADE ON UPDATE CASCADE,
+  UNIQUE (actor_id, object_id)
+)`, callback);
 
-export default { accept, postFollow, postLike, postStatus, processInbox };
+exports._meta = { version: 1 };

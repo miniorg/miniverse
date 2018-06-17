@@ -23,6 +23,10 @@
   <input name='object' />
   <button>Share</button>
 </form>
+<form on:submit='like(event)'>
+  <input name='object' />
+  <button>Like</button>
+</form>
 <ol>
   {#each $user.inbox as item}
     <li>{JSON.stringify(item)}</li>
@@ -43,6 +47,11 @@
       announce(event) {
         event.preventDefault();
         this.store.announce(fetch, event.target.elements.object.value);
+      },
+
+      like(event) {
+        event.preventDefault();
+        this.store.like(fetch, event.target.elements.object.value);
       }
     }
   };
