@@ -49,6 +49,6 @@ export const post = secure(async (request, response) => {
   const account = await LocalAccount.create(
     repository, username, false, salt, serverKey, storedKey);
 
-  cookie(repository, account, response);
+  await cookie(repository, account, response);
   response.sendStatus(204);
 });
