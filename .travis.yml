@@ -75,6 +75,7 @@ jobs:
     os: linux
     dist: trusty
     sudo: false
+    node_js: lts/*
     script:
       - echo "$SSH_IDENTITY" > ~/.ssh/id_ed25519
       - chmod 400 ~/.ssh/id_ed25519
