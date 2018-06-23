@@ -11,14 +11,57 @@ jobs:
     sudo: false
     addons:
       postgresql: 9.6
+    node_js: lts/*
+  - stage: test
+    os: linux
+    dist: trusty
+    sudo: false
+    addons:
+      postgresql: 9.6
+    node_js: node
+  - stage: test
+    os: linux
+    dist: trusty
+    sudo: false
+    addons:
+      postgresql: 9.6
+    node_js: lts/*
+  - stage: test
+    os: linux
+    dist: trusty
+    sudo: false
+    addons:
+      postgresql: 9.6
+    node_js: node
   - stage: test
     os: linux
     dist: trusty
     sudo: false
     addons:
       postgresql: 9.5
+    node_js: lts/*
+  - stage: test
+    os: linux
+    dist: trusty
+    sudo: false
+    addons:
+      postgresql: 9.5
+    node_js: node
   - stage: test
     os: osx
+    node_js: lts/*
+    before_install:
+      - initdb -D "$HOME/postgres"
+      - pg_ctl -D "$HOME/postgres" start
+      - brew install redis
+      - redis-server --daemonize yes
+      - pg_isready
+    cache:
+      directories:
+        - "$HOME/Library/Caches/Homebrew"
+  - stage: test
+    os: osx
+    node_js: node
     before_install:
       - initdb -D "$HOME/postgres"
       - pg_ctl -D "$HOME/postgres" start
@@ -43,9 +86,6 @@ services:
 cache:
   directories:
     - node_modules
-node_js:
-  - lts/*
-  - node
 script:
   - createdb travis_test_1
   - PGDATABASE=travis_test_1 npx db-migrate up
