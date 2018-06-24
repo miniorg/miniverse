@@ -41,10 +41,9 @@ const setBody = promisify(json({
 
 export const get = secure(async ({ params, repository }, response) => {
   const [userpart, host] = params.acct.split('@', 2);
-  const normalizedHost = normalizeHost(host);
 
   const person = await repository.selectPersonByUsernameAndNormalizedHost(
-    userpart, normalizedHost);
+    userpart, host ? normalizeHost(host) : null);
 
   const statuses = await person.select('statuses');
 
