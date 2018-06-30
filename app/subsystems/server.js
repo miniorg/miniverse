@@ -48,7 +48,7 @@ export default (repository, port) => {
         asyncAccount = Promise.resolve();
       }
 
-      response.set('Referrer-Policy', 'no-referrer');
+      response.set('Referrer-Policy', 'same-origin');
 
       asyncAccount.then(async account => {
         if (/^\/bull/i.test(request.path)) {
