@@ -50,9 +50,10 @@ content-type: application/activity+json`,
 };
 
 test('performs activities', async () => {
-  const { person } = await fabricateRemoteAccount({
-    publicKeyURI: { uri: 'https://AcToR.إختبار/users/admin#main-key' },
-    publicKeyPem: `-----BEGIN PUBLIC KEY-----
+  const [actor, object] = await Promise.all([
+    fabricateRemoteAccount({
+      publicKeyURI: { uri: 'https://AcToR.إختبار/users/admin#main-key' },
+      publicKeyPem: `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
 1Iu2LbvQ6iE19RM01An3kBA/MPelQATPv832/pWxdCjWPP8i2snPbzPZ5gSJP55v
@@ -62,32 +63,27 @@ AOc6sswdQZB3Q0FHFgaM5FkAeB07OSK+ndZffVfqfe5YM39470E9uGqC3NQYVkGH
 ewIDAQAB
 -----END PUBLIC KEY-----
 `
-  });
+    }),
+    fabricateRemoteAccount({ uri: { uri: 'https://ObJeCt.إختبار/' } })
+  ]);
 
   await processInbox(repository, {
     data: {
       signature,
-      body: `{
-  "type": "Create",
-  "object": {
-    "type": "Note",
-    "to": "https://www.w3.org/ns/activitystreams#Public",
-    "content": "内容",
-    "tag": []
-  }
-}`
+      body: `{ "type": "Follow", "object": "https://ObJeCt.إختبار/" }`
     }
   });
 
-  const notes = await repository.selectRecentStatusesIncludingExtensionsByPersonId(person.id);
-
-  expect(notes[0]).toHaveProperty(['extension', 'content'], '内容');
+  const persons = await repository.selectPersonsByFolloweeId(object.person.id);
+  expect(persons[0]).toHaveProperty('id', actor.person.id);
 });
 
 test('does not perform activities if signature verification failed', async () => {
-  const { person } = await fabricateRemoteAccount({
-    publicKeyURI: { uri: 'https://AcToR.إختبار/users/admin#main-key' },
-    publicKeyPem: `-----BEGIN RSA PUBLIC KEY-----
+  const [object] = await Promise.all([
+    fabricateRemoteAccount({ uri: { uri: 'https://ObJeCt.إختبار/' } }),
+    fabricateRemoteAccount({
+      publicKeyURI: { uri: 'https://AcToR.إختبار/users/admin#main-key' },
+      publicKeyPem: `-----BEGIN RSA PUBLIC KEY-----
 MIIBCgKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGTrcO6
 S16XQ3tffCo0QA7G1MOzTeOEJHMiNM4jQQuY0NgDGMs3KEgo0J4ik75VnlyOiSyF
 ZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2/POH
@@ -96,16 +92,19 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 +DHYFaVXQy60WzCEFjiQPZ8XdNQKvDyjKwIDAQAB
 -----END RSA PUBLIC KEY-----
 `
-  });
+    }),
+  ]);
 
   await processInbox(repository, {
     data: {
       signature,
-      body: '{ "type": "Create", "object": { "type": "Note", "content": "内容" } }',
+      body: '{ "type": "Follow", "object": "https://ObJeCt.إختبار/" }',
     }
   });
 
-  await expect(repository.selectRecentStatusesIncludingExtensionsByPersonId(person.id)).resolves.toEqual([]);
+  await expect(repository.selectPersonsByFolloweeId(object.person.id))
+    .resolves
+    .toEqual([]);
 });
 
 test('resolves even if object with unsupported type is given', async () => {

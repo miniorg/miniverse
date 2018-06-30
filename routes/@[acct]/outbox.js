@@ -109,29 +109,20 @@ export const post = secure(async (request, response) => {
       throw error;
     }
 
-    try {
-      await create(repository, person, object);
-    } catch(error) {
-      if (!(error instanceof TypeNotAllowed)) {
-        throw error;
-      }
-    }
+    result = await create(repository, person, object);
+    result = await result.getUri();
   }
 
-  if (result && result.getUri) {
-    const location = await result.getUri();
-
-    /*
-      ActivityPub
-      6. Client to Server Interactions
-      https://www.w3.org/TR/activitypub/#client-to-server-interactions
-      > Servers MUST return a 201 Created HTTP code, and unless the
-      > activity is transient, MUST include the new id in the Location
-      > header.
-    */
-    if (location) {
-      response.location(location);
-    }
+  /*
+    ActivityPub
+    6. Client to Server Interactions
+    https://www.w3.org/TR/activitypub/#client-to-server-interactions
+    > Servers MUST return a 201 Created HTTP code, and unless the
+    > activity is transient, MUST include the new id in the Location
+    > header.
+  */
+  if (result) {
+    response.location(result);
   }
 
  response.sendStatus(201);
