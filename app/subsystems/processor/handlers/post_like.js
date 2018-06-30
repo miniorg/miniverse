@@ -20,11 +20,11 @@ export default async (repository, { data: { id } }) => {
   const like = await repository.selectLikeById(id);
 
   const [sender, inboxURI] = await Promise.all([
-    like.select('actor').then(person => person.select('account')),
+    like.select('actor').then(actor => actor.select('account')),
     like.select('object')
         .then(note => note.select('status'))
-        .then(status => status.select('person'))
-        .then(person => person.select('account'))
+        .then(status => status.select('actor'))
+        .then(actor => actor.select('account'))
         .then(account => account.select('inboxURI'))
   ]);
 

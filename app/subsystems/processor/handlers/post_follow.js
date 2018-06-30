@@ -19,9 +19,9 @@ import postToInbox from '../../../../lib/transfer/post_to_inbox';
 export default async (repository, { data: { id } }) => {
   const follow = await repository.selectFollowIncludingActorAndObjectById(id);
   const [sender, inboxURI] = await Promise.all([
-    follow.select('actor').then(person => person.select('account')),
+    follow.select('actor').then(actor => actor.select('account')),
     follow.select('object')
-          .then(person => person.select('account'))
+          .then(actor => actor.select('account'))
           .then(account => account.select('inboxURI'))
   ]);
 

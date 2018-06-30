@@ -18,7 +18,7 @@ import { urlencoded } from 'express';
 import { promisify } from 'util';
 import ParsedActivityStreams,
        { NoHost } from '../../lib/parsed_activitystreams';
-import Person from '../../lib/person';
+import Actor from '../../lib/actor';
 import secure from '../_secure';
 import sendActivityStreams from '../_send_activitystreams';
 
@@ -29,7 +29,7 @@ export const post = secure(async (request, response) => {
 
   const { body, repository } = request;
   const parsed = new ParsedActivityStreams(repository, body.id, NoHost);
-  const person = await Person.fromParsedActivityStreams(repository, parsed);
+  const actor = await Actor.fromParsedActivityStreams(repository, parsed);
 
-  await sendActivityStreams(response, person);
+  await sendActivityStreams(response, actor);
 });

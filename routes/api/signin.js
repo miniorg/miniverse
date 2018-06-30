@@ -77,10 +77,10 @@ export const post = secure(async (request, response) => {
     return;
   }
 
-  const person = await repository.selectPersonByUsernameAndNormalizedHost(
+  const actor = await repository.selectActorByUsernameAndNormalizedHost(
     username.toString(), null);
 
-  const account = await person.select('account');
+  const account = await actor.select('account');
   const auth = Buffer.concat([nonce, account.salt]);
   const clientKey = hmac(account.storedKey, auth);
   xor(clientKey, clientProof);

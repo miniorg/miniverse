@@ -61,8 +61,8 @@ export default (repository, port) => {
           }
 
           if (account) {
-            const person = await account.select('person');
-            const activityStreams = await person.toActivityStreams();
+            const actor = await account.select('actor');
+            const activityStreams = await actor.toActivityStreams();
             activityStreams.inbox = [];
 
             request.nonce = null;

@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Person from '../../lib/person';
+import Actor from '../../lib/actor';
 import { normalizeHost } from '../../lib/uri';
 import secure from '../_secure';
 
@@ -23,13 +23,13 @@ export const get = secure(async ({ query, repository }, response) => {
   const [, userpart, host] = /(?:acct:)?(.*)@(.*)/.exec(lowerResource);
   const normalizedHost = normalizeHost(host);
 
-  const person = await (host == normalizeHost(repository.fingerHost) ?
-    repository.selectPersonByUsernameAndNormalizedHost(
+  const actor = await (host == normalizeHost(repository.fingerHost) ?
+    repository.selectActorByUsernameAndNormalizedHost(
       decodeURI(userpart), null) :
-    Person.resolveByUsernameAndNormalizedHost(
+    Actor.resolveByUsernameAndNormalizedHost(
       repository, decodeURI(userpart), host));
 
-  const account = await person.select('account');
+  const account = await actor.select('account');
 
   response.json(await account.toWebFinger());
 });

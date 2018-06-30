@@ -25,13 +25,13 @@ import postStatus from './post_status';
 import nock from 'nock';
 
 test('delivers announce to remote account', async () => {
-  const [recipient, person] = await Promise.all([
+  const [recipient, actor] = await Promise.all([
     fabricateRemoteAccount(
       { inboxURI: { uri: 'https://ReCiPiEnT.إختبار/?inbox' } }),
     fabricateLocalAccount()
   ]);
 
-  const announce = await fabricateAnnounce({ status: { person } });
+  const announce = await fabricateAnnounce({ status: { actor } });
 
   const post = nock('https://ReCiPiEnT.إختبار').post('/?inbox').reply(200);
 
@@ -47,13 +47,13 @@ test('delivers announce to remote account', async () => {
 });
 
 test('delivers note to remote account', async () => {
-  const [recipient, person] = await Promise.all([
+  const [recipient, actor] = await Promise.all([
     fabricateRemoteAccount(
       { inboxURI: { uri: 'https://ReCiPiEnT.إختبار/?inbox' } }),
     fabricateLocalAccount()
   ]);
 
-  const note = await fabricateNote({ status: { person } });
+  const note = await fabricateNote({ status: { actor } });
 
   const post = nock('https://ReCiPiEnT.إختبار').post('/?inbox').reply(200);
 

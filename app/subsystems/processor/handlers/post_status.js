@@ -24,7 +24,7 @@ export default async (repository, { data: { statusId, inboxURIId } }) => {
       Promise.all([
         status.select('extension').then(object =>
           object instanceof Note ? new Create({ object }) : object),
-        status.select('person').then(person => person.select('account'))
+        status.select('actor').then(actor => actor.select('account'))
       ])),
     repository.selectURIById(inboxURIId)
   ]);

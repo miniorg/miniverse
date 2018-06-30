@@ -15,16 +15,16 @@
 */
 
 import { URL } from 'url';
+import Actor from '../../../../lib/actor';
 import Key from '../../../../lib/key';
 import ParsedActivityStreams, { TypeNotAllowed }
   from '../../../../lib/parsed_activitystreams';
-import Person from '../../../../lib/person';
 import TemporaryError from '../../../../lib/temporary_error';
 import { normalizeHost } from '../../../../lib/uri';
 
 export default async (repository, { data }) => {
   const { body, signature } = data;
-  const owner = await Person.resolveByKeyUri(repository, signature.keyId);
+  const owner = await Actor.resolveByKeyUri(repository, signature.keyId);
   const key = new Key({ owner, repository });
 
   if (await key.verifySignature(signature)) {

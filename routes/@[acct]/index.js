@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Person from '../../lib/person';
+import Actor from '../../lib/actor';
 import { normalizeHost } from '../../lib/uri';
 import secure from '../_secure';
 import sendActivityStreams from '../_send_activitystreams';
@@ -44,8 +44,8 @@ export const get = secure(async (request, response, next) => {
     normalizedHost = normalizeHost(acct.slice(atIndex + 1));
   }
 
-  const person = await Person.resolveByUsernameAndNormalizedHost(
+  const actor = await Actor.resolveByUsernameAndNormalizedHost(
     request.repository, username, normalizedHost);
 
-  await sendActivityStreams(response, person);
+  await sendActivityStreams(response, actor);
 });

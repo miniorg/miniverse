@@ -42,10 +42,10 @@ const setBody = promisify(json({
 export const get = secure(async ({ params, repository }, response) => {
   const [userpart, host] = params.acct.split('@', 2);
 
-  const person = await repository.selectPersonByUsernameAndNormalizedHost(
+  const actor = await repository.selectActorByUsernameAndNormalizedHost(
     userpart, host ? normalizeHost(host) : null);
 
-  const statuses = await person.select('statuses');
+  const statuses = await actor.select('statuses');
 
   const orderedItems =
     await Promise.all(statuses.map(status => status.select('extension')));
@@ -81,8 +81,8 @@ export const post = secure(async (request, response) => {
     return;
   }
 
-  const person = await user.select('person');
-  if (person.username != params.acct) {
+  const actor = await user.select('actor');
+  if (actor.username != params.acct) {
     response.sendStatus(401);
     return;
   }
@@ -103,13 +103,13 @@ export const post = secure(async (request, response) => {
     > be wrapped in a Create activity by the server.
   */
   try {
-    result = await object.act(person);
+    result = await object.act(actor);
   } catch (error) {
     if (!(error instanceof TypeNotAllowed)) {
       throw error;
     }
 
-    result = await create(repository, person, object);
+    result = await create(repository, actor, object);
     result = await result.getUri();
   }
 

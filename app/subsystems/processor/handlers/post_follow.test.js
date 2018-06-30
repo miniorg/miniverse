@@ -30,7 +30,7 @@ test('delivers to remote account', async () => {
   ]);
 
   const follow =
-    await fabricateFollow({ actor: actor.person, object: object.person });
+    await fabricateFollow({ actor: actor.actor, object: object.actor });
 
   const post = nock('https://ObJeCt.إختبار').post('/?inbox').reply(200);
 

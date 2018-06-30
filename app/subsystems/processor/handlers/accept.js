@@ -22,9 +22,9 @@ export default async (repository, { data: { objectId } }) => {
 
   const object = await accept.select('object');
   const [sender, inboxURI] = await Promise.all([
-    object.select('object').then(person => person.select('account')),
+    object.select('object').then(actor => actor.select('account')),
     object.select('actor')
-          .then(person => person.select('account'))
+          .then(actor => actor.select('account'))
           .then(account => account.select('inboxURI'))
   ]);
 

@@ -74,8 +74,8 @@ ewIDAQAB
     }
   });
 
-  const persons = await repository.selectPersonsByFolloweeId(object.person.id);
-  expect(persons[0]).toHaveProperty('id', actor.person.id);
+  const actors = await repository.selectActorsByFolloweeId(object.actor.id);
+  expect(actors[0]).toHaveProperty('id', actor.actor.id);
 });
 
 test('does not perform activities if signature verification failed', async () => {
@@ -102,7 +102,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
     }
   });
 
-  await expect(repository.selectPersonsByFolloweeId(object.person.id))
+  await expect(repository.selectActorsByFolloweeId(object.actor.id))
     .resolves
     .toEqual([]);
 });
@@ -142,10 +142,10 @@ ewIDAQAB
 -----END PUBLIC KEY-----
 `,
     }),
-    fabricateLocalAccount({ person: { username: 'oBjEcT' } })
+    fabricateLocalAccount({ actor: { username: 'oBjEcT' } })
   ]);
 
-  await fabricateFollow({ actor: actor.person, object: object.person });
+  await fabricateFollow({ actor: actor.actor, object: object.actor });
 
   const promise = processInbox(repository, {
     data: { signature, body: '{ "type": "Follow", "object": "https://xn--kgbechtv/@oBjEcT" }' }

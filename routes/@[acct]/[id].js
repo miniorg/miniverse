@@ -39,12 +39,12 @@ export const get = secure(async (request, response) => {
     return;
   }
 
-  const [extension, person] =
-    await Promise.all([status.select('extension'), status.select('person')]);
-  if (!extension || !person ||
-      person.username != username ||
-      (person.host != normalizedHost &&
-       normalizeHost(person.host) != normalizedHost)) {
+  const [extension, actor] =
+    await Promise.all([status.select('extension'), status.select('actor')]);
+  if (!extension || !actor ||
+      actor.username != username ||
+      (actor.host != normalizedHost &&
+       normalizeHost(actor.host) != normalizedHost)) {
     response.sendStatus(404);
     return;
   }

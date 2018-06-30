@@ -29,10 +29,10 @@ test('delivers to remote account', async () => {
     fabricateLocalAccount(),
     fabricateRemoteAccount({
       inboxURI: { uri: 'https://ObJeCt.إختبار/?inbox' }
-    }).then(({ person }) => fabricateNote({ status: { person } }))
+    }).then(({ actor }) => fabricateNote({ status: { actor } }))
   ]);
 
-  const { id } = await fabricateLike({ actor: actor.person, object });
+  const { id } = await fabricateLike({ actor: actor.actor, object });
 
   const post = nock('https://ObJeCt.إختبار').post('/?inbox').reply(200);
 
