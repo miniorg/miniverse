@@ -23,7 +23,6 @@
   },
   "homepage": "https://github.com/miniorg/miniverse#readme",
   "dependencies": {
-    "base64url": "^2.0.0",
     "body-parser": "^1.18.2",
     "bull": "^3.3.10",
     "bull-arena": "^2.4.2",
