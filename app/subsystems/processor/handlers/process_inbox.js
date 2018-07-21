@@ -16,8 +16,8 @@
 
 import { URL } from 'url';
 import {
-  Temporary as TemporaryError,
-  Wrapper as WrappingError
+  Custom as CustomError,
+  wrap as wrapErrors
 } from '../../../../lib/errors';
 import ParsedActivityStreams, { TypeNotAllowed }
   from '../../../../lib/parsed_activitystreams';
@@ -30,7 +30,7 @@ export default async (repository, { data }) => {
   const owner = await Actor.resolveByKeyUri(repository, signature.keyId);
 
   if (!owner) {
-    throw new Error;
+    throw new CustomError('Inbox owner not found', 'error');
   }
 
   const key = new Key({ owner, repository });
@@ -52,13 +52,7 @@ export default async (repository, { data }) => {
     })));
 
     if (errors.length) {
-      const error = new (
-        errors.some(error => error instanceof TemporaryError) ?
-          TemporaryError : WrappingError)(errors.join());
-
-      error.originals = errors;
-
-      throw error;
+      throw wrapErrors(errors);
     }
   }
 };

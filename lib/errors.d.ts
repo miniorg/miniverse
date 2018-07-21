@@ -14,8 +14,19 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-export class Wrapper extends Error {
-  originals: Error[];
+import Repository from './repository';
+
+type Severity = 'info' | 'warn' | 'error';
+
+export class Custom extends Error {
+  constructor(message: string, severity: Severity, originals?: Error[] | null);
+  log(repository: Repository);
+  static wrap(originals: Error[], severity?: Severity);
+
+  originals?: Error[];
+  readonly severity: Severity;
 }
 
-export class Temporary extends Wrapper {}
+export class Temporary extends Custom {}
+
+export function wrap(originals: Error[], severity?: Severity);

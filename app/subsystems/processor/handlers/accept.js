@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { Custom as CustomError } from '../../../../lib/errors';
 import { postToInbox } from '../../../../lib/transfer';
 import Accept from '../../../../lib/tuples/accept';
 import LocalAccount from '../../../../lib/tuples/local_account';
@@ -24,7 +25,8 @@ export default async (repository, { data: { objectId } }) => {
 
   const object = await accept.select('object');
   if (!object) {
-    throw new Error;
+    throw new CustomError(
+      'Object to accept not found. Possibly deleted?', 'info');
   }
 
   const [sender, inboxURI] = await Promise.all([
@@ -33,7 +35,7 @@ export default async (repository, { data: { objectId } }) => {
         return actor.select('account');
       }
 
-      throw new Error;
+      throw new CustomError('Object of follow activity not found.', 'error');
     }),
     object.select('actor').then(async actor => {
       if (actor) {
@@ -43,12 +45,12 @@ export default async (repository, { data: { objectId } }) => {
         }
       }
 
-      throw new Error;
+      throw new CustomError('Actor of follow activity not found.', 'error');
     })
   ]);
 
   if (!(sender instanceof LocalAccount) || !inboxURI) {
-    throw new Error;
+    throw new CustomError('Invalid accept activity to post to remote', 'error');
   }
 
   await postToInbox(repository, sender, inboxURI, accept);

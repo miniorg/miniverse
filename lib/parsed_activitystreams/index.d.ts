@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { Custom as CustomError } from '../errors';
 import Repository from '../repository';
 import Actor from '../tuples/actor';
 import Resolver from './resolver';
@@ -26,7 +27,7 @@ interface Content {
 
 export const AnyHost: object;
 export const NoHost: object;
-export class TypeNotAllowed extends Error {}
+export class TypeNotAllowed extends CustomError {}
 
 export default class ParsedActivityStreams {
   constructor(

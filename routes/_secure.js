@@ -14,11 +14,18 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { Custom as CustomError } from '../lib/errors';
+
 export default handle => async (request, response, next) => {
   try {
     await handle(request, response, next);
   } catch (error) {
-    request.repository.console.error(error);
+    if (error instanceof CustomError) {
+      error.log(request.repository);
+    } else {
+      request.repository.console.error(error);
+    }
+
     response.sendStatus(500);
   }
 };

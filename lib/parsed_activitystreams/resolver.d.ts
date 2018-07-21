@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { Custom as CustomError } from '../errors';
 import Repository from '../repository';
 
 interface Resolution {
@@ -22,7 +23,7 @@ interface Resolution {
   body: any;
 }
 
-export class CircularError extends Error {}
+export class CircularError extends CustomError {}
 
 export default class Resolver {
   constructor(iterable?: Iterable<any>);

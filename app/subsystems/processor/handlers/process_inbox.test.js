@@ -14,7 +14,10 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Temporary as TemporaryError } from '../../../../lib/errors';
+import {
+  Custom as CustomError,
+  Temporary as TemporaryError
+} from '../../../../lib/errors';
 import {
   fabricateFollow,
   fabricateLocalAccount,
@@ -155,7 +158,7 @@ ewIDAQAB
   });
 
   await Promise.all([
-    expect(promise).rejects.toBeInstanceOf(Error),
+    expect(promise).rejects.toBeInstanceOf(CustomError),
     expect(promise).rejects.toHaveProperty('originals'),
     expect(promise).rejects.not.toBeInstanceOf(TemporaryError)
   ]);
