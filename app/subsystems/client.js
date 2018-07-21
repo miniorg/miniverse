@@ -15,18 +15,18 @@
 */
 
 import { init } from 'sapper/runtime';
-import Store from '../../lib/store';
+import Store from '../../lib/store/browser';
 import App from '../app';
 import { routes } from '../manifest/client';
 
 window.ga = function() {
-  ga.q.push(arguments);
+  window.ga.q.push(arguments);
 };
 
-ga.q = [];
+window.ga.q = [];
 
 document.addEventListener('securitypolicyviolation',
-  ({ blockedURI, violatedDirective }) => ga(
+  ({ blockedURI, violatedDirective }) => window.ga(
     'send',
     'event',
     'Security Policy Violation',

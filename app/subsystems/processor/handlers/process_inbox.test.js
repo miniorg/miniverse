@@ -14,13 +14,14 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import TemporaryError from '../../../../lib/temporary_error';
+import { Temporary as TemporaryError } from '../../../../lib/errors';
 import {
   fabricateFollow,
   fabricateLocalAccount,
   fabricateRemoteAccount
 } from '../../../../lib/test/fabricator';
 import repository from '../../../../lib/test/repository';
+import { unwrap } from '../../../../lib/test/types';
 import processInbox from './process_inbox';
 const nock = require('nock');
 
@@ -141,11 +142,13 @@ AOc6sswdQZB3Q0FHFgaM5FkAeB07OSK+ndZffVfqfe5YM39470E9uGqC3NQYVkGH
 ewIDAQAB
 -----END PUBLIC KEY-----
 `,
-    }),
+    }).then(account => account.select('actor')).then(unwrap),
     fabricateLocalAccount({ actor: { username: 'oBjEcT' } })
+      .then(account => account.select('actor'))
+      .then(unwrap)
   ]);
 
-  await fabricateFollow({ actor: actor.actor, object: object.actor });
+  await fabricateFollow({ actor, object });
 
   const promise = processInbox(repository, {
     data: { signature, body: '{ "type": "Follow", "object": "https://xn--kgbechtv/@oBjEcT" }' }

@@ -14,23 +14,11 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-export default {
-  listenEventSource() {
-    const eventSource = new EventSource(`https://${location.host}/api/events`);
+import Repository from '../../../../lib/repository';
 
-    eventSource.onmessage = ({ data }) => {
-      const { type, orderedItems } = JSON.parse(data);
-
-      if (type == 'OrderedCollectionPage') {
-        const { user } = this.get();
-        this.set({
-          user: Object.assign({}, user, {
-            inbox: orderedItems.reverse().concat(user.inbox)
-          })
-        });
-      }
-    };
-
-    this.set('eventSource', eventSource);
-  }
+interface Job {
+  readonly data: { readonly body: string, readonly signature: any }
 }
+
+export default function(this: void, repository: Repository, job: Job):
+  Promise<void>;

@@ -16,6 +16,7 @@
 
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
 const LicenseInfoWebpackPlugin = require('license-info-webpack-plugin').default;
+const { join } = require('path');
 const { DefinePlugin, HotModuleReplacementPlugin } = require('webpack');
 const { client } = require('sapper/webpack/config');
 
@@ -24,7 +25,10 @@ module.exports = {
   output: client.output(),
   mode: process.env.NODE_ENV,
   devtool: 'source-map',
-  resolve: { extensions: ['.js', '.html'] },
+  resolve: {
+    alias: { url: join(__dirname, '../lib/isomorphism/browser/url') },
+    extensions: ['.js', '.html']
+  },
   module: {
     rules: [
       {

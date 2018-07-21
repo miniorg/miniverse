@@ -88,6 +88,9 @@ cache:
   directories:
     - node_modules
 script:
+  - npx tsc -p browser.tsconfig.json
+  - npx tsc -p node.tsconfig.json
+  - npx tsc -p test.tsconfig.json
   - createdb travis_test_1
   - PGDATABASE=travis_test_1 npx db-migrate up
   - npm test -- -w 1

@@ -21,23 +21,30 @@ import {
   fabricateRemoteAccount
 } from '../../../../lib/test/fabricator';
 import repository from '../../../../lib/test/repository';
+import { unwrap } from '../../../../lib/test/types';
 import postLike from './post_like';
-import nock from 'nock';
+
+const nock = require('nock');
 
 test('delivers to remote account', async () => {
   const [actor, object] = await Promise.all([
-    fabricateLocalAccount(),
+    fabricateLocalAccount()
+      .then(account => account.select('actor'))
+      .then(unwrap),
     fabricateRemoteAccount({
       inboxURI: { uri: 'https://ObJeCt.إختبار/?inbox' }
-    }).then(({ actor }) => fabricateNote({ status: { actor } }))
+    })
+      .then(account => account.select('actor'))
+      .then(unwrap)
+      .then(actor => fabricateNote({ status: { actor } }))
   ]);
 
-  const { id } = await fabricateLike({ actor: actor.actor, object });
+  const { id } = await fabricateLike({ actor, object });
 
   const post = nock('https://ObJeCt.إختبار').post('/?inbox').reply(200);
 
   try {
-    await postLike(repository, { data: { id } });
+    await postLike(repository, { data: { id: unwrap(id) } });
     expect(post.isDone()).toBe(true);
   } finally {
     nock.cleanAll();

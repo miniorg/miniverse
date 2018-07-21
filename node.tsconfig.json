@@ -1,0 +1,23 @@
+{
+  "extends": "./base.tsconfig",
+  "compilerOptions": {
+    "lib": ["es2017"],
+    "paths": { "isomorphism": ["lib/isomorphism/node"] },
+    "types": [
+      "bull", "extract-text-webpack-plugin", "ioredis", "node",
+      "pg", "webpack", "webpack-env"
+    ]
+  },
+  "include": ["app", "key", "lib", "migrations", "routes", "webpack"],
+  "exclude": [
+    "**/*.test.js",
+    "app/client.js",
+    "app/service-worker.js",
+    "app/manifest",
+    "app/subsystems/client.*",
+    "lib/isomorphism/browser",
+    "lib/relation.js",
+    "lib/store/browser",
+    "lib/test"
+  ]
+}

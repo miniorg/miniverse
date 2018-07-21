@@ -21,14 +21,18 @@ import {
   fabricateRemoteAccount
 } from '../../../../lib/test/fabricator';
 import repository from '../../../../lib/test/repository';
+import { unwrap } from '../../../../lib/test/types';
 import postStatus from './post_status';
-import nock from 'nock';
+
+const nock = require('nock');
 
 test('delivers announce to remote account', async () => {
   const [recipient, actor] = await Promise.all([
     fabricateRemoteAccount(
       { inboxURI: { uri: 'https://ReCiPiEnT.إختبار/?inbox' } }),
     fabricateLocalAccount()
+      .then(account => account.select('actor'))
+      .then(unwrap)
   ]);
 
   const announce = await fabricateAnnounce({ status: { actor } });
@@ -37,7 +41,7 @@ test('delivers announce to remote account', async () => {
 
   try {
     await postStatus(repository, {
-      data: { statusId: announce.status.id, inboxURIId: recipient.inboxURIId }
+      data: { statusId: unwrap(announce.id), inboxURIId: recipient.inboxURIId }
     });
 
     expect(post.isDone()).toBe(true);
@@ -51,6 +55,8 @@ test('delivers note to remote account', async () => {
     fabricateRemoteAccount(
       { inboxURI: { uri: 'https://ReCiPiEnT.إختبار/?inbox' } }),
     fabricateLocalAccount()
+      .then(account => account.select('actor'))
+      .then(unwrap)
   ]);
 
   const note = await fabricateNote({ status: { actor } });
@@ -59,7 +65,7 @@ test('delivers note to remote account', async () => {
 
   try {
     await postStatus(repository, {
-      data: { statusId: note.status.id, inboxURIId: recipient.inboxURIId }
+      data: { statusId: unwrap(note.id), inboxURIId: recipient.inboxURIId }
     });
 
     expect(post.isDone()).toBe(true);

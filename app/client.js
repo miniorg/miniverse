@@ -16,7 +16,14 @@
 
 import init from './subsystems/client';
 
-init(document.getElementById('root'));
+const root = document.getElementById('root');
+
+if (root) {
+  init(root);
+} else {
+  // eslint-disable-next-line no-console
+  console.error('failed to get the root element');
+}
 
 if (module.hot) {
   module.hot.accept();

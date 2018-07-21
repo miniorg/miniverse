@@ -111,7 +111,9 @@ export const post = secure(async (request, response) => {
 
     result = await create(repository, actor, object);
     result = await result.select('status');
-    result = await result.getUri();
+    if (result) {
+      result = await result.getUri();
+    }
   }
 
   /*

@@ -1,0 +1,12 @@
+{
+  "extends": "./base.tsconfig",
+  "compilerOptions": {
+    "lib": ["es2017"],
+    "types": [
+      "bull", "extract-text-webpack-plugin", "ioredis", "jest",
+      "nock", "node", "pg", "webpack", "webpack-env"
+    ]
+  },
+  "include": ["**/*.test.js"],
+  "exclude": ["key"]
+}

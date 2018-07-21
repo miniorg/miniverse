@@ -15,7 +15,7 @@
 */
 
 import { globalAgent } from 'https';
-import TemporaryError from '../../../lib/temporary_error';
+import { Temporary as TemporaryError } from '../../../lib/errors';
 import handlers from './handlers';
 
 export default repository =>

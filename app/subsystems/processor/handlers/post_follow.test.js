@@ -20,22 +20,26 @@ import {
   fabricateRemoteAccount
 } from '../../../../lib/test/fabricator';
 import repository from '../../../../lib/test/repository';
+import { unwrap } from '../../../../lib/test/types';
 import postFollow from './post_follow';
-import nock from 'nock';
+
+const nock = require('nock');
 
 test('delivers to remote account', async () => {
   const [actor, object] = await Promise.all([
-    fabricateLocalAccount(),
+    fabricateLocalAccount()
+      .then(account => account.select('actor'))
+      .then(unwrap),
     fabricateRemoteAccount({ inboxURI: { uri: 'https://ObJeCt.إختبار/?inbox' } })
+      .then(account => account.select('actor'))
+      .then(unwrap)
   ]);
 
-  const follow =
-    await fabricateFollow({ actor: actor.actor, object: object.actor });
-
+  const follow = await fabricateFollow({ actor, object });
   const post = nock('https://ObJeCt.إختبار').post('/?inbox').reply(200);
 
   try {
-    await postFollow(repository, { data: { id: follow.id } });
+    await postFollow(repository, { data: { id: unwrap(follow.id) } });
     expect(post.isDone()).toBe(true);
   } finally {
     nock.cleanAll();

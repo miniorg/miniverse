@@ -49,4 +49,4 @@ if (!process.env.NO_PROCESSOR) {
   processJobs(repository);
 }
 
-serve(repository, process.env.PORT);
+serve(repository, Number(process.env.PORT));

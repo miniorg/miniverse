@@ -18,20 +18,18 @@ import OrderedCollectionPage from '../../lib/ordered_collection_page';
 import secure from '../_secure';
 
 export const get = secure(async (request, response) => {
-  const { repository, user } = request;
-
   response.setHeader('Content-Type', 'text/event-stream');
   response.setHeader('Transfer-Encoding', 'chunked');
 
-  const statuses = await user.select('inbox');
+  const statuses = await request.user.select('inbox');
 
   const initialCollection = new OrderedCollectionPage({
     orderedItems: await Promise.all(
       statuses.reverse().map(status => status.select('extension')))
   });
 
-  const resolved = await initialCollection.toActivityStreams(repository);
-  const subscribedChannel = repository.getInboxChannel(user);
+  const resolved = await initialCollection.toActivityStreams();
+  const subscribedChannel = request.repository.getInboxChannel(request.user);
 
   function listen(publishedChannel, message) {
     return response.write(`data:{"@context":"https://www.w3.org/ns/activitystreams","type":"OrderedCollectionPage","orderedItems":[${message}]}\n\n`);
@@ -40,11 +38,11 @@ export const get = secure(async (request, response) => {
   resolved['@context'] = 'https://www.w3.org/ns/activitystreams';
   response.write(`data:${JSON.stringify(resolved)}\n\n`);
 
-  await repository.subscribe(subscribedChannel, listen);
+  await request.repository.subscribe(subscribedChannel, listen);
   const heartbeat = setInterval(() => response.write(':\n'), 16384);
 
   request.on('close', () => {
     clearInterval(heartbeat);
-    repository.unsubscribe(subscribedChannel, listen);
+    request.repository.unsubscribe(subscribedChannel, listen);
   });
 });

@@ -16,15 +16,23 @@
 
 import { URL } from 'url';
 import Actor from '../../../../lib/actor';
+import {
+  Temporary as TemporaryError,
+  Wrapper as WrappingError
+} from '../../../../lib/errors';
 import Key from '../../../../lib/key';
 import ParsedActivityStreams, { TypeNotAllowed }
   from '../../../../lib/parsed_activitystreams';
-import TemporaryError from '../../../../lib/temporary_error';
 import { normalizeHost } from '../../../../lib/uri';
 
 export default async (repository, { data }) => {
   const { body, signature } = data;
   const owner = await Actor.resolveByKeyUri(repository, signature.keyId);
+
+  if (!owner) {
+    throw new Error;
+  }
+
   const key = new Key({ owner, repository });
 
   if (await key.verifySignature(signature)) {
@@ -46,7 +54,7 @@ export default async (repository, { data }) => {
     if (errors.length) {
       const error = new (
         errors.some(error => error instanceof TemporaryError) ?
-          TemporaryError : Error)(errors.join());
+          TemporaryError : WrappingError)(errors.join());
 
       error.originals = errors;
 

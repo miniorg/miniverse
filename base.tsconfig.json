@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "alwaysStrict": true,
+    "baseUrl": ".",
+    "checkJs": true,
+    "downlevelIteration": true,
+    "noEmit": true,
+    "strictFunctionTypes": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true
+  }
+}

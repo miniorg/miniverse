@@ -19,7 +19,22 @@ import Repository from '../lib/repository';
 import processJobs from './subsystems/processor';
 
 const repository = new Repository({
+  analytics: { trackingId: process.env.ANALYTICS_TRACKING_ID },
+  captcha: {
+    secret: process.env.CAPTCHA_SECRET,
+    site: process.env.CAPTCHA_SITE,
+    verifier: process.env.CAPTCHA_VERIFIER
+  },
   console,
+  content: {
+    frame: { sourceList: process.env.CONTENT_FRAME_SOURCE_LIST },
+    image: { sourceList: process.env.CONTENT_IMAGE_SOURCE_LIST },
+    script: {
+      sourceList: process.env.CONTENT_SCRIPT_SOURCE_LIST,
+      sources: process.env.CONTENT_SCRIPT_SOURCES ?
+        process.env.CONTENT_SCRIPT_SOURCES.split(';') : []
+    }
+  },
   fingerHost: process.env.FINGER_HOST,
   host: process.env.HOST,
   pg: new Pool,

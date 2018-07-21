@@ -15,18 +15,41 @@
 */
 
 import Accept from '../../../../lib/accept';
+import LocalAccount from '../../../../lib/local_account';
+import RemoteAccount from '../../../../lib/remote_account';
 import postToInbox from '../../../../lib/transfer/post_to_inbox';
 
 export default async (repository, { data: { objectId } }) => {
   const accept = new Accept({ objectId, repository });
 
   const object = await accept.select('object');
+  if (!object) {
+    throw new Error;
+  }
+
   const [sender, inboxURI] = await Promise.all([
-    object.select('object').then(actor => actor.select('account')),
-    object.select('actor')
-          .then(actor => actor.select('account'))
-          .then(account => account.select('inboxURI'))
+    object.select('object').then(actor => {
+      if (actor) {
+        return actor.select('account');
+      }
+
+      throw new Error;
+    }),
+    object.select('actor').then(async actor => {
+      if (actor) {
+        const account = await actor.select('account');
+        if (account instanceof RemoteAccount) {
+          return account.select('inboxURI');
+        }
+      }
+
+      throw new Error;
+    })
   ]);
+
+  if (!(sender instanceof LocalAccount) || !inboxURI) {
+    throw new Error;
+  }
 
   await postToInbox(repository, sender, inboxURI, accept);
 };

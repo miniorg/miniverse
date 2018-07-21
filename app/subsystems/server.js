@@ -100,7 +100,6 @@ export default (repository, port) => {
           nonce,
           scripts: repository.content.script.sources,
           user: userActivityStreams,
-          events: null,
           fingerHost: repository.fingerHost
         });
       }

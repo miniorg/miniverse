@@ -1,0 +1,14 @@
+{
+  "extends": "./base.tsconfig",
+  "compilerOptions": {
+    "lib": ["es2017", "dom"],
+    "paths": { "isomorphism": ["lib/isomorphism/browser"] },
+    "types": ["webpack-env"]
+  },
+  "include": [
+    "app/client.js",
+    "app/subsystems/client.js",
+    "lib/isomorphism/browser/url.d.ts",
+    "lib/store"
+  ]
+}

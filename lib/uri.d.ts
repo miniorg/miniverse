@@ -14,4 +14,24 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-export default class extends Error {}
+import Repository from './repository';
+
+interface Properties {
+  readonly repository: Repository;
+  readonly id?: string;
+  readonly uri: string;
+  readonly allocated: boolean;
+}
+
+export function encodeSegment(this: void, segment: string): string;
+export function encodeAcctUserpart(this: void, userpart: string): string;
+export function normalizeHost(this: void, host: string): string;
+
+export default class {
+  constructor(properties: Properties);
+
+  private readonly repository: Repository;
+  id?: string;
+  readonly uri: string;
+  readonly allocated: boolean;
+}

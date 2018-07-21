@@ -14,26 +14,11 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Repository from './index';
+import Repository from '../../../../lib/repository';
 
-test('defaults finger host to host', () => {
-  const repository = new Repository({ host: 'إختبار', redis: [] });
+interface Job {
+  readonly data: { readonly id: string }
+}
 
-  try {
-    expect(repository).toHaveProperty('fingerHost', 'إختبار');
-  } finally {
-    repository.redis.client.disconnect();
-    repository.redis.subscriber.disconnect();
-  }
-});
-
-test('allows to override finger host', () => {
-  const repository = new Repository({ fingerHost: 'إختبار', redis: [] });
-
-  try {
-    expect(repository).toHaveProperty('fingerHost', 'إختبار');
-  } finally {
-    repository.redis.client.disconnect();
-    repository.redis.subscriber.disconnect();
-  }
-});
+export default function(this: void, repository: Repository, job: Job):
+  Promise<void>;
