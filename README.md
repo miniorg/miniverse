@@ -12,12 +12,7 @@ principle when making a new reference.
 ## Do not update `id` column of any record
 The application tracks references by `id` column and therefore
 `ON UPDATE CASCADE`, which is effective only on the database, is not sufficient.
-
-References to `id` column should have `ON UPDATE RESTRICT`. References from
-`in_reply_to_id` column of `notes` table to `id` column of `uris` is rather
-exceptional because it can be *invalidated* later because the URI may not be
-validated at the time when the reference was created. Therefore it has
-`ON UPDATE SET NULL` rather than `ON UPDATE RESTRICT` and `ON UPDATE CASCADE`.
+References to `id` column should have `ON UPDATE RESTRICT`.
 
 # License
 
