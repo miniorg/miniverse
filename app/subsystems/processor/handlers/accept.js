@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import postToInbox from '../../../../lib/transfer/post_to_inbox';
+import { postToInbox } from '../../../../lib/transfer';
 import Accept from '../../../../lib/tuples/accept';
 import LocalAccount from '../../../../lib/tuples/local_account';
 import RemoteAccount from '../../../../lib/tuples/remote_account';

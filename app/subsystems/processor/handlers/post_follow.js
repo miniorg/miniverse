@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import postToInbox from '../../../../lib/transfer/post_to_inbox';
+import { postToInbox } from '../../../../lib/transfer';
 
 export default async (repository, { data: { id } }) => {
   const follow = await repository.selectFollowIncludingActorAndObjectById(id);

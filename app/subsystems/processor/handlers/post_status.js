@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import postToInbox from '../../../../lib/transfer/post_to_inbox';
+import { postToInbox } from '../../../../lib/transfer';
 import Create from '../../../../lib/tuples/create';
 import Note from '../../../../lib/tuples/note';
 
