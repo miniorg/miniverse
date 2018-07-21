@@ -57,7 +57,7 @@
     "license-info-webpack-plugin": "^1.0.0",
     "nock": "^9.2.5",
     "svelte-loader": "^2.9.0",
-    "typescript": "file:../TypeScript/typescript-3.0.0.tgz",
+    "typescript": "https://github.com/miniorg/TypeScript/releases/download/v3.0-rc-miniverse-r0/typescript-3.0.0-rc.tgz",
     "webpack": "^4.1.0"
   }
 }
