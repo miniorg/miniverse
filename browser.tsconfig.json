@@ -9,6 +9,7 @@
     "app/client.js",
     "app/subsystems/client.js",
     "lib/isomorphism/browser/url.d.ts",
-    "lib/store"
+    "lib/store",
+    "lib/svelte.d.ts"
   ]
 }
