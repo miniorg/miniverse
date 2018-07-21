@@ -15,7 +15,7 @@
 */
 
 import { spawnSync } from 'child_process';
-import { extractPublic, generate } from './build/Release/key';
+import { extractPublic, generate } from './build/Release';
 
 describe('extractPublic', () => {
   test('rejects malformed characters', () => {
