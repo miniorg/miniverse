@@ -45,6 +45,7 @@ import Notes from './notes';
 import Pg from './pg';
 import Statuses from './statuses';
 import Subscribers, { Listen } from './subscribers';
+import Syslog from './syslog';
 import URIs from './uris';
 
 interface Captcha {
@@ -142,6 +143,7 @@ export default class Repository implements
 
   readonly analytics: Analytics;
   readonly captcha: Captcha;
+  readonly console: Syslog;
   readonly content: Content;
   readonly host: string;
   readonly fingerHost: string;
