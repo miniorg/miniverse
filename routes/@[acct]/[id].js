@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { normalizeHost } from '../../lib/uri';
+import { normalizeHost } from '../../lib/tuples/uri';
 import secure from '../_secure';
 import sendActivityStreams from '../_send_activitystreams';
 

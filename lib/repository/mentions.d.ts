@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Mention from '../mention';
+import Mention from '../tuples/mention';
 
 export default class {
   selectMentionsIncludingActorsByNoteId(id: string): Promise<Mention[]>;

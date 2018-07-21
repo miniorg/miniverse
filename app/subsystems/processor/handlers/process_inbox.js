@@ -15,15 +15,15 @@
 */
 
 import { URL } from 'url';
-import Actor from '../../../../lib/actor';
 import {
   Temporary as TemporaryError,
   Wrapper as WrappingError
 } from '../../../../lib/errors';
-import Key from '../../../../lib/key';
 import ParsedActivityStreams, { TypeNotAllowed }
   from '../../../../lib/parsed_activitystreams';
-import { normalizeHost } from '../../../../lib/uri';
+import Actor from '../../../../lib/tuples/actor';
+import Key from '../../../../lib/tuples/key';
+import { normalizeHost } from '../../../../lib/tuples/uri';
 
 export default async (repository, { data }) => {
   const { body, signature } = data;

@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Announce from '../announce';
+import Announce from '../tuples/announce';
 
 export default class {
   insertAnnounce(announce: Announce): Promise<void>;

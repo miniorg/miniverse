@@ -17,7 +17,7 @@
 import { raw } from 'body-parser';
 import { createHash, createHmac, timingSafeEqual } from 'crypto';
 import { promisify } from 'util';
-import { digest } from '../../lib/challenge';
+import { digest } from '../../lib/tuples/challenge';
 import secure from '../_secure';
 import cookie from './_cookie';
 

@@ -14,8 +14,8 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Actor from '../actor';
-import Follow from '../follow';
+import Actor from '../tuples/actor';
+import Follow from '../tuples/follow';
 
 export default class {
   deleteFollowByActorAndObject(actor: Actor, object: Actor): Promise<void>;

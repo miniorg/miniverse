@@ -14,8 +14,8 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Actor from '../../lib/actor';
-import { normalizeHost } from '../../lib/uri';
+import Actor from '../../lib/tuples/actor';
+import { normalizeHost } from '../../lib/tuples/uri';
 import secure from '../_secure';
 import sendActivityStreams from '../_send_activitystreams';
 

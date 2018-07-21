@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import RemoteAccount from '../remote_account';
+import RemoteAccount from '../tuples/remote_account';
 
 export default class {
   insertRemoteAccount(account: RemoteAccount): Promise<void>;

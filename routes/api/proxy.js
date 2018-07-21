@@ -18,7 +18,7 @@ import { urlencoded } from 'express';
 import { promisify } from 'util';
 import ParsedActivityStreams,
        { NoHost } from '../../lib/parsed_activitystreams';
-import Actor from '../../lib/actor';
+import Actor from '../../lib/tuples/actor';
 import secure from '../_secure';
 import sendActivityStreams from '../_send_activitystreams';
 

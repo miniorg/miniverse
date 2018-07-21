@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import OrderedCollectionPage from '../../lib/ordered_collection_page';
+import OrderedCollectionPage from '../../lib/tuples/ordered_collection_page';
 import secure from '../_secure';
 
 export const get = secure(async (request, response) => {

@@ -15,7 +15,7 @@
 */
 
 import Repository from '../repository';
-import Status from '../status';
+import Status from '../tuples/status';
 
 export default function(this: void, repository: Repository, status: Status):
   Promise<void>;

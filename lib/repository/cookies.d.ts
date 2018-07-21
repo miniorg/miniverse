@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Cookie from '../cookie';
+import Cookie from '../tuples/cookie';
 
 export default class {
   insertCookie(cookie: Cookie): Promise<void>;

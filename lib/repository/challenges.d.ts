@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Challenge from '../challenge';
+import Challenge from '../tuples/challenge';
 
 export default class {
   insertChallenge(challenge: Challenge): Promise<void>;

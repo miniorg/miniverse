@@ -16,8 +16,8 @@
     "app/manifest",
     "app/subsystems/client.*",
     "lib/isomorphism/browser",
-    "lib/relation.js",
     "lib/store/browser",
-    "lib/test"
+    "lib/test",
+    "lib/tuples/relation.js"
   ]
 }

@@ -14,10 +14,10 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Accept from '../../../../lib/accept';
-import LocalAccount from '../../../../lib/local_account';
-import RemoteAccount from '../../../../lib/remote_account';
 import postToInbox from '../../../../lib/transfer/post_to_inbox';
+import Accept from '../../../../lib/tuples/accept';
+import LocalAccount from '../../../../lib/tuples/local_account';
+import RemoteAccount from '../../../../lib/tuples/remote_account';
 
 export default async (repository, { data: { objectId } }) => {
   const accept = new Accept({ objectId, repository });

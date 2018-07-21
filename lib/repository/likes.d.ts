@@ -14,9 +14,9 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Actor from '../actor';
-import Like from '../like';
-import Note from '../note';
+import Actor from '../tuples/actor';
+import Like from '../tuples/like';
+import Note from '../tuples/note';
 
 export default class {
   deleteLikeByActorAndObject(actor: Actor, object: Note): Promise<void>;

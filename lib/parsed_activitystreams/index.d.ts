@@ -14,8 +14,8 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Actor from '../actor';
 import Repository from '../repository';
+import Actor from '../tuples/actor';
 import Resolver from './resolver';
 
 interface Content {

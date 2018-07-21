@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Actor from '../actor';
+import Actor from '../tuples/actor';
 
 export default class {
   selectActorById(id: string): Promise<Actor | null>;

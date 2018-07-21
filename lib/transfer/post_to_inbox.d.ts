@@ -15,9 +15,9 @@
 */
 
 import { Any } from '../generated_activitystreams';
-import LocalAccount from '../local_account';
-import URI from '../uri';
 import Repository from '../repository';
+import LocalAccount from '../tuples/local_account';
+import URI from '../tuples/uri';
 
 export default function(
   this: void,

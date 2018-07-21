@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Hashtag from '../hashtag';
+import Hashtag from '../tuples/hashtag';
 
 export default class {
   selectHashtagsByNoteId(noteId: string): Promise<Hashtag[]>;

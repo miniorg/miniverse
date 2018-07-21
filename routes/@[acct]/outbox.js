@@ -20,9 +20,9 @@ import ParsedActivityStreams, {
   AnyHost,
   TypeNotAllowed
 } from '../../lib/parsed_activitystreams';
-import { create } from '../../lib/create';
-import OrderedCollection from '../../lib/ordered_collection';
-import { normalizeHost } from '../../lib/uri';
+import { create } from '../../lib/tuples/create';
+import OrderedCollection from '../../lib/tuples/ordered_collection';
+import { normalizeHost } from '../../lib/tuples/uri';
 import secure from '../_secure';
 import sendActivityStreams from '../_send_activitystreams';
 

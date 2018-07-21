@@ -14,8 +14,8 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Actor from '../actor';
-import Status from '../status';
+import Actor from '../tuples/actor';
+import Status from '../tuples/status';
 
 export default class {
   deleteStatusByUriAndAttributedTo(uri: string, attributedTo: Actor):

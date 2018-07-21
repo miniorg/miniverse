@@ -16,7 +16,7 @@
 
 import { randomBytes } from 'crypto';
 import { promisify } from 'util';
-import Cookie, { getToken } from '../../lib/cookie';
+import Cookie, { getToken } from '../../lib/tuples/cookie';
 
 const promisifiedRandomBytes = promisify(randomBytes);
 

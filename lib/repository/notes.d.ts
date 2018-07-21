@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Note from '../note';
+import Note from '../tuples/note';
 
 export default class {
   insertNote(note: Note, inReplyToUri?: string | null): Promise<void>;

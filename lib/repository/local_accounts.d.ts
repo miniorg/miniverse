@@ -14,9 +14,9 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Actor from '../actor';
-import LocalAccount from '../local_account';
-import Status from '../status';
+import Actor from '../tuples/actor';
+import LocalAccount from '../tuples/local_account';
+import Status from '../tuples/status';
 
 export default class {
   getInboxChannel(accountOrActor: LocalAccount | Actor): string;

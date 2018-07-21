@@ -14,9 +14,9 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Create from '../../../../lib/create';
-import Note from '../../../../lib/note';
 import postToInbox from '../../../../lib/transfer/post_to_inbox';
+import Create from '../../../../lib/tuples/create';
+import Note from '../../../../lib/tuples/note';
 
 export default async (repository, { data: { statusId, inboxURIId } }) => {
   const [[activity, sender], inboxURI] = await Promise.all([

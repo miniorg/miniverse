@@ -14,19 +14,19 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Accept from '../accept';
-import Actor from '../actor';
-import Announce from '../announce';
-import Challenge from '../challenge';
-import Cookie from '../cookie';
-import Follow from '../follow';
-import Hashtag from '../hashtag';
-import Like from '../like';
-import LocalAccount from '../local_account';
-import Mention from '../mention';
-import Note from '../note';
-import RemoteAccount from '../remote_account';
 import Repository from '../repository';
+import Accept from '../tuples/accept';
+import Actor from '../tuples/actor';
+import Announce from '../tuples/announce';
+import Challenge from '../tuples/challenge';
+import Cookie from '../tuples/cookie';
+import Follow from '../tuples/follow';
+import Hashtag from '../tuples/hashtag';
+import Like from '../tuples/like';
+import LocalAccount from '../tuples/local_account';
+import Mention from '../tuples/mention';
+import Note from '../tuples/note';
+import RemoteAccount from '../tuples/remote_account';
 
 interface URIProperties {
   readonly id?: string;
