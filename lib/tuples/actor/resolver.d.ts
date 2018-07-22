@@ -21,9 +21,9 @@ export function lookup(this: void, repository: Repository, resource: string):
   Promise<any>;
 
 export default class Resolver {
-  static resolveByUsernameAndNormalizedHost(
+  static fromUsernameAndNormalizedHost(
     repository: Repository, username: string, normalizedHost: string):
       Promise<Actor | null>;
-  static resolveByKeyUri(repository: Repository, keyUri: string):
+  static fromKeyUri(repository: Repository, keyUri: string):
     Promise<Actor | null>;
 }

@@ -27,7 +27,7 @@ import { normalizeHost } from '../../../../lib/tuples/uri';
 
 export default async (repository, { data }) => {
   const { body, signature } = data;
-  const owner = await Actor.resolveByKeyUri(repository, signature.keyId);
+  const owner = await Actor.fromKeyUri(repository, signature.keyId);
 
   if (!owner) {
     throw new CustomError('Inbox owner not found', 'error');

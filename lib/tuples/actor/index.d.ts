@@ -52,11 +52,10 @@ export default class Actor extends Relation<Properties, References>
   static fromParsedActivityStreams(
     repository: Repository, object: ParsedActivityStreams): 
       Promise<Actor | null>;
-
-  static resolveByUsernameAndNormalizedHost(
+  static fromUsernameAndNormalizedHost(
     repository: Repository, username: string, normalizedHost: string | null):
       Promise<Actor | null>;
-  static resolveByKeyUri(repository: Repository, keyUri: string):
+  static fromKeyUri(repository: Repository, keyUri: string):
     Promise<Actor | null>;
 
   id?: string;

@@ -26,8 +26,7 @@ export const get = secure(async ({ query, repository }, response) => {
   const actor = await (host == normalizeHost(repository.fingerHost) ?
     repository.selectActorByUsernameAndNormalizedHost(
       decodeURI(userpart), null) :
-    Actor.resolveByUsernameAndNormalizedHost(
-      repository, decodeURI(userpart), host));
+    Actor.fromUsernameAndNormalizedHost(repository, decodeURI(userpart), host));
 
   const account = await actor.select('account');
 

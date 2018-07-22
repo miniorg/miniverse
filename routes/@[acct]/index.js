@@ -44,7 +44,7 @@ export const get = secure(async (request, response, next) => {
     normalizedHost = normalizeHost(acct.slice(atIndex + 1));
   }
 
-  const actor = await Actor.resolveByUsernameAndNormalizedHost(
+  const actor = await Actor.fromUsernameAndNormalizedHost(
     request.repository, username, normalizedHost);
 
   await sendActivityStreams(response, actor);
