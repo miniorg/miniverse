@@ -25,6 +25,12 @@ window.ga = function() {
 
 window.ga.q = [];
 
+addEventListener('error', ({ message, filename }) =>
+  window.ga('send', 'event', 'Runtime script error', filename, message));
+
+addEventListener('unhandledrejection', ({ reason }) =>
+  window.ga('send', 'event', 'Unhandled promise rejection', null, reason));
+
 document.addEventListener('securitypolicyviolation',
   ({ blockedURI, violatedDirective }) => window.ga(
     'send',
