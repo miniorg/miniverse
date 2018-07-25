@@ -14,15 +14,11 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Repository from '../lib/repository';
-import options from './options';
-import processJobs from './subsystems/processor';
-import serve from './subsystems/server';
+import Document from '../tuples/document';
+import Base from './base';
 
-const repository = new Repository(options);
-
-if (!process.env.NO_PROCESSOR) {
-  processJobs(repository);
+export default class extends Base {
+  insertDocument(document: Document): Promise<void>;
+  selectDocumentById(id: string): Promise<Document>;
+  selectDocumentsByAttachedNoteId(id: string): Promise<Document[]>;
 }
-
-serve(repository, Number(process.env.PORT));

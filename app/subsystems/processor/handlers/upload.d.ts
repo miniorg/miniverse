@@ -14,15 +14,11 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Repository from '../lib/repository';
-import options from './options';
-import processJobs from './subsystems/processor';
-import serve from './subsystems/server';
+import Repository from '../../../../lib/repository';
 
-const repository = new Repository(options);
-
-if (!process.env.NO_PROCESSOR) {
-  processJobs(repository);
+interface Job {
+  readonly data: { readonly id: string }
 }
 
-serve(repository, Number(process.env.PORT));
+export default function(this: void, repository: Repository, job: Job):
+  Promise<void>;

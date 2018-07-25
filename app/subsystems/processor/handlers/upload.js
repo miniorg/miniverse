@@ -14,15 +14,14 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Repository from '../lib/repository';
-import options from './options';
-import processJobs from './subsystems/processor';
-import serve from './subsystems/server';
+import { fetch } from '../../../../lib/transfer';
 
-const repository = new Repository(options);
+const sharp = require('sharp');
 
-if (!process.env.NO_PROCESSOR) {
-  processJobs(repository);
-}
+export default async (repository, { data: { id } }) => {
+  const document = await repository.selectDocumentById(id);
+  const { uri } = await document.select('url');
+  const { body } = await fetch(repository, uri);
 
-serve(repository, Number(process.env.PORT));
+  await document.upload(body.pipe(sharp().toFormat(document.format)));
+};

@@ -38,6 +38,8 @@ export type Actor = {
 
 export type Create = { type: string, object: Note };
 
+export type Document = { type: string, mediaType: string, url: string };
+
 export type Follow = { type: string, actor: string, object: string };
 
 export type Hashtag = { type: string, name: string };

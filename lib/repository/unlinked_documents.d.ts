@@ -14,15 +14,9 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Repository from '../lib/repository';
-import options from './options';
-import processJobs from './subsystems/processor';
-import serve from './subsystems/server';
+import Base from './base';
 
-const repository = new Repository(options);
-
-if (!process.env.NO_PROCESSOR) {
-  processJobs(repository);
+export default class extends Base {
+  deleteUnlinkedDocumentsByIds(ids: string[]): Promise<void>;
+  selectUnlinkedDocuments(): Promise<{ id: string, key: string }>;
 }
-
-serve(repository, Number(process.env.PORT));

@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/miniorg/miniverse#readme",
   "dependencies": {
+    "aws-sdk": "^2.263.1",
     "body-parser": "^1.18.2",
     "bull": "^3.3.10",
     "bull-arena": "^2.4.2",
@@ -37,6 +38,7 @@
     "pg": "^7.4.1",
     "sanitize-html": "^1.18.2",
     "sapper": "^0.12.0",
+    "sharp": "^0.20.4",
     "svelte": "^2.4.4"
   },
   "devDependencies": {
@@ -48,6 +50,7 @@
     "@types/node": "^8.10.21",
     "@types/pg": "^7.4.10",
     "@types/sanitize-html": "^1.14.0",
+    "@types/sharp": "^0.17.9",
     "@types/webpack": "^4.4.7",
     "@types/webpack-env": "^1.13.6",
     "babel-core": "^6.26.3",

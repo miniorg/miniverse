@@ -36,6 +36,7 @@ export default class ParsedActivityStreams {
     normalizedHost: any,
     parentContent?: Promise<Content>);
   getActor(): Promise<ParsedActivityStreams>;
+  getAttachment(): Promise<ParsedActivityStreams[]>;
   getAttributedTo(): Promise<ParsedActivityStreams>;
   getContent(): Promise<any>;
   getContext(): Promise<Set<any>>;
@@ -55,6 +56,7 @@ export default class ParsedActivityStreams {
   getTag(): Promise<ParsedActivityStreams[]>;
   getTo(): Promise<ParsedActivityStreams[]>;
   getType(): Promise<Set<any>>;
+  getUrl(): Promise<ParsedActivityStreams>;
   act(actor: Actor): Promise<string | null>;
 
   readonly normalizedHost: string;

@@ -19,5 +19,9 @@ import postFollow from './post_follow';
 import postLike from './post_like';
 import postStatus from './post_status';
 import processInbox from './process_inbox';
+import upload from './upload';
 
-export default { accept, postFollow, postLike, postStatus, processInbox };
+export default {
+  accept, postFollow, postLike, postStatus,
+  processInbox, upload
+};

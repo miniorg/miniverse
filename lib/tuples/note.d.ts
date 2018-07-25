@@ -18,6 +18,7 @@ import { Note as ActivityStreams } from '../generated_activitystreams';
 import ParsedActivityStreams from '../parsed_activitystreams';
 import Repository from '../repository';
 import Actor from './actor';
+import Document from './document';
 import Hashtag from './hashtag';
 import Mention from './mention';
 import Relation from './relation';
@@ -32,6 +33,7 @@ interface Properties {
 
 interface References {
   status: Status | null;
+  attachments?: Document[];
   hashtags: Hashtag[];
   mentions: Mention[];
 }
@@ -68,6 +70,7 @@ export default class Note extends Relation<Properties, References> {
   readonly summary: string | null;
   readonly content: string;
   private status?: Status | null;
+  private attachments?: Document[];
   private hashtags?: Hashtag[];
   private mentions?: Mention[];
 }

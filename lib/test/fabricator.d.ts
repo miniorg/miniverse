@@ -20,6 +20,7 @@ import Actor from '../tuples/actor';
 import Announce from '../tuples/announce';
 import Challenge from '../tuples/challenge';
 import Cookie from '../tuples/cookie';
+import Document from '../tuples/document';
 import Follow from '../tuples/follow';
 import Hashtag from '../tuples/hashtag';
 import Like from '../tuples/like';
@@ -62,6 +63,13 @@ export function fabricateCookie(properties?: {
   readonly digest?: Buffer
 }): Promise<Cookie>;
 
+export function fabricateDocument(properties?: {
+  readonly repository?: Repository,
+  readonly uuid?: string,
+  readonly format?: string,
+  readonly uri?: URIProperties,
+}): Promise<Document>;
+
 export function fabricateFollow(properties?: {
   readonly repository?: Repository,
   readonly actor?: Actor,
@@ -95,6 +103,7 @@ export function fabricateNote(properties?: {
   readonly inReplyToId?: string,
   readonly summary?: string | null,
   readonly content?: string,
+  readonly attachments?: Document[],
   readonly hashtags?: { readonly name?: string }[],
   readonly mentions?: { readonly href?: Actor }[]
 }): Promise<Note>;
