@@ -53,7 +53,8 @@ jobs:
     before_install:
       - initdb -D "$HOME/postgres"
       - pg_ctl -D "$HOME/postgres" start
-      - brew install redis
+      - brew install minio redis
+      - minio server travis/minio.RELEASE.2018-07-23T18-34-49Z/srv/data &
       - redis-server --daemonize yes
       - pg_isready
     cache:
@@ -65,7 +66,8 @@ jobs:
     before_install:
       - initdb -D "$HOME/postgres"
       - pg_ctl -D "$HOME/postgres" start
-      - brew install redis
+      - brew install minio redis
+      - minio server travis/minio.RELEASE.2018-07-23T18-34-49Z/srv/data &
       - redis-server --daemonize yes
       - pg_isready
     cache:
@@ -80,17 +82,38 @@ jobs:
       - echo "$SSH_IDENTITY" > ~/.ssh/id_ed25519
       - chmod 400 ~/.ssh/id_ed25519
       - npm pack
-      - scp -o UserKnownHostsFile=known_hosts -P 110 miniverse-0.0.1.tgz miniverse@pub.miniverse.social:miniverse.tgz
-      - ssh -o UserKnownHostsFile=known_hosts -p 110 miniverse@pub.miniverse.social "sudo systemctl stop miniverse && scl enable rh-nodejs8 'npm install miniverse.tgz && PATH=\$PWD/node_modules/.bin:\$PATH PGDATABASE=miniverse PGHOST=/var/run/postgresql ./node_modules/.bin/miniverse db-migrate up' && sudo systemctl start miniverse"
+      - scp -o UserKnownHostsFile=travis/known_hosts -P 110 miniverse-0.0.1.tgz miniverse@pub.miniverse.social:miniverse.tgz
+      - ssh -o UserKnownHostsFile=travis/known_hosts -p 110 miniverse@pub.miniverse.social "sudo systemctl stop miniverse && scl enable rh-nodejs8 'npm install miniverse.tgz && PATH=\$PWD/node_modules/.bin:\$PATH PGDATABASE=miniverse PGHOST=/var/run/postgresql ./node_modules/.bin/miniverse db-migrate up' && sudo systemctl start miniverse"
+env:
+  global:
+    - AWS_ENDPOINT=http://127.0.0.1:9000
+    - AWS_ACCESS_KEY_ID=minio
+    - AWS_SECRET_ACCESS_KEY=miniostorage
+    - AWS_SIGNATURE_VERSION=v4
+    - AWS_S3_BUCKET=miniverse
+    - AWS_S3_FORCE_PATH_STYLE=1
+    - MINIO_ACCESS_KEY=minio
+    - MINIO_SECRET_KEY=miniostorage
 services:
   - redis-server
 cache:
   directories:
     - node_modules
+    - travis/minio.RELEASE.2018-07-23T18-34-49Z/bin
+before_install:
+  - |
+    if [ ! -f travis/minio.RELEASE.2018-07-23T18-34-49Z/bin/minio ]
+    then
+      mkdir -p travis/minio.RELEASE.2018-07-23T18-34-49Z/bin &&
+        wget https://dl.minio.io/server/minio/release/linux-amd64/archive/minio.RELEASE.2018-07-23T18-34-49Z -O travis/minio.RELEASE.2018-07-23T18-34-49Z/bin/minio &&
+        chmod a+x travis/minio.RELEASE.2018-07-23T18-34-49Z/bin/minio
+    fi
+  - ./travis/minio.RELEASE.2018-07-23T18-34-49Z/bin/minio server travis/minio.RELEASE.2018-07-23T18-34-49Z/srv/data &
 script:
   - npx tsc -p browser.tsconfig.json
   - npx tsc -p node.tsconfig.json
   - npx tsc -p test.tsconfig.json
   - createdb travis_test_1
   - PGDATABASE=travis_test_1 npx db-migrate up
+  - node travis/create-bucket.js
   - npm test -- -w 1

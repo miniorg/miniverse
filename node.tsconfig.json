@@ -8,7 +8,7 @@
       "pg", "webpack", "webpack-env"
     ]
   },
-  "include": ["app", "key", "lib", "migrations", "routes", "webpack"],
+  "include": ["app", "key", "lib", "migrations", "routes", "webpack", "travis"],
   "exclude": [
     "**/*.test.js",
     "app/client.js",
