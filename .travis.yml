@@ -5,49 +5,37 @@ stages:
     if: branch = master
 jobs:
   include:
-  - stage: test
+  - &job_test_linux_9.6
+    stage: test
     os: linux
     dist: trusty
     sudo: false
     addons:
       postgresql: 9.6
     node_js: lts/*
-  - stage: test
-    os: linux
-    dist: trusty
-    sudo: false
-    addons:
-      postgresql: 9.6
+    env:
+      global:
+        - AWS_ENDPOINT=http://127.0.0.1:9000
+        - AWS_ACCESS_KEY_ID=minio
+        - AWS_SECRET_ACCESS_KEY=miniostorage
+        - AWS_SIGNATURE_VERSION=v4
+        - AWS_S3_BUCKET=miniverse
+        - AWS_S3_FORCE_PATH_STYLE=1
+        - MINIO_ACCESS_KEY=minio
+        - MINIO_SECRET_KEY=miniostorage
+  - <<: *job_test_linux_9.6
     node_js: node
-  - stage: test
-    os: linux
-    dist: trusty
-    sudo: false
-    addons:
-      postgresql: 9.6
+  - <<: *job_test_linux_9.6
     node_js: lts/*
-  - stage: test
-    os: linux
-    dist: trusty
-    sudo: false
-    addons:
-      postgresql: 9.6
-    node_js: node
-  - stage: test
-    os: linux
-    dist: trusty
-    sudo: false
-    addons:
-      postgresql: 9.5
-    node_js: lts/*
-  - stage: test
-    os: linux
-    dist: trusty
-    sudo: false
+  - &job_test_linux_9.5
+    <<: *job_test_linux_9.6
     addons:
       postgresql: 9.5
     node_js: node
-  - stage: test
+  - <<: *job_test_linux_9.5
+    node_js: lts/*
+  - &job_test_osx
+    <<: *job_test_linux_9.6
     os: osx
     node_js: lts/*
     before_install:
@@ -61,20 +49,8 @@ jobs:
       directories:
         - node_modules
         - "$HOME/Library/Caches/Homebrew"
-  - stage: test
-    os: osx
+  - <<: *job_test_osx
     node_js: node
-    before_install:
-      - initdb -D "$HOME/postgres"
-      - pg_ctl -D "$HOME/postgres" start
-      - brew install minio redis
-      - minio server travis/minio.RELEASE.2018-07-23T18-34-49Z/srv/data &
-      - redis-server --daemonize yes
-      - pg_isready
-    cache:
-      directories:
-        - node_modules
-        - "$HOME/Library/Caches/Homebrew"
   - stage: deploy
     os: linux
     dist: trusty
@@ -87,16 +63,6 @@ jobs:
       - git clone --depth 1 git@github.com:akihikodaki/dawachin.git
       - cd dawachin
       - ./deploy-miniverse.sh ../miniverse-0.0.1.tgz
-env:
-  global:
-    - AWS_ENDPOINT=http://127.0.0.1:9000
-    - AWS_ACCESS_KEY_ID=minio
-    - AWS_SECRET_ACCESS_KEY=miniostorage
-    - AWS_SIGNATURE_VERSION=v4
-    - AWS_S3_BUCKET=miniverse
-    - AWS_S3_FORCE_PATH_STYLE=1
-    - MINIO_ACCESS_KEY=minio
-    - MINIO_SECRET_KEY=miniostorage
 services:
   - redis-server
 cache:
