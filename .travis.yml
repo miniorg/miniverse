@@ -84,8 +84,9 @@ jobs:
       - echo "$SSH_IDENTITY" > ~/.ssh/id_ed25519
       - chmod 400 ~/.ssh/id_ed25519
       - npm pack
-      - scp -o UserKnownHostsFile=travis/known_hosts -P 110 miniverse-0.0.1.tgz miniverse@pub.miniverse.social:miniverse.tgz
-      - ssh -o UserKnownHostsFile=travis/known_hosts -p 110 miniverse@pub.miniverse.social "sudo systemctl stop miniverse && scl enable rh-nodejs8 'npm install miniverse.tgz && PATH=\$PWD/node_modules/.bin:\$PATH PGDATABASE=miniverse PGHOST=/var/run/postgresql PKG_CONFIG_PATH=$PWD/lib/pkgconfig ./node_modules/.bin/miniverse db-migrate up' && sudo systemctl start miniverse"
+      - git clone --depth 1 git@github.com:akihikodaki/dawachin.git
+      - cd dawachin
+      - ./deploy-miniverse.sh miniverse-0.0.1.tgz
 env:
   global:
     - AWS_ENDPOINT=http://127.0.0.1:9000
