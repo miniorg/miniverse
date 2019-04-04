@@ -86,7 +86,7 @@ jobs:
       - npm pack
       - git clone --depth 1 git@github.com:akihikodaki/dawachin.git
       - cd dawachin
-      - ./deploy-miniverse.sh miniverse-0.0.1.tgz
+      - ./deploy-miniverse.sh ../miniverse-0.0.1.tgz
 env:
   global:
     - AWS_ENDPOINT=http://127.0.0.1:9000
