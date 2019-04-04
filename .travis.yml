@@ -5,7 +5,7 @@ stages:
     if: branch = master
 jobs:
   include:
-  - &job_test_linux_9.6
+  - &job_test_linux_96
     stage: test
     os: linux
     dist: trusty
@@ -14,28 +14,27 @@ jobs:
       postgresql: 9.6
     node_js: lts/*
     env:
-      global:
-        - AWS_ENDPOINT=http://127.0.0.1:9000
-        - AWS_ACCESS_KEY_ID=minio
-        - AWS_SECRET_ACCESS_KEY=miniostorage
-        - AWS_SIGNATURE_VERSION=v4
-        - AWS_S3_BUCKET=miniverse
-        - AWS_S3_FORCE_PATH_STYLE=1
-        - MINIO_ACCESS_KEY=minio
-        - MINIO_SECRET_KEY=miniostorage
-  - <<: *job_test_linux_9.6
+      - AWS_ENDPOINT=http://127.0.0.1:9000
+      - AWS_ACCESS_KEY_ID=minio
+      - AWS_SECRET_ACCESS_KEY=miniostorage
+      - AWS_SIGNATURE_VERSION=v4
+      - AWS_S3_BUCKET=miniverse
+      - AWS_S3_FORCE_PATH_STYLE=1
+      - MINIO_ACCESS_KEY=minio
+      - MINIO_SECRET_KEY=miniostorage
+  - <<: *job_test_linux_96
     node_js: node
-  - <<: *job_test_linux_9.6
+  - <<: *job_test_linux_96
     node_js: lts/*
-  - &job_test_linux_9.5
-    <<: *job_test_linux_9.6
+  - &job_test_linux_95
+    <<: *job_test_linux_96
     addons:
       postgresql: 9.5
     node_js: node
-  - <<: *job_test_linux_9.5
+  - <<: *job_test_linux_95
     node_js: lts/*
   - &job_test_osx
-    <<: *job_test_linux_9.6
+    <<: *job_test_linux_96
     os: osx
     node_js: lts/*
     before_install:
@@ -57,16 +56,20 @@ jobs:
     sudo: false
     node_js: lts/*
     script:
+      - mkdir bin
+      - curl -O bin/ecs-cli https://s3.amazonaws.com/amazon-ecs-cli/ecs-cli-linux-amd64-latest
+      - chmod 700 bin/ecs-cli
       - echo "$SSH_IDENTITY" > ~/.ssh/id_ed25519
       - chmod 400 ~/.ssh/id_ed25519
       - npm pack
       - git clone --depth 1 git@github.com:akihikodaki/dawachin.git
       - cd dawachin
-      - ./deploy-miniverse.sh ../miniverse-0.0.1.tgz
+      - PATH="$PWD/../bin:$PATH" ./deploy-miniverse.sh ../miniverse-0.0.1.tgz
 services:
   - redis-server
 cache:
   directories:
+    - bin
     - node_modules
     - travis/minio.RELEASE.2018-07-23T18-34-49Z/bin
 before_install:
