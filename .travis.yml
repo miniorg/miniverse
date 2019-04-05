@@ -8,7 +8,7 @@ jobs:
   - &job_test_linux_96
     stage: test
     os: linux
-    dist: trusty
+    dist: xenial
     sudo: false
     addons:
       postgresql: 9.6
@@ -24,19 +24,25 @@ jobs:
       - MINIO_SECRET_KEY=miniostorage
   - <<: *job_test_linux_96
     node_js: node
-  - <<: *job_test_linux_96
-    node_js: lts/*
   - &job_test_linux_95
     <<: *job_test_linux_96
     addons:
       postgresql: 9.5
+  - <<: *job_test_linux_95
+    node_js: node
+  - <<: *job_test_linux_96
+    dist: trusty
+  - <<: *job_test_linux_96
+    dist: trusty
     node_js: node
   - <<: *job_test_linux_95
-    node_js: lts/*
+    dist: trusty
+  - <<: *job_test_linux_95
+    dist: trusty
+    node_js: node
   - &job_test_osx
     <<: *job_test_linux_96
     os: osx
-    node_js: lts/*
     before_install:
       - initdb -D "$HOME/postgres"
       - pg_ctl -D "$HOME/postgres" start
@@ -52,7 +58,7 @@ jobs:
     node_js: node
   - stage: deploy
     os: linux
-    dist: trusty
+    dist: xenial
     sudo: false
     node_js: lts/*
     addons:
