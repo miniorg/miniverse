@@ -55,21 +55,22 @@ jobs:
     dist: trusty
     sudo: false
     node_js: lts/*
+    addons:
+      apt:
+        packages:
+          - awscli
+    install:
+      - pip install --user awscli
+      - docker login -p "$DOCKER_PASSWORD" -u "$DOCKER_USER"
     script:
-      - mkdir bin
-      - curl -O bin/ecs-cli https://s3.amazonaws.com/amazon-ecs-cli/ecs-cli-linux-amd64-latest
-      - chmod 700 bin/ecs-cli
-      - echo "$SSH_IDENTITY" > ~/.ssh/id_ed25519
-      - chmod 400 ~/.ssh/id_ed25519
       - npm pack
-      - git clone --depth 1 git@github.com:akihikodaki/dawachin.git
-      - cd dawachin
-      - PATH="$PWD/../bin:$PATH" ./deploy-miniverse.sh ../miniverse-0.0.1.tgz
+      - mv miniverse-0.0.1.tgz docker
+      - docker build -t miniorg/miniverse docker
+      - aws ecs update-service --force-new-deployment --service dawachin
 services:
   - redis-server
 cache:
   directories:
-    - bin
     - node_modules
     - travis/minio.RELEASE.2018-07-23T18-34-49Z/bin
 before_install:
