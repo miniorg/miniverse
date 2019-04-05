@@ -5,13 +5,13 @@ stages:
     if: branch = master
 jobs:
   include:
-  - &job_test_linux_96
+  - &job_test_linux_100
     stage: test
     os: linux
     dist: xenial
     sudo: false
     addons:
-      postgresql: 9.6
+      postgresql: 10
     node_js: lts/*
     env:
       - AWS_ENDPOINT=http://127.0.0.1:9000
@@ -22,10 +22,16 @@ jobs:
       - AWS_S3_FORCE_PATH_STYLE=1
       - MINIO_ACCESS_KEY=minio
       - MINIO_SECRET_KEY=miniostorage
+  - <<: *job_test_linux_100
+    node_js: node
+  - &job_test_linux_96
+    <<: *job_test_linux_100
+    addons:
+      postgresql: 9.6
   - <<: *job_test_linux_96
     node_js: node
   - &job_test_linux_95
-    <<: *job_test_linux_96
+    <<: *job_test_linux_100
     addons:
       postgresql: 9.5
   - <<: *job_test_linux_95
@@ -41,7 +47,7 @@ jobs:
     dist: trusty
     node_js: node
   - &job_test_osx
-    <<: *job_test_linux_96
+    <<: *job_test_linux_100
     os: osx
     before_install:
       - initdb -D "$HOME/postgres"
