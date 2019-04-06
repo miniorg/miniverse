@@ -71,13 +71,13 @@ jobs:
       apt:
         packages:
           - awscli
-    install:
-      - pip install --user awscli
-      - docker login -p "$DOCKER_PASSWORD" -u "$DOCKER_USER"
     script:
       - npm pack
       - mv miniverse-0.0.1.tgz docker
       - docker build -t miniorg/miniverse docker
+      - docker login -p "$DOCKER_PASSWORD" -u "$DOCKER_USER"
+      - docker push miniorg/miniverse
+      - pip install --user awscli
       - aws ecs update-service --force-new-deployment --service dawachin
 services:
   - redis-server
