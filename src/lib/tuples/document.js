@@ -27,7 +27,7 @@ export default class Document extends Relation {
     return {
       type: 'Document',
       mediaType: `image/${this.format}`,
-      url: `${this.repository.document.urlPrefix}/${this.uuid}.${this.format}`
+      url: `${this.repository.s3.urlPrefix}/${this.uuid}.${this.format}`
     };
   }
 
@@ -36,7 +36,7 @@ export default class Document extends Relation {
       Bucket: this.repository.s3.bucket,
       Body: data,
       ContentType: `image/${this.format}`,
-      Key: `${this.repository.document.keyPrefix}${this.uuid}.${this.format}`
+      Key: `${this.repository.s3.keyPrefix}${this.uuid}.${this.format}`
     }).promise();
   }
 

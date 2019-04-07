@@ -29,10 +29,6 @@ const testRepository = new Repository({
   captcha: {},
   console,
   content: { frame: {}, image: {}, script: { sources: [] } },
-  document: {
-    keyPrefix: 'documents/',
-    urlPrefix: 'https://dOcUmEnTs.xn--kgbechtv'
-  },
   fingerHost: 'FiNgEr.إختبار',
   host: 'إختبار',
   pg: new Pool({ database }),
@@ -46,7 +42,9 @@ const testRepository = new Repository({
       s3BucketEndpoint: Boolean(process.env.AWS_S3_BUCKET_ENDPOINT),
       s3ForcePathStyle: Boolean(process.env.AWS_S3_FORCE_PATH_STYLE)
     }),
-    bucket: `${process.env.AWS_S3_BUCKET}-test-${process.env.JEST_WORKER_ID || '1'}`
+    bucket: `${process.env.AWS_S3_BUCKET}-test-${process.env.JEST_WORKER_ID || '1'}`,
+    keyPrefix: 'documents/',
+    urlPrefix: 'https://dOcUmEnTs.xn--kgbechtv'
   },
   redis: {
     url: process.env.REDIS,

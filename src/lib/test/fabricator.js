@@ -101,7 +101,7 @@ export async function fabricateDocument(properties) {
     repository.s3.service.upload({
       Bucket: repository.s3.bucket,
       Body: join(__dirname, __filename),
-      Key: `documents/${document.uuid}.${document.format}`
+      Key: `${repository.s3.keyPrefix}${document.uuid}.${document.format}`
     }).promise()
   ]);
 

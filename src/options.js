@@ -19,9 +19,9 @@ import { Custom as CustomError } from './lib/errors';
 
 const S3 = require('aws-sdk/clients/s3');
 
-if (!process.env.DOCUMENT_URL_PREFIX) {
+if (!process.env.AWS_S3_URL_PREFIX) {
   throw new CustomError(
-    'DOCUMENT_URL_PREFIX environment variable not specified',
+    'AWS_S3_URL_PREFIX environment variable not specified',
     'error');
 }
 
@@ -42,10 +42,6 @@ export default {
         process.env.CONTENT_SCRIPT_SOURCES.split(';') : []
     }
   },
-  document: {
-    keyPrefix: process.env.DOCUMENT_KEY_PREFIX,
-    urlPrefix: process.env.DOCUMENT_URL_PREFIX,
-  },
   fingerHost: process.env.FINGER_HOST,
   host: process.env.HOST,
   pg: new Pool,
@@ -61,7 +57,9 @@ export default {
       region: process.env.AWS_REGION,
       signatureVersion: process.env.AWS_SIGNATURE_VERSION,
       s3BucketEndpoint: Boolean(process.env.AWS_S3_BUCKET_ENDPOINT),
-      s3ForcePathStyle: Boolean(process.env.AWS_S3_FORCE_PATH_STYLE)
+      s3ForcePathStyle: Boolean(process.env.AWS_S3_FORCE_PATH_STYLE),
+      keyPrefix: process.env.AWS_S3_KEY_PREFIX,
+      urlPrefix: process.env.AWS_S3_URL_PREFIX,
     }),
     bucket: process.env.AWS_S3_BUCKET
   }

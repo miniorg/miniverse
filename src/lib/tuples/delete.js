@@ -41,8 +41,8 @@ export default class {
       await repository.s3.service.deleteObjects({
         Bucket: repository.s3.bucket,
         Delete: {
-          Objects: documents.map(
-            ({ uuid, format }) => ({ Key: `documents/${uuid}.${format}` }))
+          Objects: documents.map(({ uuid, format }) =>
+            ({ Key: `${repository.s3.keyPrefix}${uuid}.${format}` }))
         }
       }).promise();
 

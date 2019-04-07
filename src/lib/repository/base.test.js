@@ -46,11 +46,10 @@ test('allows to override finger host', () => {
     captcha: {},
     console,
     content: { frame: {}, image: {}, script: { sources: [] } },
-    document: { urlPrefix: '' },
     fingerHost: 'إختبار',
     pg: new Pool,
     redis: {},
-    s3: { service: new S3, bucket: '' }
+    s3: { service: new S3, bucket: '', urlPrefix: '' }
   });
 
   try {
