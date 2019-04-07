@@ -17,8 +17,6 @@
 /.eslintrc.json
 /.sapper
 /.travis.yml
-/known_hosts
 /app
-/key/build
 /lib
 /routes

@@ -8,6 +8,5 @@
       "nock", "node", "pg", "webpack", "webpack-env"
     ]
   },
-  "include": ["**/*.test.js"],
-  "exclude": ["key"]
+  "include": ["**/*.test.js"]
 }
