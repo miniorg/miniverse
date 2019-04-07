@@ -71,16 +71,17 @@ services:
 cache:
   directories:
     - node_modules
-    - travis/minio.RELEASE.2018-07-23T18-34-49Z/bin
+    - travis/minio.RELEASE.2019-04-04T18-31-46Z/bin
 before_install:
   - |
-    if [ ! -f travis/minio.RELEASE.2018-07-23T18-34-49Z/bin/minio ]
+    if [ ! -f travis/minio.RELEASE.2019-04-04T18-31-46Z/bin/minio ]
     then
-      mkdir -p travis/minio.RELEASE.2018-07-23T18-34-49Z/bin &&
-        wget https://dl.minio.io/server/minio/release/linux-amd64/archive/minio.RELEASE.2018-07-23T18-34-49Z -O travis/minio.RELEASE.2018-07-23T18-34-49Z/bin/minio &&
-        chmod a+x travis/minio.RELEASE.2018-07-23T18-34-49Z/bin/minio
+      mkdir -p travis/minio.RELEASE.2019-04-04T18-31-46Z/bin
+      wget https://dl.minio.io/server/minio/release/linux-amd64/archive/minio.RELEASE.2019-04-04T18-31-46Z -O travis/minio.RELEASE.2019-04-04T18-31-46Z/bin/minio
+      sha1sum -c <<< '06ad2f55f370d2ad1d1310cbdcae8889637a8eb1  travis/minio.RELEASE.2019-04-04T18-31-46Z/bin/minio'
+      chmod a+x travis/minio.RELEASE.2019-04-04T18-31-46Z/bin/minio
     fi
-  - ./travis/minio.RELEASE.2018-07-23T18-34-49Z/bin/minio server travis/minio.RELEASE.2018-07-23T18-34-49Z/srv/data &
+  - ./travis/minio.RELEASE.2019-04-04T18-31-46Z/bin/minio server travis/minio.RELEASE.2019-04-04T18-31-46Z/srv/data &
 script:
   - npx tsc -p browser.tsconfig.json
   - npx tsc -p node.tsconfig.json
