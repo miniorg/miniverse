@@ -37,7 +37,7 @@ describe('toActivityStreams', () => {
     return expect(document.toActivityStreams()).resolves.toEqual({
       type: 'Document',
       mediaType: `image/svg`,
-      url: `https://xn--kgbechtv/documents/00000000-0000-1000-8000-010000000000.svg`
+      url: `https://dOcUmEnTs.xn--kgbechtv/00000000-0000-1000-8000-010000000000.svg`
     });
   });
 });

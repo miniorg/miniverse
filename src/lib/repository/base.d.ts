@@ -52,23 +52,31 @@ import Syslog from './syslog';
 import UnlinkedDocuments from './unlinked_documents';
 import URIs from './uris';
 
-interface Captcha {
-  readonly secret?: string;
-  readonly site?: string;
-  readonly verifier?: string;
-}
+declare namespace Option {
+  interface Captcha {
+    readonly secret?: string;
+    readonly site?: string;
+    readonly verifier?: string;
+  }
 
-interface Content {
-  readonly frame: { readonly sourceList?: string };
-  readonly image: { readonly sourceList?: string };
-  readonly script: { readonly sourceList?: string, readonly sources: string[] };
+  interface Content {
+    readonly frame: { readonly sourceList?: string };
+    readonly image: { readonly sourceList?: string };
+    readonly script: { readonly sourceList?: string, readonly sources: string[] };
+  }
+
+  interface Document {
+    readonly keyPrefix?: string;
+    readonly urlPrefix: string;
+  }
 }
 
 export interface Options {
   readonly analytics: Analytics;
-  readonly captcha: Captcha;
+  readonly captcha: Option.Captcha;
   readonly console: Console;
-  readonly content: Content;
+  readonly content: Option.Content;
+  readonly document: Option.Document;
   readonly host?: string;
   readonly fingerHost?: string;
   readonly pg: Pool;
@@ -154,9 +162,10 @@ export default class Repository implements
   selectAllocatedURI(uri: string): Promise<URI | null>;
 
   readonly analytics: Analytics;
-  readonly captcha: Captcha;
+  readonly captcha: Option.Captcha;
   readonly console: Syslog;
-  readonly content: Content;
+  readonly content: Option.Content;
+  readonly document: Option.Document;
   readonly host: string;
   readonly fingerHost: string;
   readonly pg: Pg;

@@ -14,7 +14,6 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { domainToASCII } from 'url';
 import generateUuid from '../generate_uuid';
 import { TypeNotAllowed } from '../parsed_activitystreams';
 import { fetch } from '../transfer';
@@ -28,7 +27,7 @@ export default class Document extends Relation {
     return {
       type: 'Document',
       mediaType: `image/${this.format}`,
-      url: `https://${domainToASCII(this.repository.host)}/documents/${this.uuid}.${this.format}`
+      url: `${this.repository.document.urlPrefix}/${this.uuid}.${this.format}`
     };
   }
 
@@ -37,7 +36,7 @@ export default class Document extends Relation {
       Bucket: this.repository.s3.bucket,
       Body: data,
       ContentType: `image/${this.format}`,
-      Key: `documents/${this.uuid}.${this.format}`
+      Key: `${this.repository.document.keyPrefix}${this.uuid}.${this.format}`
     }).promise();
   }
 

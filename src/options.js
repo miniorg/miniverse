@@ -15,8 +15,15 @@
 */
 
 import { Pool } from 'pg';
+import { Custom as CustomError } from './lib/errors';
 
 const S3 = require('aws-sdk/clients/s3');
+
+if (!process.env.DOCUMENT_URL_PREFIX) {
+  throw new CustomError(
+    'DOCUMENT_URL_PREFIX environment variable not specified',
+    'error');
+}
 
 export default {
   analytics: { trackingId: process.env.ANALYTICS_TRACKING_ID },
@@ -34,6 +41,10 @@ export default {
       sources: process.env.CONTENT_SCRIPT_SOURCES ?
         process.env.CONTENT_SCRIPT_SOURCES.split(';') : []
     }
+  },
+  document: {
+    keyPrefix: process.env.DOCUMENT_KEY_PREFIX,
+    urlPrefix: process.env.DOCUMENT_URL_PREFIX,
   },
   fingerHost: process.env.FINGER_HOST,
   host: process.env.HOST,

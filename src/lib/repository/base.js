@@ -35,7 +35,7 @@ import Syslog from './syslog';
 const Bull = require('bull');
 const Redis = require('ioredis');
 
-export default function Repository({ analytics, captcha, console, content, host, fingerHost, pg, s3, redis }) {
+export default function Repository({ analytics, captcha, console, content, document, host, fingerHost, pg, s3, redis }) {
   this.analytics = analytics;
   this.captcha = captcha;
   this.console = new Syslog(console);
@@ -45,6 +45,11 @@ export default function Repository({ analytics, captcha, console, content, host,
   this.fingerHost = fingerHost || host;
   this.pg = new Pg(pg);
   this.s3 = s3;
+
+  this.document = {
+    keyPrefix: document.keyPrefix || '',
+    urlPrefix: document.urlPrefix
+  };
 
   this.redis = {
     prefix: redis.prefix || 'miniverse:',

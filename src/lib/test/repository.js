@@ -29,6 +29,10 @@ const testRepository = new Repository({
   captcha: {},
   console,
   content: { frame: {}, image: {}, script: { sources: [] } },
+  document: {
+    keyPrefix: 'documents/',
+    urlPrefix: 'https://dOcUmEnTs.xn--kgbechtv'
+  },
   fingerHost: 'FiNgEr.إختبار',
   host: 'إختبار',
   pg: new Pool({ database }),
