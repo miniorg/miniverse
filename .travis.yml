@@ -1,4 +1,5 @@
 language: node_js
+node_js: node
 stages:
   - test
   - name: deploy
@@ -12,7 +13,6 @@ jobs:
     sudo: false
     addons:
       postgresql: 10
-    node_js: node
     env:
       - AWS_ENDPOINT=http://127.0.0.1:9000
       - AWS_ACCESS_KEY_ID=minio
@@ -53,7 +53,6 @@ jobs:
     os: linux
     dist: xenial
     sudo: false
-    node_js: node
     addons:
       apt:
         packages:
