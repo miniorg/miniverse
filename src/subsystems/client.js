@@ -19,7 +19,7 @@ import Store from '../lib/store/browser';
 
 /* eslint-disable no-global-assign */
 // @ts-ignore
-ga = function() {
+window.ga = function() {
   ga.q.push(arguments);
 };
 /* eslint-enable no-global-assign */
