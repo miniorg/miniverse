@@ -64,13 +64,6 @@ declare namespace Option {
     readonly image: { readonly sourceList?: string };
     readonly script: { readonly sourceList?: string, readonly sources: string[] };
   }
-
-  interface S3 {
-    service: S3,
-    readonly bucket?: string;
-    readonly keyPrefix?: string;
-    readonly urlPrefix: string;
-  }
 }
 
 export interface Options {
@@ -82,7 +75,12 @@ export interface Options {
   readonly fingerHost?: string;
   readonly pg: Pool;
   readonly redis: { readonly prefix?: string, readonly url?: string };
-  readonly s3: Option.S3;
+  readonly s3: {
+    service: S3;
+    readonly bucket?: string;
+    readonly keyPrefix?: string;
+    readonly urlPrefix: string;
+  };
 }
 
 interface RedisRepository {
@@ -170,7 +168,12 @@ export default class Repository implements
   readonly fingerHost: string;
   readonly pg: Pg;
   readonly redis: RedisRepository;
-  readonly s3: Option.S3;
+  readonly s3: {
+    service: S3;
+    readonly bucket: string;
+    readonly keyPrefix: string;
+    readonly urlPrefix: string;
+  };
   readonly queue: Queue;
   protected listeners: { [channel: string]: Set<Listen> };
 }

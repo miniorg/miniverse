@@ -25,11 +25,10 @@ test('defaults finger host to host', () => {
     captcha: {},
     console,
     content: { frame: {}, image: {}, script: { sources: [] } },
-    document: { urlPrefix: '' },
     host: 'إختبار',
     pg: new Pool,
     redis: {},
-    s3: { service: new S3, bucket: '' }
+    s3: { service: new S3, bucket: '', urlPrefix: '' }
   });
 
   try {

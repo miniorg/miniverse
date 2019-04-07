@@ -58,9 +58,9 @@ export default {
       signatureVersion: process.env.AWS_SIGNATURE_VERSION,
       s3BucketEndpoint: Boolean(process.env.AWS_S3_BUCKET_ENDPOINT),
       s3ForcePathStyle: Boolean(process.env.AWS_S3_FORCE_PATH_STYLE),
-      keyPrefix: process.env.AWS_S3_KEY_PREFIX,
-      urlPrefix: process.env.AWS_S3_URL_PREFIX,
     }),
-    bucket: process.env.AWS_S3_BUCKET
+    bucket: process.env.AWS_S3_BUCKET,
+    keyPrefix: process.env.AWS_S3_KEY_PREFIX,
+    urlPrefix: process.env.AWS_S3_URL_PREFIX
   }
 };
