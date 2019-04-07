@@ -18,6 +18,7 @@
 !/LICENSE
 !/README.md
 !/database.json
-!/index.sh
 !/migrations/**
+!/mini-migrate.js
+!/mini-serve.js
 !/static/**

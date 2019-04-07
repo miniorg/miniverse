@@ -3,7 +3,9 @@
   "version": "0.0.1",
   "description": "Miniverse is a microblogging software.",
   "bin": {
-    "miniverse": "./index.sh"
+    "mini-migrate": "mini-migrate.js",
+    "mini-process": "__sapper__/build/server/processor.js",
+    "mini-serve": "mini-serve.js"
   },
   "scripts": {
     "dev": "sapper dev",

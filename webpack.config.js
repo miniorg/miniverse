@@ -16,7 +16,11 @@
 
 const LicenseInfoWebpackPlugin = require('license-info-webpack-plugin').default;
 const { join } = require('path');
-const { DefinePlugin, HotModuleReplacementPlugin } = require('webpack');
+const {
+  BannerPlugin,
+  DefinePlugin,
+  HotModuleReplacementPlugin
+} = require('webpack');
 const { client, server, serviceworker } = require('sapper/config/webpack');
 const { dependencies } = require('./package');
 
@@ -85,7 +89,14 @@ module.exports = {
           }
         }
       ]
-    }
+    },
+    plugins: [
+      new BannerPlugin({
+        banner: '#!/usr/bin/env node',
+        raw: true,
+        test: /^processor\.js$/
+      })
+    ]
   },
   serviceworker: {
     entry: serviceworker.entry(),
