@@ -32,5 +32,7 @@ RUN tar xf vips-8.7.4.tar.gz && \
     apk del build
 
 FROM base
-CMD ["miniverse", "sh", "-c", "db-migrate up && exec sapper start"]
+CMD ["miniverse", "sh", "-c", "db-migrate up && exec node __sapper__/build"]
+ENV NO_UPDATE_NOTIFIER=1
+USER node
 COPY --from=1 / /
