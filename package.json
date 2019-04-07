@@ -9,8 +9,8 @@
     "dev": "sapper dev",
     "build": "sapper build",
     "prepare": "sapper build",
-    "start": "sapper start",
-    "test": "jest --env=node"
+    "start": "node __sapper__/build",
+    "test": "jest --env=node --testPathIgnorePatterns=DefinitelyTyped/"
   },
   "repository": {
     "type": "git",
@@ -22,35 +22,34 @@
   },
   "homepage": "https://github.com/miniorg/miniverse#readme",
   "dependencies": {
-    "aws-sdk": "^2.263.1",
-    "body-parser": "^1.18.2",
-    "bull": "^3.3.10",
-    "bull-arena": "^2.4.2",
+    "aws-sdk": "^2.437.0",
+    "body-parser": "^1.18.3",
+    "bull": "^3.7.0",
+    "bull-arena": "^2.6.2",
     "cookie": "^0.3.1",
-    "db-migrate": "^0.10.7",
-    "db-migrate-pg": "^0.4.0",
-    "express": "^4.16.3",
+    "db-migrate": "^0.11.5",
+    "db-migrate-pg": "^0.5.0",
+    "express": "^4.16.4",
     "http-signature": "^1.2.0",
-    "ioredis": "^3.2.2",
+    "ioredis": "^4.9.0",
     "node-fetch": "https://github.com/miniorg/node-fetch/releases/download/v2.1.2-miniverse-r0/node-fetch-2.1.2.tgz",
-    "pg": "^7.4.1",
-    "sanitize-html": "^1.18.2",
-    "sapper": "^0.12.0",
-    "sharp": "^0.20.4",
-    "svelte": "^2.4.4"
+    "pg": "^7.9.0",
+    "sanitize-html": "^1.20.0",
+    "sapper": "^0.25.0",
+    "sharp": "^0.22.0",
+    "svelte": "^2.16.1"
   },
   "devDependencies": {
     "@types/webpack-env": "^1.13.9",
     "babel-core": "^6.26.3",
-    "babel-jest": "^22.4.3",
+    "babel-jest": "^24.7.1",
     "babel-plugin-transform-es2015-modules-commonjs": "^6.26.2",
-    "eslint": "^4.19.1",
-    "extract-text-webpack-plugin": "^3.0.2",
-    "jest": "^22.4.3",
-    "license-info-webpack-plugin": "^1.0.0",
-    "nock": "^9.2.5",
-    "svelte-loader": "^2.9.0",
+    "eslint": "^5.16.0",
+    "jest": "^24.7.1",
+    "license-info-webpack-plugin": "^2.0.0",
+    "nock": "^10.0.6",
+    "svelte-loader": "^2.13.3",
     "typescript": "^3.4.2",
-    "webpack": "^4.1.0"
+    "webpack": "^4.29.6"
   }
 }

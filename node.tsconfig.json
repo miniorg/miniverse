@@ -2,23 +2,23 @@
   "extends": "./base.tsconfig",
   "compilerOptions": {
     "lib": ["es2017"],
-    "paths": { "isomorphism": ["lib/isomorphism/node"] },
+    "paths": { "isomorphism": ["src/lib/isomorphism/node"] },
     "typeRoots": ["./DefinitelyTyped/types"],
     "types": [
       "bull", "extract-text-webpack-plugin", "ioredis", "node",
       "pg", "webpack", "webpack-env"
     ]
   },
-  "include": ["app", "key", "lib", "migrations", "routes", "webpack", "travis"],
+  "include": ["src", "migrations", "webpack.config.js"],
   "exclude": [
     "**/*.test.js",
-    "app/client.js",
-    "app/service-worker.js",
-    "app/manifest",
-    "app/subsystems/client.*",
-    "lib/isomorphism/browser",
-    "lib/store/browser",
-    "lib/test",
-    "lib/tuples/relation.js"
+    "src/client.js",
+    "src/service-worker.js",
+    "src/subsystems/client.*",
+    "src/subsystems/server.js",
+    "src/lib/isomorphism/browser",
+    "src/lib/store/browser",
+    "src/lib/test",
+    "src/lib/tuples/relation.js"
   ]
 }

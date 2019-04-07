@@ -13,8 +13,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 build
-/.sapper
-/app/manifest
-/assets/license-main.html
+/__sapper__
 /docker/miniverse-*.tgz
 /node_modules
+/static/license-main.html
