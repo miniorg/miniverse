@@ -3,6 +3,7 @@
   "compilerOptions": {
     "lib": ["es2017"],
     "paths": { "isomorphism": ["lib/isomorphism/node"] },
+    "typeRoots": ["./DefinitelyTyped/types"],
     "types": [
       "bull", "extract-text-webpack-plugin", "ioredis", "node",
       "pg", "webpack", "webpack-env"

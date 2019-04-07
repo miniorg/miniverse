@@ -19,26 +19,35 @@ import Store from '../../lib/store/browser';
 import App from '../app';
 import { routes } from '../manifest/client';
 
-window.ga = function() {
-  window.ga.q.push(arguments);
+/* eslint-disable no-global-assign */
+// @ts-ignore
+ga = function() {
+  ga.q.push(arguments);
 };
+/* eslint-enable no-global-assign */
 
-window.ga.q = [];
+ga.q = [];
 
-addEventListener('error', ({ message, filename }) =>
-  window.ga('send', 'event', 'Runtime script error', filename, message));
+addEventListener('error', ({ message, filename }) => {
+  // @ts-ignore
+  ga('send', 'event', 'Runtime script error', filename, message);
+});
 
-addEventListener('unhandledrejection', ({ reason }) =>
-  window.ga('send', 'event', 'Unhandled promise rejection', null, reason));
+addEventListener('unhandledrejection', ({ reason }) => {
+  // @ts-ignore
+  ga('send', 'event', 'Unhandled promise rejection', null, reason);
+});
 
-document.addEventListener('securitypolicyviolation',
-  ({ blockedURI, violatedDirective }) => window.ga(
+document.addEventListener('securitypolicyviolation', ({ blockedURI, violatedDirective }) => {
+  // @ts-ignore
+  ga(
     'send',
     'event',
     'Security Policy Violation',
     violatedDirective,
     blockedURI,
-    { nonInteraction: true }));
+    { nonInteraction: true });
+});
 
 export default target => init({
   target,

@@ -12,7 +12,7 @@ jobs:
     sudo: false
     addons:
       postgresql: 10
-    node_js: lts/*
+    node_js: node
     env:
       - AWS_ENDPOINT=http://127.0.0.1:9000
       - AWS_ACCESS_KEY_ID=minio
@@ -23,31 +23,20 @@ jobs:
       - MINIO_ACCESS_KEY=minio
       - MINIO_SECRET_KEY=miniostorage
   - <<: *job_test_linux_100
-    node_js: node
-  - &job_test_linux_96
-    <<: *job_test_linux_100
     addons:
       postgresql: 9.6
-  - <<: *job_test_linux_96
-    node_js: node
-  - &job_test_linux_95
-    <<: *job_test_linux_100
+  - <<: *job_test_linux_100
     addons:
       postgresql: 9.5
-  - <<: *job_test_linux_95
-    node_js: node
-  - <<: *job_test_linux_96
+  - <<: *job_test_linux_100
+    addons:
+      postgresql: 9.6
     dist: trusty
-  - <<: *job_test_linux_96
+  - <<: *job_test_linux_100
+    addons:
+      postgresql: 9.5
     dist: trusty
-    node_js: node
-  - <<: *job_test_linux_95
-    dist: trusty
-  - <<: *job_test_linux_95
-    dist: trusty
-    node_js: node
-  - &job_test_osx
-    <<: *job_test_linux_100
+  - <<: *job_test_linux_100
     os: osx
     before_install:
       - initdb -D "$HOME/postgres"
@@ -60,13 +49,11 @@ jobs:
       directories:
         - node_modules
         - "$HOME/Library/Caches/Homebrew"
-  - <<: *job_test_osx
-    node_js: node
   - stage: deploy
     os: linux
     dist: xenial
     sudo: false
-    node_js: lts/*
+    node_js: node
     addons:
       apt:
         packages:

@@ -2,6 +2,7 @@
   "extends": "./base.tsconfig",
   "compilerOptions": {
     "lib": ["es2017"],
+    "typeRoots": ["./DefinitelyTyped/types"],
     "types": [
       "bull", "extract-text-webpack-plugin", "ioredis", "jest",
       "nock", "node", "pg", "webpack", "webpack-env"

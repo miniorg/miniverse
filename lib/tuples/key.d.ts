@@ -22,8 +22,6 @@ import Relation, { Reference } from './relation';
 type Properties = { ownerId: string } | { ownerId?: string, owner: Actor };
 type Signature = {};
 
-export function generate(this: void): string;
-
 export default class extends Relation<Properties, { owner: Actor | null }> {
   getUri(): Promise<string>;
   verifySignature(signature: Signature): Promise<boolean>;

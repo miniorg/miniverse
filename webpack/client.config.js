@@ -61,8 +61,11 @@ module.exports = {
 
 if (process.env.NODE_ENV == 'development') {
   module.exports.module.rules[0].use.options.emitCss = true;
+
+  // @ts-ignore
   module.exports.module.rules.push({
     test: /\.css$/,
+    // @ts-ignore
     use: ExtractTextPlugin.extract({
       fallback: 'style-loader',
       use: 'css-loader',
