@@ -25,7 +25,7 @@ export default async () => {
   const timestampRemainder = timestamp % 0x100000000;
   const random = await promisifiedRandomBytes(8);
 
-  random[0] = (randomBytes[0] & 0x3f) | 0x80;
+  random[0] = (random[0] & 0x3f) | 0x80;
   random[2] |= 1;
 
   const timeLow = Math.floor(timestampRemainder);
