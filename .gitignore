@@ -16,4 +16,5 @@ build
 /.sapper
 /app/manifest
 /assets/license-main.html
+/docker/miniverse-*.tgz
 /node_modules
