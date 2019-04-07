@@ -33,4 +33,4 @@ RUN tar xf vips-8.7.4.tar.gz && \
 
 FROM base
 CMD ["miniverse", "sh", "-c", "db-migrate up && exec sapper start"]
-COPY --from=0 / /
+COPY --from=1 / /
