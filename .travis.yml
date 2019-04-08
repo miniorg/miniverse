@@ -64,7 +64,7 @@ jobs:
       - docker login -p "$DOCKER_PASSWORD" -u "$DOCKER_USER"
       - docker push miniorg/miniverse
       - pip install --user awscli
-      - aws ecs update-service --force-new-deployment --service dawachin
+      - aws ecs update-service --force-new-deployment --service server
 services:
   - redis-server
 cache:
