@@ -26,6 +26,7 @@ import {
 import repository from '../../../lib/test/repository';
 import { unwrap } from '../../../lib/test/types';
 import processInbox from './process_inbox';
+import { createPublicKey } from 'crypto';
 const nock = require('nock');
 
 const signature = {
@@ -57,7 +58,7 @@ test('performs activities', async () => {
   const [actor, object] = await Promise.all([
     fabricateRemoteAccount({
       publicKeyURI: { uri: 'https://AcToR.إختبار/users/admin#main-key' },
-      publicKeyPem: `-----BEGIN PUBLIC KEY-----
+      publicKeyDer: createPublicKey(`-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
 1Iu2LbvQ6iE19RM01An3kBA/MPelQATPv832/pWxdCjWPP8i2snPbzPZ5gSJP55v
@@ -66,7 +67,7 @@ aiM3niRO1Dwz7XPszQ8ygbLWdqM/2pAvckp/lIUm0ufVz5ONGcqjZDVUNh/ZQ5tO
 AOc6sswdQZB3Q0FHFgaM5FkAeB07OSK+ndZffVfqfe5YM39470E9uGqC3NQYVkGH
 ewIDAQAB
 -----END PUBLIC KEY-----
-`
+`).export({ format: 'der', type: 'pkcs1' })
     }),
     fabricateRemoteAccount({ uri: { uri: 'https://ObJeCt.إختبار/' } })
   ]);
@@ -87,7 +88,7 @@ test('does not perform activities if signature verification failed', async () =>
     fabricateRemoteAccount({ uri: { uri: 'https://ObJeCt.إختبار/' } }),
     fabricateRemoteAccount({
       publicKeyURI: { uri: 'https://AcToR.إختبار/users/admin#main-key' },
-      publicKeyPem: `-----BEGIN RSA PUBLIC KEY-----
+      publicKeyDer: createPublicKey(`-----BEGIN RSA PUBLIC KEY-----
 MIIBCgKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGTrcO6
 S16XQ3tffCo0QA7G1MOzTeOEJHMiNM4jQQuY0NgDGMs3KEgo0J4ik75VnlyOiSyF
 ZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2/POH
@@ -95,7 +96,7 @@ ZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2/POH
 ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 +DHYFaVXQy60WzCEFjiQPZ8XdNQKvDyjKwIDAQAB
 -----END RSA PUBLIC KEY-----
-`
+`).export({ format: 'der', type: 'pkcs1' })
     }),
   ]);
 
@@ -114,7 +115,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 test('resolves even if object with unsupported type is given', async () => {
   await fabricateRemoteAccount({
     publicKeyURI: { uri: 'https://AcToR.إختبار/users/admin#main-key' },
-    publicKeyPem: `-----BEGIN PUBLIC KEY-----
+    publicKeyDer: createPublicKey(`-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
 1Iu2LbvQ6iE19RM01An3kBA/MPelQATPv832/pWxdCjWPP8i2snPbzPZ5gSJP55v
@@ -123,7 +124,7 @@ aiM3niRO1Dwz7XPszQ8ygbLWdqM/2pAvckp/lIUm0ufVz5ONGcqjZDVUNh/ZQ5tO
 AOc6sswdQZB3Q0FHFgaM5FkAeB07OSK+ndZffVfqfe5YM39470E9uGqC3NQYVkGH
 ewIDAQAB
 -----END PUBLIC KEY-----
-`
+`).export({ format: 'der', type: 'pkcs1' })
   });
 
   await expect(processInbox(repository, {
@@ -135,7 +136,7 @@ test('rejects without TemporaryError if all rejections are not temporary', async
   const [actor, object] = await Promise.all([
     fabricateRemoteAccount({
       publicKeyURI: { uri: 'https://AcToR.إختبار/users/admin#main-key' },
-      publicKeyPem: `-----BEGIN PUBLIC KEY-----
+      publicKeyDer: createPublicKey(`-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
 1Iu2LbvQ6iE19RM01An3kBA/MPelQATPv832/pWxdCjWPP8i2snPbzPZ5gSJP55v
@@ -144,7 +145,7 @@ aiM3niRO1Dwz7XPszQ8ygbLWdqM/2pAvckp/lIUm0ufVz5ONGcqjZDVUNh/ZQ5tO
 AOc6sswdQZB3Q0FHFgaM5FkAeB07OSK+ndZffVfqfe5YM39470E9uGqC3NQYVkGH
 ewIDAQAB
 -----END PUBLIC KEY-----
-`,
+`).export({ format: 'der', type: 'pkcs1' }),
     }).then(account => account.select('actor')).then(unwrap),
     fabricateLocalAccount({ actor: { username: 'oBjEcT' } })
       .then(account => account.select('actor'))
@@ -167,7 +168,7 @@ ewIDAQAB
 test('rejects with TemporaryError if some rejection is temporary', async () => {
   await fabricateRemoteAccount({
     publicKeyURI: { uri: 'https://AcToR.إختبار/users/admin#main-key' },
-    publicKeyPem: `-----BEGIN PUBLIC KEY-----
+    publicKeyDer: createPublicKey(`-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
 1Iu2LbvQ6iE19RM01An3kBA/MPelQATPv832/pWxdCjWPP8i2snPbzPZ5gSJP55v
@@ -176,7 +177,7 @@ aiM3niRO1Dwz7XPszQ8ygbLWdqM/2pAvckp/lIUm0ufVz5ONGcqjZDVUNh/ZQ5tO
 AOc6sswdQZB3Q0FHFgaM5FkAeB07OSK+ndZffVfqfe5YM39470E9uGqC3NQYVkGH
 ewIDAQAB
 -----END PUBLIC KEY-----
-`
+`).export({ format: 'der', type: 'pkcs1' })
   });
 
   nock('https://uNrEaChAbLe.إختبار').get('/').replyWithError('');

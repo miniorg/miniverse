@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { createPrivateKey } from 'crypto';
 import { Custom as CustomError } from '../errors';
 import { fabricateLocalAccount } from '../test/fabricator';
 import repository from '../test/repository';
@@ -61,6 +62,12 @@ describe('create', () => {
       serverKey,
       storedKey);
 
+    const privateKey = createPrivateKey({
+      format: 'der',
+      type: 'pkcs1',
+      key: account.privateKeyDer
+    });
+
     expect(account).toHaveProperty('repository', repository);
     expect(account).toHaveProperty(['actor', 'repository'], repository);
     expect(account).toHaveProperty(['actor', 'username'], username);
@@ -68,10 +75,12 @@ describe('create', () => {
     expect(account).toHaveProperty(['actor', 'name'], '');
     expect(account).toHaveProperty(['actor', 'summary'], '');
     expect(account).toHaveProperty('admin', admin);
-    expect(account.privateKeyPem).toMatch(/^-----BEGIN RSA PRIVATE KEY-----\n(.|\n)*\n-----END RSA PRIVATE KEY-----\n$/);
     expect(account).toHaveProperty('salt', salt);
     expect(account).toHaveProperty('serverKey', serverKey);
     expect(account).toHaveProperty('storedKey', storedKey);
+
+    expect(privateKey).toHaveProperty('asymmetricKeyType', 'rsa');
+    expect(privateKey).toHaveProperty('type', 'private');
   });
 
   test('will rejects with an error if username is invalid', async () => {

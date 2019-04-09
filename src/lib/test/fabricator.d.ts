@@ -91,7 +91,7 @@ export function fabricateLocalAccount(properties?: {
     readonly summary?: string
   },
   readonly admin?: boolean,
-  readonly privateKeyPem?: string,
+  readonly privateKeyDer?: Buffer,
   readonly salt?: Buffer,
   readonly serverKey?: Buffer,
   readonly storedKey?: Buffer
@@ -119,5 +119,5 @@ export function fabricateRemoteAccount(properties?: {
   readonly uri?: URIProperties,
   readonly inboxURI?: URIProperties,
   readonly publicKeyURI?: URIProperties,
-  readonly publicKeyPem?: string;
+  readonly publicKeyDer?: Buffer;
 }): Promise<RemoteAccount>;

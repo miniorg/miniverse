@@ -40,32 +40,38 @@ export default class Key extends Relation {
   async verifySignature(signature) {
     const owner = await this.select('owner');
     const account = await owner.select('account');
+    const publicKeyPem = createPublicKey({
+      format: 'der',
+      type: 'pkcs1',
+      key: account.publicKeyDer
+    }).export({ format: 'pem', type: 'pkcs1' });
 
-    return verifySignature(signature, account.publicKeyPem);
+    return verifySignature(signature, publicKeyPem);
   }
 
-  async selectPrivateKeyPem() {
+  async selectPrivateKeyDer() {
     const owner = await this.select('owner');
-    const { privateKeyPem } = await owner.select('account');
+    const { privateKeyDer } = await owner.select('account');
 
-    return privateKeyPem;
+    return privateKeyDer;
   }
 
   async toActivityStreams() {
-    const [id, owner, privateKeyPem] = await Promise.all([
+    const [id, owner, key] = await Promise.all([
       this.getUri(),
       this.select('owner').then(owner => owner.getUri()),
-      this.selectPrivateKeyPem()
+      this.selectPrivateKeyDer()
     ]);
 
     return {
       id,
       type: 'Key',
       owner,
-      publicKeyPem: createPublicKey(privateKeyPem).export({
-        format: 'pem',
-        type: 'pkcs1'
-      })
+      publicKeyPem: createPublicKey({
+        format: 'der',
+        type: 'pkcs1',
+        key
+      }).export({ format: 'pem', type: 'pkcs1' })
     };
   }
 }

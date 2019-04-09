@@ -22,7 +22,7 @@ import Status from './status';
 interface Properties {
   id?: string;
   admin: boolean;
-  privateKeyPem: string;
+  privateKeyDer: Buffer;
   salt: Buffer;
   serverKey: Buffer;
   storedKey: Buffer;
@@ -53,7 +53,7 @@ export default class LocalAccount extends Relation<Properties, References> {
 
   id?: string;
   readonly admin: boolean;
-  readonly privateKeyPem: string;
+  readonly privateKeyDer: Buffer;
   readonly salt: Buffer;
   readonly serverKey: Buffer;
   readonly storedKey: Buffer;

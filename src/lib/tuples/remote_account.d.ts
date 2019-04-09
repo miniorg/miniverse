@@ -31,7 +31,7 @@ interface WebFinger {
   links: { rel: string, type: string, href: string }[];
 }
 
-type Properties = { id?: string, publicKeyPem: string } &
+type Properties = { id?: string, publicKeyDer: Buffer } &
   ({ inboxURIId: string } | { inboxURIId?: string, inboxURI: URI }) &
   ({ publicKeyURIId: string } | { publicKeyURIId?: string, publicKeyURI: URI });
 
@@ -46,7 +46,7 @@ export default class RemoteAccount extends Relation<Properties, References> {
     summary: string,
     uri: string,
     inbox: { uri: string },
-    publicKey: { uri: string, publicKeyPem: string }): Promise<RemoteAccount>;
+    publicKey: { uri: string, publicKeyDer: Buffer }): Promise<RemoteAccount>;
 
   id?: string;
   private uri?: Reference<URI | null>;
@@ -54,5 +54,5 @@ export default class RemoteAccount extends Relation<Properties, References> {
   private inboxURI: Reference<URI | null>;
   readonly publicKeyURIId: string;
   private publicKeyURI: Reference<URI | null>;
-  readonly publicKeyPem: string;
+  readonly publicKeyDer: Buffer;
 }

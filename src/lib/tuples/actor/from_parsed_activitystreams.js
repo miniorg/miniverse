@@ -19,6 +19,7 @@ import { Custom as CustomError } from '../../errors';
 import { TypeNotAllowed } from '../../parsed_activitystreams';
 import RemoteAccount from '../remote_account';
 import { lookup } from './resolver';
+import { createPublicKey } from 'crypto';
 
 const actorTypes =
   ['Application', 'Group', 'Organization', 'Person', 'Service'];
@@ -63,6 +64,9 @@ export default {
       })
     ]);
 
+    const publicKeyDer = createPublicKey(publicKeyPem)
+      .export({ format: 'der', type: 'pkcs1' });
+
     const account = await RemoteAccount.create(
       repository,
       username,
@@ -71,7 +75,7 @@ export default {
       summary,
       id,
       { uri: inboxId },
-      { uri: publicKeyId, publicKeyPem });
+      { uri: publicKeyId, publicKeyDer });
 
     return account.select('actor');
   },

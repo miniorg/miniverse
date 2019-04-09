@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { createPublicKey } from 'crypto';
 import {
   fabricateLocalAccount,
   fabricateRemoteAccount
@@ -32,7 +33,7 @@ async function testInsertAndQuery(query) {
     },
     inboxURI: { uri: 'https://ReMoTe.إختبار/inbox' },
     publicKeyURI: { uri: 'https://ReMoTe.إختبار/publickey' },
-    publicKeyPem: `-----BEGIN RSA PUBLIC KEY-----
+    publicKeyDer: createPublicKey(`-----BEGIN RSA PUBLIC KEY-----
 MIIBCgKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGTrcO6
 S16XQ3tffCo0QA7G1MOzTeOEJHMiNM4jQQuY0NgDGMs3KEgo0J4ik75VnlyOiSyF
 ZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2/POH
@@ -40,7 +41,7 @@ ZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2/POH
 ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 +DHYFaVXQy60WzCEFjiQPZ8XdNQKvDyjKwIDAQAB
 -----END RSA PUBLIC KEY-----
-`,
+`).export({ format: 'der', type: 'pkcs1' }),
     uri: { uri: 'https://ReMoTe.إختبار/' }
   });
 
@@ -48,7 +49,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 
   expect(queried).toHaveProperty('inboxURIId', inserted.inboxURIId);
   expect(queried).toHaveProperty('publicKeyURIId', inserted.publicKeyURIId);
-  expect(queried).toHaveProperty('publicKeyPem', `-----BEGIN RSA PUBLIC KEY-----
+  expect(queried).toHaveProperty('publicKeyDer', createPublicKey(`-----BEGIN RSA PUBLIC KEY-----
 MIIBCgKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGTrcO6
 S16XQ3tffCo0QA7G1MOzTeOEJHMiNM4jQQuY0NgDGMs3KEgo0J4ik75VnlyOiSyF
 ZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2/POH
@@ -56,7 +57,7 @@ ZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2/POH
 ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 +DHYFaVXQy60WzCEFjiQPZ8XdNQKvDyjKwIDAQAB
 -----END RSA PUBLIC KEY-----
-`);
+`).export({ format: 'der', type: 'pkcs1' }));
   expect(queried).toHaveProperty('repository', repository);
 
   return queried;

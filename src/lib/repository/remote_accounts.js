@@ -17,13 +17,13 @@
 import RemoteAccount from '../tuples/remote_account';
 import Base from './base';
 
-function parse({ id, inbox_uri_id, key_uri_id, public_key_pem }) {
+function parse({ id, inbox_uri_id, key_uri_id, public_key_der }) {
   return new RemoteAccount({
     repository: this,
     id,
     inboxURIId: inbox_uri_id,
     publicKeyURIId: key_uri_id,
-    publicKeyPem: public_key_pem
+    publicKeyDer: public_key_der
   });
 }
 
@@ -40,7 +40,7 @@ export default class extends Base {
         account.uri.uri,
         account.inboxURI.uri,
         account.publicKeyURI.uri,
-        account.publicKeyPem
+        account.publicKeyDer
       ]
     });
 

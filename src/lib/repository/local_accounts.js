@@ -18,12 +18,12 @@ import { Custom as CustomError } from '../errors';
 import LocalAccount from '../tuples/local_account';
 import Base from './base';
 
-function parse({ id, admin, private_key_pem, salt, server_key, stored_key }) {
+function parse({ id, admin, private_key_der, salt, server_key, stored_key }) {
   return new LocalAccount({
     repository: this,
     id,
     admin,
-    privateKeyPem: private_key_pem,
+    privateKeyDer: private_key_der,
     salt,
     serverKey: server_key,
     storedKey: stored_key
@@ -48,7 +48,7 @@ export default class extends Base {
         account.actor.name,
         account.actor.summary,
         account.admin,
-        account.privateKeyPem,
+        account.privateKeyDer,
         account.salt,
         account.serverKey,
         account.storedKey

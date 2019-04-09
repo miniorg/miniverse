@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { createPublicKey } from 'crypto';
 import { Custom as CustomError } from '../../errors';
 import ParsedActivityStreams, {
   AnyHost,
@@ -64,7 +65,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
     expect(actor).toHaveProperty(['account', 'uri', 'uri'], 'https://remote.xn--kgbechtv/@preferred%20username');
     expect(actor).toHaveProperty(['account', 'inboxURI', 'uri'], 'https://remote.xn--kgbechtv/@preferred%20username/inbox');
     expect(actor).toHaveProperty(['account', 'publicKeyURI', 'uri'], 'https://remote.xn--kgbechtv/@preferred%20username#key');
-    expect(actor).toHaveProperty(['account', 'publicKeyPem'], `-----BEGIN RSA PUBLIC KEY-----
+    expect(actor).toHaveProperty(['account', 'publicKeyDer'], createPublicKey(`-----BEGIN RSA PUBLIC KEY-----
 MIIBCgKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGTrcO6
 S16XQ3tffCo0QA7G1MOzTeOEJHMiNM4jQQuY0NgDGMs3KEgo0J4ik75VnlyOiSyF
 ZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2/POH
@@ -72,7 +73,7 @@ ZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2/POH
 ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 +DHYFaVXQy60WzCEFjiQPZ8XdNQKvDyjKwIDAQAB
 -----END RSA PUBLIC KEY-----
-`);
+`).export({ format: 'der', type: 'pkcs1' }));
   });
 
   /*

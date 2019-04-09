@@ -53,7 +53,7 @@ export default class RemoteAccount extends Relation {
         uri: publicKey.uri,
         allocated: true
       }),
-      publicKeyPem: publicKey.publicKeyPem
+      publicKeyDer: publicKey.publicKeyDer
     });
 
     account.actor.validate();

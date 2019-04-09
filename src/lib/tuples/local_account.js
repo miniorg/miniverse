@@ -53,9 +53,9 @@ export default class LocalAccount extends Relation {
         summary: sanitizeHtml(summary)
       }),
       admin,
-      privateKeyPem: (await generateKeyPairAsync('rsa', {
+      privateKeyDer: (await generateKeyPairAsync('rsa', {
         modulusLength: 2048,
-        privateKeyEncoding: {format: 'pem', type: 'pkcs1'}
+        privateKeyEncoding: { format: 'der', type: 'pkcs1' }
       })).privateKey,
       salt,
       serverKey,

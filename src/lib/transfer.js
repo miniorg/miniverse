@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { createPrivateKey } from 'crypto';
 import originalFetch, { FetchError } from 'node-fetch';
 import { sign } from 'http-signature';
 import { domainToASCII } from 'url';
@@ -78,11 +79,11 @@ export async function postStatus(repository, status) {
 }
 
 export async function postToInbox(repository, sender, { uri }, object) {
-  const [activityStreams, [keyId, privateKeyPem]] = await Promise.all([
+  const [activityStreams, [keyId, key]] = await Promise.all([
     object.toActivityStreams(),
     sender.select('actor').then(owner => {
       const key = new Key({ owner, repository });
-      return Promise.all([key.getUri(), key.selectPrivateKeyPem()]);
+      return Promise.all([key.getUri(), key.selectPrivateKeyDer()]);
     })
   ]);
 
@@ -96,7 +97,10 @@ export async function postToInbox(repository, sender, { uri }, object) {
     onrequest(request) {
       sign(request, {
         authorizationHeaderName: 'Signature',
-        key: privateKeyPem,
+        key: createPrivateKey({ format: 'der', type: 'pkcs1', key }).export({
+          format: 'pem',
+          type: 'pkcs1'
+        }),
         keyId
       });
     }

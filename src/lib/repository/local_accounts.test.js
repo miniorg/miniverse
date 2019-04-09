@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { createPrivateKey } from 'crypto';
 import {
   fabricateCookie,
   fabricateLocalAccount,
@@ -22,7 +23,7 @@ import {
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
 
-const privateKeyPem = `-----BEGIN RSA PRIVATE KEY-----
+const privateKeyDer = createPrivateKey(`-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGT
 rcO6S16XQ3tffCo0QA7G1MOzTeOEJHMiNM4jQQuY0NgDGMs3KEgo0J4ik75VnlyO
 iSyFZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2
@@ -49,7 +50,7 @@ SFUIIQKBgBBMvSxRcDCiF5hdV2jVSmFMrdy6mt8kLWZh+vGUu5OOGXIn8xqDeqze
 PtM8uICJERUD+p/WiEmEyC3Pd8F7db3zxt34L5BhQ5w2HnPpumDTGNUeuV4byF4z
 OyJRYe+sFKZ6lXqnwdWuTrxTNucFuhw+6BVyzNn6lI5cNXLr1reH
 -----END RSA PRIVATE KEY-----
-`;
+`).export({ format: 'der', type: 'pkcs1' });
 
 describe('selectLocalAccountByDigestOfCookie', () => {
   test('resolves with null if not found', () => {
@@ -94,7 +95,7 @@ test('delivers objects to inboxses', async () => {
 test('inserts cookie and allows to query account with its digest', async () => {
   const account = await fabricateLocalAccount({
     admin: true,
-    privateKeyPem,
+    privateKeyDer,
     salt: Buffer.from('salt'),
     serverKey: Buffer.from('serverKey'),
     storedKey: Buffer.from('storedKey')
@@ -109,7 +110,7 @@ test('inserts cookie and allows to query account with its digest', async () => {
   expect(queried).toHaveProperty('repository', repository);
   expect(queried).toHaveProperty('id', account.id);
   expect(queried).toHaveProperty('admin', true);
-  expect(queried).toHaveProperty('privateKeyPem', privateKeyPem);
+  expect(queried).toHaveProperty('privateKeyDer', privateKeyDer);
   expect(Buffer.from('salt').equals(queried.salt)).toBe(true);
   expect(Buffer.from('serverKey').equals(queried.serverKey)).toBe(true);
   expect(Buffer.from('storedKey').equals(queried.storedKey)).toBe(true);
@@ -118,7 +119,7 @@ test('inserts cookie and allows to query account with its digest', async () => {
 test('inserts account allows to query one by its id', async () => {
   const { id } = await fabricateLocalAccount({
     admin: true,
-    privateKeyPem,
+    privateKeyDer,
     salt: Buffer.from('salt'),
     serverKey: Buffer.from('serverKey'),
     storedKey: Buffer.from('storedKey')
@@ -128,7 +129,7 @@ test('inserts account allows to query one by its id', async () => {
 
   expect(queried).toHaveProperty('admin', true);
   expect(queried).toHaveProperty('id', id);
-  expect(queried).toHaveProperty('privateKeyPem', privateKeyPem);
+  expect(queried).toHaveProperty('privateKeyDer', privateKeyDer);
   expect(Buffer.from('salt').equals(queried.salt)).toBe(true);
   expect(Buffer.from('serverKey').equals(queried.serverKey)).toBe(true);
   expect(Buffer.from('storedKey').equals(queried.storedKey)).toBe(true);
