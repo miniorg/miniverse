@@ -120,14 +120,14 @@ $_$;
 ALTER TABLE local_accounts DROP COLUMN private_key_pem;
 ALTER TABLE remote_accounts DROP COLUMN public_key_pem;`);
 
-  await db.runSql('UPDATE local_accounts SET private_key_der = given_private_key_der FROM unnest($1::bigint[]) AS given_id, unnest($2::bytea[]) AS given_private_key_der WHERE local_accounts.id = given_id', [
+  await db.runSql('UPDATE local_accounts SET private_key_der = given_private_key_der.element FROM unnest($1::bigint[]) WITH ORDINALITY AS given_id(element, index), unnest($2::bytea[]) WITH ORDINALITY AS given_private_key_der(element, index) WHERE local_accounts.id = given_id.element AND given_id.index = given_private_key_der.index', [
     locals.map(({ id }) => id),
     locals.map(({ private_key_pem }) =>
       createPrivateKey(private_key_pem)
         .export({ format: 'der', type: 'pkcs1' })),
   ]);
 
-  await db.runSql('UPDATE remote_accounts SET public_key_der = given_public_key_der FROM unnest($1::bigint[]) AS given_id, unnest($2::bytea[]) AS given_public_key_der WHERE remote_accounts.id = given_id', [
+  await db.runSql('UPDATE remote_accounts SET public_key_der = given_public_key_der.element FROM unnest($1::bigint[]) WITH ORDINALITY AS given_id(element, index), unnest($2::bytea[]) WITH ORDINALITY AS given_public_key_der(element, index) WHERE remote_accounts.id = given_id.element AND given_id.index = given_public_key_der.index', [
     remotes.map(({ id }) => id),
     remotes.map(({ public_key_pem }) =>
       createPublicKey(public_key_pem)
