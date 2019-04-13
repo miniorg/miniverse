@@ -76,8 +76,8 @@ export interface Options {
   readonly pg: Pool;
   readonly redis: { readonly prefix?: string, readonly url?: string };
   readonly s3: {
-    service: S3;
-    readonly bucket?: string;
+    readonly service: S3;
+    bucket?: string;
     readonly keyPrefix?: string;
     readonly urlPrefix: string;
   };
@@ -169,8 +169,8 @@ export default class Repository implements
   readonly pg: Pg;
   readonly redis: RedisRepository;
   readonly s3: {
-    service: S3;
-    readonly bucket: string;
+    readonly service: S3;
+    bucket: string;
     readonly keyPrefix: string;
     readonly urlPrefix: string;
   };

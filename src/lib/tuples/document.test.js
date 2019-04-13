@@ -21,7 +21,6 @@ import { unwrap } from '../test/types';
 import Document from './document';
 import URI from './uri';
 
-const S3 = require('aws-sdk/clients/s3');
 const nock = require('nock');
 const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8" />';
 
@@ -97,15 +96,15 @@ describe('create', () => {
   });
 
   test('queues upload job if upload failed', async () => {
-    const { service } = repository.s3;
-    repository.s3.service = new S3({ endpoint: 'https://s3.إختبار/' });
+    const { bucket } = repository.s3;
     nock('https://إختبار').get('/').reply(200, svg);
+    repository.s3.bucket = `${process.env.AWS_S3_BUCKET}-test-invalid`;
 
     try {
       await expect(Document.create(repository, 'https://إختبار/')).rejects.toEqual(expect.anything());
     } finally {
       nock.cleanAll();
-      repository.s3.service = service;
+      repository.s3.bucket = bucket;
     }
 
     await expect((await repository.queue.getWaiting())[0])
