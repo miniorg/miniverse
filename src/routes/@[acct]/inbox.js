@@ -55,5 +55,5 @@ export const post = secure(async (request, response) => {
     body: request.body
   });
 
-  response.sendStatus(202)
+  response.sendStatus(202);
 });
