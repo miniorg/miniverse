@@ -37,7 +37,7 @@
     "node-fetch": "https://github.com/miniorg/node-fetch/releases/download/v2.3.0-miniverse-r0/node-fetch-2.3.0.tgz",
     "pg": "^7.9.0",
     "sanitize-html": "^1.20.0",
-    "sapper": "^0.25.0",
+    "sapper": "https://github.com/miniorg/sapper/releases/download/v0.25.0-miniverse-r0/sapper-0.25.0.tgz",
     "sharp": "^0.22.0",
     "svelte": "^2.16.1"
   },
