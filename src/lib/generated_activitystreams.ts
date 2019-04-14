@@ -40,6 +40,8 @@ export type Create = { type: string, object: Note };
 
 export type Document = { type: string, mediaType: string, url: string };
 
+export type Endpoints = { proxyUrl: string };
+
 export type Follow = { type: string, actor: string, object: string };
 
 export type Hashtag = { type: string, name: string };
@@ -55,7 +57,7 @@ export type Like = { type: string, object: string };
 
 export type LocalActor = Actor & {
   type: string;
-  endpoints: { proxyUrl: string };
+  endpoints: Endpoints;
   publicKey: Key;
   'miniverse:salt': string;
 };

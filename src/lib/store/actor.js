@@ -50,7 +50,7 @@ export default class extends Base {
     const { href } = links.find(({ rel }) => rel == 'self');
 
     const activityStreams = await (remote ?
-      fetch(this.get().user.endpoints.proxyUrl,
+      fetch(this.get().endpoints.proxyUrl,
         { method: 'POST', headers, body: new URLSearchParams({ id: href }) }) :
       fetch(href, { headers }));
 

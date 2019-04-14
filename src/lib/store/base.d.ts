@@ -15,7 +15,7 @@
 */
 
 import { Store as Base } from 'svelte/store';
-import { LocalActor } from '../generated_activitystreams';
+import { Endpoints, LocalActor } from '../generated_activitystreams';
 
 export interface Analytics {
   readonly trackingId?: string;
@@ -24,6 +24,7 @@ export interface Analytics {
 interface Properties {
   readonly analytics: Analytics,
   readonly captcha: string,
+  readonly endpoints: Endpoints,
   readonly nonce: string,
   readonly scripts: string[],
   readonly user: LocalActor,

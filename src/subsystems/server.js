@@ -17,6 +17,7 @@
 import { parse } from 'cookie';
 import { randomBytes } from 'crypto';
 import { promisify } from 'util';
+import { domainToASCII } from 'url';
 import { middleware as sapper } from '../../__sapper__/server';
 import Store from '../lib/store';
 import Challenge, { getToken } from '../lib/tuples/challenge';
@@ -90,9 +91,12 @@ export default (repository, port) => {
     }, { basePath: '/bull', disableListen: true }),
     sapper({
       store({ nonce, userActivityStreams }) {
+        const host = domainToASCII(repository.host);
+
         return new Store({
           analytics: repository.analytics,
           captcha: repository.captcha.site,
+          endpoints: { proxyUrl: `https://${host}/api/proxy` },
           nonce,
           scripts: repository.content.script.sources,
           user: userActivityStreams,
