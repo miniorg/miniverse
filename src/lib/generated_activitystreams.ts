@@ -14,74 +14,100 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-export type Accept = { type: string, object: Follow };
+export interface Accept {
+  type: string;
+  object: Follow;
+}
 
-export type Announce = {
-  type: string,
-  id?: string,
-  published: Date,
-  object: string
-};
+export interface Announce {
+  type: string;
+  id?: string;
+  published: Date;
+  object: string;
+}
 
 export type Any = Accept | Actor | Announce | Create |
-  Follow | Key | LocalActor | OrderedCollection |
-  OrderedCollectionPage;
+Follow | Key | LocalActor | Note |
+OrderedCollection | OrderedCollectionPage;
 
-export type Actor = {
+export interface Actor {
   id: string;
   preferredUsername: string;
   name: string;
   summary: string;
   inbox: string;
   outbox: string;
-};
+}
 
-export type Create = { type: string, object: Note };
+export interface Create {
+  type: string;
+  object: Note;
+}
 
-export type Document = { type: string, mediaType: string, url: string };
+export interface Document {
+  type: string;
+  mediaType: string;
+  url: string;
+}
 
-export type Endpoints = { proxyUrl: string };
+export interface Endpoints {
+  proxyUrl: string;
+}
 
-export type Follow = { type: string, actor: string, object: string };
+export interface Follow {
+  type: string;
+  actor: string;
+  object: string;
+}
 
-export type Hashtag = { type: string, name: string };
+export interface Hashtag {
+  type: string;
+  name: string;
+}
 
-export type Key = {
-  id: string,
-  type: string,
-  owner: string,
-  publicKeyPem: string
-};
+export interface Key {
+  id: string;
+  type: string;
+  owner: string;
+  publicKeyPem: string;
+}
 
-export type Like = { type: string, object: string };
+export interface Like {
+  type: string;
+  object: string;
+}
 
-export type LocalActor = Actor & {
+export interface LocalActor extends Actor {
   type: string;
   endpoints: Endpoints;
   publicKey: Key;
   'miniverse:salt': string;
-};
+}
 
-export type Mention = { type: string, href: string };
+export interface Mention {
+  type: string;
+  href: string;
+}
 
-export type Note = {
+export interface Note {
   type: string;
   id: string;
   published: Date;
   attributedTo: string;
-  inReplyTo: string;
+  inReplyTo: string | null;
   to: string;
-  summary: string;
+  summary: string | null;
   content: string;
+  attachment: Document[];
   tag: (Hashtag | Mention)[];
-};
+}
 
-export type OrderedCollection = {
-  type: string,
-  orderedItems: Any
-};
+export interface OrderedCollection {
+  type: string;
+  orderedItems: Any[];
+}
 
-export type OrderedCollectionPage = {
-  type: string,
-  orderedItems: Any
-};
+export interface OrderedCollectionPage {
+  type: string;
+  orderedItems: Any[];
+}

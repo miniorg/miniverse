@@ -82,9 +82,8 @@ before_install:
     fi
   - ./travis/minio.RELEASE.2019-04-04T18-31-46Z/bin/minio server travis/minio.RELEASE.2019-04-04T18-31-46Z/srv/data &
 script:
-  - npx tsc -p browser.tsconfig.json
-  - npx tsc -p node.tsconfig.json
-  - npx tsc -p test.tsconfig.json
+  - npx eslint .
+  - npx eslint -c ts.eslintrc.json --ext .ts .
   - createdb travis_test_1
   - PGDATABASE=travis_test_1 npx db-migrate up
   - node travis/create-bucket.js

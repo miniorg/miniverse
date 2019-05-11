@@ -32,7 +32,7 @@ module.exports = {
     devtool: 'source-map',
     resolve: {
       alias: { url: join(__dirname, 'src/lib/isomorphism/browser/url') },
-      extensions: ['.js', '.html']
+      extensions: ['.js', '.ts', '.html']
     },
     module: {
       rules: [
@@ -48,6 +48,13 @@ module.exports = {
               shared: true,
               store: true
             }
+          }
+        }, {
+          test: /\.ts$/,
+          exclude: /node_modules/,
+          use: {
+            loader: 'ts-loader',
+            options: { configFile: 'browser.tsconfig.json' }
           }
         }
       ],
@@ -71,7 +78,7 @@ module.exports = {
     mode: process.env.NODE_ENV,
     devtool: 'source-map',
     externals: Object.keys(dependencies),
-    resolve: { extensions: ['.html', '.js'] },
+    resolve: { extensions: ['.html', '.js', '.ts'] },
     target: 'node',
     module: {
       rules: [
@@ -86,6 +93,13 @@ module.exports = {
               store: true,
               generate: 'ssr'
             }
+          }
+        }, {
+          test: /\.ts$/,
+          exclude: /node_modules/,
+          use: {
+            loader: 'ts-loader',
+            options: { configFile: 'node.tsconfig.json' }
           }
         }
       ]

@@ -1,0 +1,10 @@
+{
+  "extends": "./base.tsconfig",
+  "compilerOptions": {
+    "lib": ["es2017", "dom"],
+    "paths": { "isomorphism": ["src/lib/isomorphism/node"] },
+    "types": ["jest", "webpack-env"]
+  },
+  "include": ["src", "migrations", "webpack.config.js"],
+  "exclude": ["src/service-worker.js"]
+}

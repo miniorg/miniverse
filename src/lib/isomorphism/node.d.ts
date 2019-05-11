@@ -14,7 +14,11 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import fetch, { Response } from 'node-fetch';
+import { RequestInit, Response } from 'node-fetch';
 
-export type Fetch = typeof fetch;
+export type Fetch = (url: string | Request, init?: RequestInit & {
+  credentials?: 'omit' | 'same-origin' | 'include';
+  mode?: 'navigate' | 'same-origin' | 'no-cors' | 'cors';
+}) => Promise<Response>;
+
 export { Response };

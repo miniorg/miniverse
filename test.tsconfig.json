@@ -1,12 +1,11 @@
 {
   "extends": "./base.tsconfig",
   "compilerOptions": {
+    "checkJs": true,
     "lib": ["es2017"],
-    "typeRoots": ["./DefinitelyTyped/types"],
-    "types": [
-      "bull", "extract-text-webpack-plugin", "ioredis", "jest",
-      "nock", "node", "pg", "webpack", "webpack-env"
-    ]
+    "module": "CommonJS",
+    "target": "ES2017",
+    "types": ["jest"]
   },
-  "include": ["**/*.test.js"]
+  "include": ["**/*.test.ts"]
 }

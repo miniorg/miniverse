@@ -1,0 +1,50 @@
+/*
+  Copyright (C) 2018  Miniverse authors
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published by
+  the Free Software Foundation, version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+import { domainToASCII } from 'url';
+import Repository from '../repository';
+
+interface Properties {
+  readonly repository: Repository;
+  readonly id?: string;
+  readonly uri: string;
+  readonly allocated: boolean;
+}
+
+export function encodeSegment(segment: string) {
+  return encodeURI(segment)
+    .replace(/\//g, '%2F')
+    .replace(/\?/g, '%3F')
+    .replace(/#/g, '%23');
+}
+
+export function encodeAcctUserpart(userpart: string) {
+  return encodeSegment(userpart).replace(/:/g, '%3A').replace(/@/g, '%40');
+}
+
+export function normalizeHost(host: string) {
+  return domainToASCII(host).toLowerCase();
+}
+
+export default class {
+  id?: string;
+  readonly uri!: string;
+  readonly allocated!: boolean;
+
+  constructor(properties: Properties) {
+    Object.assign(this, properties);
+  }
+}

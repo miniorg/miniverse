@@ -24,6 +24,7 @@ export default class Store extends Base {}
 
 for (const Constructor of [Actor, Announce, Like, Note]) {
   for (const key of Object.getOwnPropertyNames(Constructor.prototype)) {
+    // @ts-ignore
     Store.prototype[key] = Constructor.prototype[key];
   }
 }
