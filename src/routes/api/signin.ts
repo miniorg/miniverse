@@ -70,7 +70,8 @@ function xor(a: Buffer, b: Buffer) {
 export const post = secure(async (request, response) => {
   await setBody(request, response);
 
-  const { body, repository } = request;
+  const { body } = request;
+  const { repository } = response.app.locals;
   const nonce = body.slice(0, 128);
   const serverNonce = body.slice(64, 128);
   const serverNonceDigest = digest(serverNonce);

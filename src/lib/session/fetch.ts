@@ -14,20 +14,19 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Fetch } from 'isomorphism';
-import Base from './base';
-import { postOutbox } from './fetch';
+import { Fetch } from 'isomorphism/fetch';
+import Session from './types';
 
-export default class extends Base {
-  async createNote(fetch: Fetch, content: string) {
-    await postOutbox.call(this, fetch, {
-      '@context': 'https://www.w3.org/ns/activitystreams',
-      type: 'Note',
-      published: new Date,
-      to: 'https://www.w3.org/ns/activitystreams#Public',
-      content,
-      attachment: [],
-      tag: []
-    });
+export function postOutbox({ user }: Session, fetch: Fetch, body: unknown) {
+  if (!user) {
+    throw new Error('Not signed in.');
   }
+
+  return fetch(user.outbox, {
+    mode: 'cors',
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/activity+json' },
+    body: JSON.stringify(body)
+  });
 }

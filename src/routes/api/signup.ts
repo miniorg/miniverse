@@ -30,7 +30,8 @@ const setBody = promisify(raw()) as
 export const post = secure(async (request, response) => {
   await setBody(request, response);
 
-  const { body, repository } = request;
+  const { body } = request;
+  const { repository } = response.app.locals;
   const salt = body.slice(0, 64);
   const serverKey = body.slice(64, 96);
   const storedKey = body.slice(96, 128);

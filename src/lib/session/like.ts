@@ -14,21 +14,14 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Fetch } from 'isomorphism';
-import { Actor, LocalActor } from '../generated_activitystreams';
-import StoreActor from './actor';
-import Announce from './announce';
-import Base from './base';
-import Like from './like';
-import Note from './note';
+import { Fetch } from 'isomorphism/fetch';
+import { postOutbox } from './fetch';
+import Session from './types';
 
-export default class extends Base implements StoreActor, Announce, Like, Note {
-  fetchOutbox(fetch: Fetch, actor: Actor | LocalActor): Promise<void>;
-  fetchActor(fetch: Fetch, acct: string): Promise<Actor | LocalActor>;
-
-  announce(fetch: Fetch, object: string): Promise<void>;
-
-  like(fetch: Fetch, object: string): Promise<void>;
-
-  createNote(fetch: Fetch, content: string): Promise<void>;
+export async function like(session: Session, fetch: Fetch, object: string) {
+  await postOutbox(session, fetch, {
+    '@context': 'https://www.w3.org/ns/activitystreams',
+    type: 'Like',
+    object
+  });
 }

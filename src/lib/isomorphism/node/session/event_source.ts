@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2018  Miniverse authors
+  Copyright (C) 2019  Miniverse authors
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU Affero General Public License as published by
@@ -14,20 +14,8 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Fetch } from 'isomorphism';
-import Base from './base';
+import { readable } from 'svelte/store';
 
-export function postOutbox(this: Base, fetch: Fetch, body: unknown) {
-  const { user } = this.get();
-  if (!user) {
-    throw new Error('Not signed in.');
-  }
-
-  return fetch(user.outbox, {
-    mode: 'cors',
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/activity+json' },
-    body: JSON.stringify(body)
-  });
+export function listenEventSource() {
+  return readable([], () => () => {});
 }

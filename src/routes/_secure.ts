@@ -14,9 +14,9 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Response, NextFunction } from 'express';
+import { Request, NextFunction } from 'express';
 import { Custom as CustomError } from '../lib/errors';
-import { Request } from '../subsystems/server';
+import { Response } from '../subsystems/server';
 
 interface Handler {
   (request: Request, response: Response, next: NextFunction): unknown;
@@ -27,9 +27,9 @@ export default (handle: Handler) => async (request: Request, response: Response,
     await handle(request, response, next);
   } catch (error) {
     if (error instanceof CustomError) {
-      error.log(request.repository);
+      error.log(response.app.locals.repository);
     } else {
-      request.repository.console.error(error);
+      response.app.locals.repository.console.error(error);
     }
 
     response.sendStatus(500);

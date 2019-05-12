@@ -14,44 +14,47 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-const LicenseInfoWebpackPlugin = require('license-info-webpack-plugin').default;
+const LicenseChecker = require('@jetbrains/ring-ui-license-checker');
 const { join } = require('path');
-const {
-  BannerPlugin,
-  DefinePlugin,
-  HotModuleReplacementPlugin
-} = require('webpack');
+const { BannerPlugin, DefinePlugin } = require('webpack');
 const { client, server, serviceworker } = require('sapper/config/webpack');
 const { dependencies } = require('./package');
+
+const extensions = ['.mjs', '.js', '.ts', '.svelte'];
+const mode = process.env.NODE_ENV;
+const dev = mode == 'development';
 
 module.exports = {
   client: {
     entry: client.entry(),
     output: client.output(),
-    mode: process.env.NODE_ENV,
+    mode,
     devtool: 'source-map',
     resolve: {
-      alias: { url: join(__dirname, 'src/lib/isomorphism/browser/url') },
-      extensions: ['.js', '.ts', '.html']
+      alias: {
+        isomorphism: join(__dirname, 'src/lib/isomorphism/browser'),
+        url: join(__dirname, 'src/lib/isomorphism/browser/url')
+      },
+      extensions
     },
     module: {
       rules: [
         {
-          test: /\.html$/,
-          exclude: /node_modules/,
+          test: /\.svelte$/,
           use: {
             loader: 'svelte-loader',
             options: {
-              cascade: false,
-              hotReload: true,
+              dev,
               hydratable: true,
               shared: true,
-              store: true
+
+              // Hooks for granular HMR support · Issue #2377 · sveltejs/svelte
+              // https://github.com/sveltejs/svelte/issues/2377
+              hotReload: false,
             }
           }
         }, {
           test: /\.ts$/,
-          exclude: /node_modules/,
           use: {
             loader: 'ts-loader',
             options: { configFile: 'browser.tsconfig.json' }
@@ -63,10 +66,6 @@ module.exports = {
       new DefinePlugin({
         'process.browser': true,
         'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV)
-      }),
-      new LicenseInfoWebpackPlugin({
-        output: 'html',
-        outputPath: 'static'
       })
     ]
   },
@@ -75,28 +74,51 @@ module.exports = {
       processor: join(__dirname, './src/processor')
     }, server.entry()),
     output: server.output(),
-    mode: process.env.NODE_ENV,
+    mode,
     devtool: 'source-map',
-    externals: Object.keys(dependencies),
-    resolve: { extensions: ['.html', '.js', '.ts'] },
+    externals(_context, request, callback) {
+      if (request == 'svelte/store.mjs') {
+        return callback(null, 'commonjs svelte/store');
+      }
+
+      if (request in dependencies ||
+        request == 'encoding' ||
+        request.startsWith('encoding/')) {
+        return callback(null, 'commonjs ' + request);
+      }
+
+      for (const key in dependencies) {
+        if (request.startsWith(key + '/')) {
+          return callback(null, 'commonjs ' + request);
+        }
+      }
+
+      callback();
+    },
+    resolve: {
+      alias: { isomorphism: join(__dirname, 'src/lib/isomorphism/node') },
+      extensions
+    },
     target: 'node',
     module: {
       rules: [
         {
-          test: /\.html$/,
-          exclude: /node_modules/,
+          test: /\.mjs$/,
+          include: join(__dirname, 'src'),
+          type: 'javascript/auto'
+        },
+        {
+          test: /\.svelte$/,
           use: {
             loader: 'svelte-loader',
             options: {
               css: false,
-              cascade: false,
-              store: true,
+              dev,
               generate: 'ssr'
             }
           }
         }, {
           test: /\.ts$/,
-          exclude: /node_modules/,
           use: {
             loader: 'ts-loader',
             options: { configFile: 'node.tsconfig.json' }
@@ -120,6 +142,12 @@ module.exports = {
   }
 };
 
-if (process.env.NODE_ENV == 'development') {
-  module.exports.client.plugins.push(new HotModuleReplacementPlugin);
+if (dev) {
+  // Hooks for granular HMR support · Issue #2377 · sveltejs/svelte
+  // https://github.com/sveltejs/svelte/issues/2377
+  // module.exports.client.plugins.push(new HotModuleReplacementPlugin);
+} else {
+  module.exports.client.plugins.push(new LicenseChecker({
+    filename: '../../../static/license.html'
+  }));
 }

@@ -13,16 +13,15 @@
   You should have received a copy of the GNU Affero General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -->
-{#if $user}
+{#if $session.user}
   <Dashboard />
 {:else}
   <Landing />
 {/if}
 <script>
+  import { stores } from '@sapper/app';
   import Dashboard from './_dashboard';
   import Landing from './_landing';
 
-  export default {
-    components: { Dashboard, Landing },
-  };
+  const { session } = stores();
 </script>

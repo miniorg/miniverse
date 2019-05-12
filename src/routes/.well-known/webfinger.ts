@@ -18,7 +18,7 @@ import Actor from '../../lib/tuples/actor';
 import { normalizeHost } from '../../lib/tuples/uri';
 import secure from '../_secure';
 
-export const get = secure(async ({ query, repository }, response) => {
+export const get = secure(async ({ query }, response) => {
   const lowerResource = query.resource;
   const parsed = /(?:acct:)?(.*)@(.*)/.exec(lowerResource);
 
@@ -27,7 +27,8 @@ export const get = secure(async ({ query, repository }, response) => {
     return;
   }
 
-  const  [, userpart, host] = parsed;
+  const [, userpart, host] = parsed;
+  const { repository } = response.app.locals;
 
   const actor = await (host == normalizeHost(repository.fingerHost) ?
     repository.selectActorByUsernameAndNormalizedHost(

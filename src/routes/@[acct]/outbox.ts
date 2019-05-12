@@ -39,8 +39,9 @@ const setBody = promisify(json({
   type: ['application/activity+json', 'application/ld+json']
 })) as unknown as (request: Request, response: Response) => Promise<unknown>;
 
-export const get = secure(async ({ params, repository }, response) => {
+export const get = secure(async ({ params }, response) => {
   const [userpart, host] = params.acct.split('@', 2);
+  const { repository } = response.app.locals;
 
   const actor = await repository.selectActorByUsernameAndNormalizedHost(
     userpart, host ? normalizeHost(host) : null);
@@ -74,7 +75,8 @@ export const get = secure(async ({ params, repository }, response) => {
   > to Server Interactions.
 */
 export const post = secure(async (request, response) => {
-  const { headers: { origin }, user, params, repository } = request;
+  const { headers: { origin }, params } = request;
+  const { repository } = response.app.locals;
 
   if (typeof origin != 'string') {
     response.sendStatus(403);
@@ -86,12 +88,12 @@ export const post = secure(async (request, response) => {
     return;
   }
 
-  if (!user) {
+  if (!response.locals.user) {
     response.sendStatus(403);
     return;
   }
 
-  const actor = await user.select('actor');
+  const actor = await response.locals.user.select('actor');
   if (!actor) {
     response.sendStatus(403);
     return;

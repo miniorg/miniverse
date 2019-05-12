@@ -45,7 +45,7 @@ export const get = secure(async (request, response, next) => {
   }
 
   const actor = await Actor.fromUsernameAndNormalizedHost(
-    request.repository, username, normalizedHost);
+    response.app.locals.repository, username, normalizedHost);
 
   if (actor) {
     await sendActivityStreams(response, actor);

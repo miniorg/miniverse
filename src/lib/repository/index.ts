@@ -15,7 +15,7 @@
 */
 
 import { Pool } from 'pg';
-import { Analytics } from '../store/base';
+import { Analytics } from '../session/types';
 import Actor from '../tuples/actor';
 import Announce from '../tuples/announce';
 import Challenge from '../tuples/challenge';

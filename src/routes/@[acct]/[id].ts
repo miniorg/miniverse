@@ -19,7 +19,8 @@ import secure from '../_secure';
 import sendActivityStreams from '../_send_activitystreams';
 
 export const get = secure(async (request, response) => {
-  const { params, repository } = request;
+  const { params } = request;
+  const { repository } = response.app.locals;
   const acct = decodeURIComponent(params.acct);
   const atIndex = acct.lastIndexOf('@');
   let username;

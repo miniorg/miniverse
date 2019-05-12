@@ -15,31 +15,39 @@
 -->
 
 <h1>{actor.preferredUsername}</h1>
-{#if $user && $user.id != actor.id}
-  <button on:click='follow()'>Follow</button>
+{#if $session.user && $session.user.id != actor.id}
+  <button on:click='{follow}'>Follow</button>
 {/if}
 <ol>
   {#each actor.outbox.orderedItems as item}
     <li>{JSON.stringify(item)}</li>
   {/each}
 </ol>
-<script>
-  export default {
-    async preload({ params }) {
-      const actor = await this.store.fetchActor(this.fetch, params.acct);
+<script context='module'>
+  import { get } from 'svelte/store';
+  import { stores } from '@sapper/app';
+  import {
+    fetch as fetchActor,
+    fetchOutbox,
+    follow
+  } from '../../lib/session/actor';
 
-      if (actor) {
-        await this.store.fetchOutbox(this.fetch, actor);
-        return { actor };
-      }
+  export async function preload({ params }, session) {
+    const actor = await fetchActor(session, this.fetch, params.acct);
 
-      this.error(404, 'Not Found');
-    },
-
-    methods: {
-      follow() {
-        this.store.follow(fetch, this.get().actor);
-      }
+    if (actor) {
+      await fetchOutbox(this.fetch, actor);
+      return { actor };
     }
-  };
+
+    this.error(404, 'Not Found');
+  }
+</script>
+<script>
+  const { session } = stores();
+  let actor;
+
+  function follow() {
+    follow(get(session), fetch, actor);
+  }
 </script>

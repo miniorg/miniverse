@@ -14,9 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { start } from '../../__sapper__/client';
-import { Properties } from '../lib/store/base';
-import Store from '../lib/store/browser';
+import { start } from '@sapper/app';
 
 type GA = ((...a: unknown[]) => void) & { q: unknown[] };
 
@@ -53,10 +51,5 @@ document.addEventListener('securitypolicyviolation', ({ blockedURI, violatedDire
 });
 
 export default function(target: HTMLElement) {
-  return start({
-    target,
-    store(data: Properties) {
-      return new Store(data);
-    }
-  });
+  return start({ target });
 }

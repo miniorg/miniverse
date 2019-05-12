@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Challenge, { digest, getToken } from './challenge';
+import Challenge, { digest } from './challenge';
 import repository from '../test/repository';
 
 const secret = Buffer.from('secret');
@@ -22,7 +22,6 @@ const expectedDigest = Buffer.from([
   229, 233, 250, 27, 163, 30, 205, 26, 232, 79, 117, 202, 170, 71, 79, 58,
   102, 63, 5, 244
 ]);
-const token = 'c2VjcmV0';
 
 describe('create', () => {
   test('creates challenge', async () => {
@@ -39,8 +38,4 @@ describe('create', () => {
 describe('digest', () => {
   test('digests secret', () =>
     expect(expectedDigest.equals(digest(secret))).toBe(true));
-});
-
-describe('getToken', () => {
-  test('gets token from secret', () => expect(getToken(secret)).toBe(token));
 });

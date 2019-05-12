@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2018  Miniverse authors
+  Copyright (C) 2019  Miniverse authors
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU Affero General Public License as published by
@@ -14,7 +14,6 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Store as Base } from 'svelte/store';
 import { Announce, Endpoints, Key, Note } from '../generated_activitystreams';
 
 export interface Analytics {
@@ -34,28 +33,10 @@ export interface User {
   'miniverse:salt': string;
 }
 
-export interface Properties {
+export default interface Session {
   readonly analytics: Analytics;
-  readonly captcha: null | string;
   readonly endpoints: Endpoints;
-  readonly nonce: null | string;
-  readonly scripts: string[];
-  readonly user: User | null;
   readonly fingerHost: string;
-}
-
-type SomeProperties = { readonly [key in keyof Properties]?: Properties[key] };
-
-export default class Store extends Base {
-  constructor(properties: Properties) {
-    super(properties);
-  }
-
-  get() {
-    return super.get() as Properties;
-  }
-
-  set(properties: SomeProperties) {
-    super.set(properties);
-  }
+  readonly nonce: string;
+  readonly user: User | null;
 }

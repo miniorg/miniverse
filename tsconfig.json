@@ -2,7 +2,7 @@
   "extends": "./base.tsconfig",
   "compilerOptions": {
     "lib": ["es2017", "dom"],
-    "paths": { "isomorphism": ["src/lib/isomorphism/node"] },
+    "paths": { "isomorphism/*": ["src/lib/isomorphism/browser/*"] },
     "types": ["jest", "webpack-env"]
   },
   "include": ["src", "migrations", "webpack.config.js"],

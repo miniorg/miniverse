@@ -1,4 +1,4 @@
-<!--
+/*
   Copyright (C) 2018  Miniverse authors
 
   This program is free software: you can redistribute it and/or modify
@@ -12,13 +12,18 @@
 
   You should have received a copy of the GNU Affero General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
--->
+*/
 
-<svelte:head>
-  <title>{status}</title>
-</svelte:head>
-<h1>{status}</h1>
-<p>{error.message}</p>
-{#if error.stack}
-  <pre>{error.stack}</pre>
-{/if}
+import { Fetch } from 'isomorphism/fetch';
+import { postOutbox } from './fetch';
+import Session from './types';
+
+export async function announce(session: Session, fetch: Fetch, object: string) {
+  await postOutbox(session, fetch, {
+    '@context': 'https://www.w3.org/ns/activitystreams',
+    type: 'Announce',
+    published: new Date,
+    to: 'https://www.w3.org/ns/activitystreams#Public',
+    object
+  });
+}

@@ -23,10 +23,6 @@ export function digest(secret: Buffer): Buffer {
   return hash.digest();
 }
 
-export function getToken(secret: Buffer): string {
-  return secret.toString('base64');
-}
-
 export default class Challenge {
   readonly digest: Buffer;
 

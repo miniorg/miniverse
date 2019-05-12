@@ -3,20 +3,20 @@
   "compilerOptions": {
     "lib": ["es2017"],
     "module": "CommonJS",
-    "paths": { "isomorphism": ["src/lib/isomorphism/node"] },
+    "paths": { "isomorphism/*": ["src/lib/isomorphism/node/*"] },
     "target": "ES2017",
     "types": []
   },
-  "include": ["src", "migrations", "webpack.config.js"],
-  "exclude": [
-    "__sapper__/**/*.js",
-    "__sapper__/*.js",
-    "**/*.test.ts",
-    "src/client.ts",
-    "src/service-worker.js",
-    "src/subsystems/client.*",
-    "src/lib/isomorphism/browser",
-    "src/lib/store/browser",
-    "src/lib/test"
-  ]
+  "include": [
+    "migrations",
+    "src/bull-arena.d.ts",
+    "src/http-signature.d.ts",
+    "src/processor.ts",
+    "src/routes",
+    "src/sapper.d.ts",
+    "src/server.ts",
+    "src/svelte.d.ts",
+    "webpack.config.js"
+  ],
+  "exclude": ["**/*.test.ts"]
 }

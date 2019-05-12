@@ -2,13 +2,14 @@
   "extends": "./base.tsconfig",
   "compilerOptions": {
     "lib": ["es2017", "dom"],
-    "paths": { "isomorphism": ["src/lib/isomorphism/browser"] },
+    "paths": { "isomorphism/*": ["src/lib/isomorphism/browser/*"] },
     "types": ["webpack-env"]
   },
   "include": [
     "src/client.ts",
     "src/lib/isomorphism/browser/url.d.ts",
     "src/lib/store",
-    "src/lib/svelte.d.ts"
+    "src/sapper.d.ts",
+    "src/svelte.d.ts"
   ]
 }

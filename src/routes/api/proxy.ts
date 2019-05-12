@@ -30,7 +30,8 @@ const setBody = promisify(urlencoded({ extended: false })) as
 export const post = secure(async (request, response) => {
   await setBody(request, response);
 
-  const { body, repository } = request;
+  const { body } = request;
+  const { repository } = response.app.locals;
   const parsed = new ParsedActivityStreams(repository, body.id, NoHost);
   const actor = await Actor.fromParsedActivityStreams(repository, parsed);
 

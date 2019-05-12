@@ -14,17 +14,22 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Actor from './actor';
-import Base from './base';
-import Announce from './announce';
-import Like from './like';
-import Note from './note';
+import { readable } from 'svelte/store';
 
-export default class Store extends Base {}
+export function listenEventSource() {
+  const eventSource = new EventSource(`https://${location.host}/api/events`);
+  let inbox: unknown[] = [];
 
-for (const Constructor of [Actor, Announce, Like, Note]) {
-  for (const key of Object.getOwnPropertyNames(Constructor.prototype)) {
-    // @ts-ignore
-    Store.prototype[key] = Constructor.prototype[key];
-  }
+  return readable(inbox, set => {
+    eventSource.onmessage = ({ data }) => {
+      const { type, orderedItems } = JSON.parse(data);
+
+      if (type == 'OrderedCollectionPage') {
+        inbox = orderedItems.reverse().concat(inbox);
+        set(inbox);
+      }
+    };
+
+    return () => eventSource.close();
+  });
 }

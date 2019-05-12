@@ -14,27 +14,18 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Universal from '..';
+import { Fetch } from 'isomorphism/fetch';
+import { postOutbox } from './fetch';
+import Session from './types';
 
-export default class extends Universal {
-  listenEventSource() {
-    const eventSource = new EventSource(`https://${location.host}/api/events`);
-
-    eventSource.onmessage = ({ data }) => {
-      const { type, orderedItems } = JSON.parse(data);
-
-      if (type == 'OrderedCollectionPage') {
-        const { user } = this.get();
-        if (!user) {
-          throw new Error('Not signed in.');
-        }
-
-        this.set({
-          user: Object.assign({}, user, {
-            inbox: orderedItems.reverse().concat(user.inbox)
-          })
-        });
-      }
-    };
-  }
+export async function create(session: Session, fetch: Fetch, content: string) {
+  await postOutbox(session, fetch, {
+    '@context': 'https://www.w3.org/ns/activitystreams',
+    type: 'Note',
+    published: new Date,
+    to: 'https://www.w3.org/ns/activitystreams#Public',
+    content,
+    attachment: [],
+    tag: []
+  });
 }

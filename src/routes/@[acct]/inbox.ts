@@ -50,7 +50,7 @@ export const post = secure(async (request, response) => {
 
   await setBody(request, response);
 
-  await request.repository.queue.add({
+  await response.app.locals.repository.queue.add({
     type: 'processInbox',
     signature,
     body: request.body
