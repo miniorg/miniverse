@@ -14,7 +14,6 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Custom as CustomError } from '../errors';
 import { Mention as ActivityStreams } from '../generated_activitystreams';
 import Actor from './actor';
 import Relation, { Reference } from './relation';
@@ -29,15 +28,15 @@ export default class Mention extends Relation<Properties, References> {
   readonly href?: Reference<Actor | null>;
   readonly hrefId!: string;
 
-  async toActivityStreams(): Promise<ActivityStreams> {
+  async toActivityStreams(recover: (error: Error) => unknown): Promise<ActivityStreams> {
     const actor = await this.select('href');
     if (!actor) {
-      throw new CustomError('Href not found.', 'error');
+      throw recover(new Error('href not found.'));
     }
 
-    const href = await actor.getUri();
+    const href = await actor.getUri(recover);
     if (!href) {
-      throw new CustomError('Href URI not found.', 'error');
+      throw recover(new Error('href\'s uri not found.'));
     }
 
     return { type: 'Mention', href };

@@ -15,7 +15,6 @@
 */
 
 import { Request, NextFunction } from 'express';
-import { Custom as CustomError } from '../lib/errors';
 import { Response } from '../subsystems/server';
 
 interface Handler {
@@ -26,12 +25,7 @@ export default (handle: Handler) => async (request: Request, response: Response,
   try {
     await handle(request, response, next);
   } catch (error) {
-    if (error instanceof CustomError) {
-      error.log(response.app.locals.repository);
-    } else {
-      response.app.locals.repository.console.error(error);
-    }
-
+    response.app.locals.repository.console.error(error);
     response.sendStatus(500);
   }
 };

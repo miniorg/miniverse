@@ -15,13 +15,13 @@
 */
 
 import { createPublicKey } from 'crypto';
-import { Custom as CustomError } from '../errors';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
 import RemoteAccount from './remote_account';
 
 describe('create', () => {
   test('creates and resolves with an account', async () => {
+    const recover = jest.fn();
     const account = await RemoteAccount.create(
       repository,
       'name of user',
@@ -41,8 +41,10 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 +DHYFaVXQy60WzCEFjiQPZ8XdNQKvDyjKwIDAQAB
 -----END RSA PUBLIC KEY-----
 `).export({ format: 'der', type: 'pkcs1' })
-      });
+      },
+      recover);
 
+    expect(recover).not.toHaveBeenCalled();
     expect(account).toBeInstanceOf(RemoteAccount);
     expect(account).toHaveProperty('repository', repository);
     expect(account).toHaveProperty(['actor', 'repository'], repository);
@@ -78,17 +80,20 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 `).export({ format: 'der', type: 'pkcs1' }));
   });
 
-  test('rejects if username is invalid', () => expect(RemoteAccount.create(
-    repository,
-    '',
-    'finger.remote.xn--kgbechtv',
-    '',
-    '',
-    'https://remote.xn--kgbechtv/@%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E5%90%8D',
-    { uri: 'https://remote.xn--kgbechtv/@%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E5%90%8D/inbox' },
-    {
-      uri: 'https://remote.xn--kgbechtv/@%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E5%90%8D#key',
-      publicKeyDer: createPublicKey(`-----BEGIN RSA PUBLIC KEY-----
+  test('rejects if username is invalid', async () => {
+    const recovery = {};
+
+    await expect(RemoteAccount.create(
+      repository,
+      '',
+      'finger.remote.xn--kgbechtv',
+      '',
+      '',
+      'https://remote.xn--kgbechtv/@%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E5%90%8D',
+      { uri: 'https://remote.xn--kgbechtv/@%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E5%90%8D/inbox' },
+      {
+        uri: 'https://remote.xn--kgbechtv/@%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E5%90%8D#key',
+        publicKeyDer: createPublicKey(`-----BEGIN RSA PUBLIC KEY-----
 MIIBCgKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGTrcO6
 S16XQ3tffCo0QA7G1MOzTeOEJHMiNM4jQQuY0NgDGMs3KEgo0J4ik75VnlyOiSyF
 ZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2/POH
@@ -97,5 +102,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 +DHYFaVXQy60WzCEFjiQPZ8XdNQKvDyjKwIDAQAB
 -----END RSA PUBLIC KEY-----
 `).export({ format: 'der', type: 'pkcs1' })
-    })).rejects.toBeInstanceOf(CustomError));
+      },
+      () => recovery)).rejects.toBe(recovery);
+  });
 });

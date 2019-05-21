@@ -15,7 +15,6 @@
 */
 
 import { domainToASCII } from 'url';
-import { Custom as CustomError } from '../errors';
 import Actor from './actor';
 import Announce from './announce';
 import Note from './note';
@@ -52,16 +51,16 @@ export default class Status extends Relation<Properties, References> {
   readonly extension?: Reference<Announce | Note | null>;
   readonly published!: Date;
 
-  async getUri() {
+  async getUri(recover: (error: Error) => unknown) {
     const actor = await this.select('actor');
     if (!actor) {
-      throw new CustomError('Actor not found.', 'error');
+      throw recover(new Error('actor not found.'));
     }
 
     if (actor.host) {
       const uri = await this.select('uri');
       if (!uri) {
-        throw new CustomError('URI not found.', 'error');
+        throw recover(new Error('uri not found.'));
       }
 
       return uri.uri;

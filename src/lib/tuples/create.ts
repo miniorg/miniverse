@@ -14,10 +14,10 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Custom as CustomError } from '../errors';
 import { Create as ActivityStreams } from '../generated_activitystreams';
-import ParsedActivityStreams, { TypeNotAllowed } from '../parsed_activitystreams';
+import ParsedActivityStreams from '../parsed_activitystreams';
 import Repository from '../repository';
+import { temporaryError } from '../transfer';
 import Actor from './actor';
 import Note from './note';
 import Relation, { Reference } from './relation';
@@ -28,56 +28,54 @@ interface References {
 
 type Properties = { objectId: string } | { objectId?: string; object: Note };
 
-export async function create(repository: Repository, attributedTo: Actor, object: ParsedActivityStreams) {
-  const [type] = await Promise.all([
-    object.getType(),
-    Promise.all([
-      object.getAttributedTo().then(actual => actual && actual.getId()),
-      attributedTo.getUri()
-    ]).then(([actual, expected]) => {
-      if (actual && actual != expected) {
-        throw new CustomError(
-          'attributedTo mismatches. Possibly invalid Activity Streams?',
-          'info');
-      }
-    })
+export const unexpectedObjectType = Symbol();
+export const unexpectedType = Symbol();
+
+export async function create(repository: Repository, attributedTo: Actor, object: ParsedActivityStreams, recover: (error: Error) => unknown) {
+  const [actual, expected] = await Promise.all([
+    object.getAttributedTo(recover)
+      .then(actual => actual && actual.getId(recover)),
+    attributedTo.getUri(recover)
   ]);
 
-  if (type.has('Note')) {
-    return Note.fromParsedActivityStreams(repository, object, attributedTo);
+  if (actual && actual != expected) {
+    throw recover(new Error('attributedTo verification failed.'));
   }
 
-  throw new TypeNotAllowed('Unsupported type for creation.', 'info');
+  return Note.fromParsedActivityStreams(repository, object, attributedTo, recover);
 }
 
 export default class Create extends Relation<Properties, References> {
   readonly object?: Reference<Note | null>;
   readonly objectId!: string;
 
-  async toActivityStreams(): Promise<ActivityStreams> {
+  async toActivityStreams(recover: (error: Error) => unknown): Promise<ActivityStreams> {
     const object = await this.select('object');
     if (!object) {
-      throw new CustomError('object not found', 'error');
+      throw recover(new Error('object not found.'));
     }
 
     return {
       type: 'Create',
-      object: await object.toActivityStreams()
+      object: await object.toActivityStreams(recover)
     };
   }
 
-  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor) {
-    const type = await activity.getType();
+  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor, recover: (error: Error & {
+    [temporaryError]?: boolean;
+    [unexpectedType]?: boolean;
+  }) => unknown) {
+    const type = await activity.getType(recover);
     if (!type.has('Create')) {
-      throw new TypeNotAllowed('Unsupported type. Expected Create.', 'info');
+      throw recover(Object.assign(new Error('Unsupported type. Expected Create.'), { [unexpectedType]: true }));
     }
 
-    const objectActivityStreams = await activity.getObject();
+    const objectActivityStreams = await activity.getObject(recover);
     if (!objectActivityStreams) {
-      throw new CustomError('object unspecified.', 'error');
+      throw recover(new Error('object unspecified.'));
     }
 
-    const object = await create(repository, actor, objectActivityStreams);
+    const object = await create(repository, actor, objectActivityStreams, recover);
     if (!object) {
       return null;
     }

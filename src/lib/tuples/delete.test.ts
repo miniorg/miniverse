@@ -14,14 +14,11 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import ParsedActivityStreams, {
-  AnyHost,
-  TypeNotAllowed
-} from '../parsed_activitystreams';
+import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
 import { fabricateDocument, fabricateNote } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
-import Delete from './delete';
+import Delete, { unexpectedType } from './delete';
 
 describe('createFromParsedActivityStreams', () => {
   test('deletes note', async () => {
@@ -30,6 +27,7 @@ describe('createFromParsedActivityStreams', () => {
 
     const status = unwrap(await note.select('status'));
     const actor = unwrap(await status.select('actor'));
+    const recover = jest.fn();
     const activityStreams = new ParsedActivityStreams(repository, {
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'Delete',
@@ -37,8 +35,9 @@ describe('createFromParsedActivityStreams', () => {
     }, AnyHost);
 
     await expect(Delete.createFromParsedActivityStreams(
-      repository, activityStreams, actor)).resolves.toBeInstanceOf(Delete);
+      repository, activityStreams, actor, recover)).resolves.toBeInstanceOf(Delete);
 
+    expect(recover).not.toHaveBeenCalled();
     await expect(repository.selectRecentStatusesIncludingExtensionsByActorId(status.actorId))
       .resolves
       .toEqual([]);
@@ -57,6 +56,7 @@ describe('createFromParsedActivityStreams', () => {
 
     const status = unwrap(await note.select('status'));
     const actor = unwrap(await status.select('actor'));
+    const recover = jest.fn();
     const activityStreams = new ParsedActivityStreams(repository, {
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'Delete',
@@ -64,8 +64,9 @@ describe('createFromParsedActivityStreams', () => {
     }, AnyHost);
 
     await expect(Delete.createFromParsedActivityStreams(
-      repository, activityStreams, actor)).resolves.toBeInstanceOf(Delete);
+      repository, activityStreams, actor, recover)).resolves.toBeInstanceOf(Delete);
 
+    expect(recover).not.toHaveBeenCalled();
     await expect(repository.selectDocumentById(documentId)).resolves.toBe(null);
     await expect(repository.selectUnlinkedDocuments()).resolves.toEqual([]);
     await expect(repository.s3.service.headObject({
@@ -74,10 +75,11 @@ describe('createFromParsedActivityStreams', () => {
     }).promise()).rejects.toHaveProperty('code', 'NotFound');
   });
 
-  test('rejects with TypeNotAllowed if type is not Delete', async () => {
+  test('rejects if type is not Delete', async () => {
     const note = await fabricateNote(
       { status: { uri: {  uri: 'https://ReMoTe.إختبار/' } } });
 
+    const recovery = {};
     const status = unwrap(await note.select('status'));
     const activityStreams = new ParsedActivityStreams(repository, {
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -85,7 +87,12 @@ describe('createFromParsedActivityStreams', () => {
     }, AnyHost);
 
     await expect(Delete.createFromParsedActivityStreams(
-      repository, activityStreams, unwrap(await status.select('actor'))))
-      .rejects.toBeInstanceOf(TypeNotAllowed);
+      repository,
+      activityStreams,
+      unwrap(await status.select('actor')),
+      error => {
+        expect(error[unexpectedType]).toBe(true);
+        return recovery;
+      })).rejects.toBe(recovery);
   });
 });

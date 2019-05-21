@@ -14,7 +14,6 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Custom as CustomError } from '../errors';
 import { Account as WebFinger } from '../generated_webfinger';
 import Repository from '../repository';
 import Relation, { Reference } from './relation';
@@ -51,15 +50,15 @@ export default class RemoteAccount extends Relation<Properties, References> {
   publicKeyURIId?: string;
   readonly publicKeyDer!: Buffer;
 
-  async toWebFinger(): Promise<WebFinger> {
+  async toWebFinger(recover: (error: Error) => unknown): Promise<WebFinger> {
     const actor = await this.select('actor');
     if (!actor) {
-      throw new CustomError('Actor not found.', 'error');
+      throw recover(new Error('actor not found.'));
     }
 
-    const href = await actor.getUri();
+    const href = await actor.getUri(recover);
     if (!href) {
-      throw new CustomError('URI not found.', 'error');
+      throw recover(new Error('uri not found.'));
     }
 
     return {
@@ -74,7 +73,7 @@ export default class RemoteAccount extends Relation<Properties, References> {
     };
   }
 
-  static async create(repository: Repository, username: string, host: string, name: string, summary: string, uri: string, inbox: Inbox, publicKey: PublicKey) {
+  static async create(repository: Repository, username: string, host: string, name: string, summary: string, uri: string, inbox: Inbox, publicKey: PublicKey, recover: (error: Error) => unknown) {
     const account = new this({
       repository,
       actor: new Actor({
@@ -96,10 +95,10 @@ export default class RemoteAccount extends Relation<Properties, References> {
 
     const actor = await account.select('actor');
     if (!actor) {
-      throw new CustomError('Actor not found.', 'error');
+      throw new Error('Actor not found.');
     }
 
-    actor.validate();
+    actor.validate(recover);
     await repository.insertRemoteAccount(account);
 
     return account;

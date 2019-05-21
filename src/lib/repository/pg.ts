@@ -16,7 +16,6 @@
 
 import { Pool, QueryConfig } from 'pg';
 import { inspect } from 'util';
-import { Custom as CustomError } from '../errors';
 
 export default class {
   readonly pg: Pool;
@@ -33,7 +32,7 @@ export default class {
         `failed to query ${query}: ${error.message}` :
         `failed to query ${query.text} with ${inspect(query.values)}: ${error.message}`;
 
-      throw new CustomError(message, 'error', [error]);
+      throw new Error(message);
     }
   }
 }

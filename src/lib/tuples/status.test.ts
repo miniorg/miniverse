@@ -25,8 +25,10 @@ describe('getUri', () => {
     const actor = unwrap(await account.select('actor'));
     const note = await fabricateNote({ status: { actor } });
     const status = unwrap(await note.select('status'));
+    const recover = jest.fn();
 
-    await expect(status.getUri()).resolves.toMatch(/^https:\/\/xn--kgbechtv\/@attributed%20to\//);
+    await expect(status.getUri(recover)).resolves.toMatch(/^https:\/\/xn--kgbechtv\/@attributed%20to\//);
+    expect(recover).not.toHaveBeenCalled();
   });
 
   test('resolves with remote URI when it is resolved remote status', async () => {
@@ -34,7 +36,9 @@ describe('getUri', () => {
       { status: { uri: { uri: 'https://NoTe.xn--kgbechtv/' } } });
 
     const status = unwrap(await note.select('status'));
+    const recover = jest.fn();
 
-    await expect(status.getUri()).resolves.toBe('https://NoTe.xn--kgbechtv/');
+    await expect(status.getUri(recover)).resolves.toBe('https://NoTe.xn--kgbechtv/');
+    expect(recover).not.toHaveBeenCalled();
   });
 });

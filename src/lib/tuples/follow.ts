@@ -14,10 +14,10 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Custom as CustomError } from '../errors';
 import { Follow as ActivityStreams } from '../generated_activitystreams';
-import ParsedActivityStreams, { TypeNotAllowed } from '../parsed_activitystreams';
+import ParsedActivityStreams from '../parsed_activitystreams';
 import Repository from '../repository';
+import { temporaryError } from '../transfer';
 import Accept from './accept';
 import Actor from './actor';
 import Relation, { Reference } from './relation';
@@ -31,6 +31,8 @@ interface References {
   object: Actor | null;
 }
 
+export const unexpectedType = Symbol();
+
 export default class Follow extends Relation<Properties, References> {
   id?: string;
   readonly actor?: Reference<Actor | null>;
@@ -38,42 +40,42 @@ export default class Follow extends Relation<Properties, References> {
   readonly object?: Reference<Actor | null>;
   readonly objectId!: string;
 
-  async toActivityStreams(): Promise<ActivityStreams> {
+  async toActivityStreams(recover: (error: Error) => unknown): Promise<ActivityStreams> {
     const [actor, object] = await Promise.all([
       this.select('actor').then(actor => {
         if (!actor) {
-          throw new CustomError('Actor not found.', 'error');
+          throw recover(new Error('actor not found.'));
         }
 
-        return actor.getUri();
+        return actor.getUri(recover);
       }),
       this.select('object').then(actor => {
         if (!actor) {
-          throw new CustomError('Object not found.', 'error');
+          throw recover(new Error('object not found.'));
         }
 
-        return actor.getUri();
+        return actor.getUri(recover);
       })
     ]);
 
     if (!actor) {
-      throw new CustomError('Actor URI not found.', 'error');
+      throw recover(new Error('actor\'s uri not found.'));
     }
 
     if (!object) {
-      throw new CustomError('Object URI not found.', 'error');
+      throw recover(new Error('object\'s uri not found.'));
     }
 
     return { type: 'Follow', actor, object };
   }
 
-  static async create(repository: Repository, actor: Actor, object: Actor) {
+  static async create(repository: Repository, actor: Actor, object: Actor, recover: (error: Error) => unknown) {
     const follow = new this({ actor, object, repository });
 
     await repository.insertFollow(follow);
 
     await Promise.all([
-      Accept.create(repository, follow),
+      Accept.create(repository, follow, recover),
       !actor.host && object.host && repository.queue.add({
         type: 'postFollow',
         id: follow.id
@@ -83,24 +85,27 @@ export default class Follow extends Relation<Properties, References> {
     return follow;
   }
 
-  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor) {
-    const type = await activity.getType();
+  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor, recover: (error: Error & {
+    [temporaryError]?: boolean;
+    [unexpectedType]?: boolean;
+  }) => unknown) {
+    const type = await activity.getType(recover);
     if (!type.has('Follow')) {
-      throw new TypeNotAllowed('Unexpected type. Expected Follow.', 'info');
+      throw recover(Object.assign(new Error('Unsupported type. Expected Follow.'), { [unexpectedType]: true }));
     }
 
-    const object = await activity.getObject();
+    const object = await activity.getObject(recover);
     if (!object) {
-      throw new CustomError('object unspecified.', 'error');
+      throw recover(new Error('object unspecified.'));
     }
 
     const objectActor =
-      await Actor.fromParsedActivityStreams(repository, object);
+      await Actor.fromParsedActivityStreams(repository, object, recover);
     if (!objectActor) {
-      throw new CustomError('The object cannot be fetched.', 'error');
+      throw recover(new Error('object\'s actor unfetched.'));
     }
 
-    return this.create(repository, actor, objectActor);
+    return this.create(repository, actor, objectActor, recover);
   }
 }
 

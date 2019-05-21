@@ -36,13 +36,16 @@ test('delivers to remote account', async () => {
 
   const { id } = await fabricateFollow({ actor, object });
   const job = await repository.queue.add({ objectId: unwrap(id) });
+  const recover = jest.fn();
 
   const post = nock('https://AcToR.إختبار').post('/?inbox').reply(200);
 
   try {
-    await accept(repository, job);
+    await accept(repository, job, recover);
     expect(post.isDone()).toBe(true);
   } finally {
     nock.cleanAll();
   }
+
+  expect(recover).not.toHaveBeenCalled();
 });

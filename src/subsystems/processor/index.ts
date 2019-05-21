@@ -16,28 +16,44 @@
 
 import { Job } from 'bull';
 import { globalAgent } from 'https';
-import {
-  Custom as CustomError,
-  Temporary as TemporaryError
-} from '../../lib/errors';
 import Repository from '../../lib/repository';
+import { temporaryError } from '../../lib/transfer';
 import handlers from './handlers';
 
 export default function(repository: Repository) {
   repository.queue.process(globalAgent.maxFreeSockets, job => {
-    const indexableHandlers = handlers as { readonly [key: string]: ((repository: Repository, job: Job<unknown>) => Promise<unknown>) | undefined };
+    const indexableHandlers = handlers as {
+      readonly [key: string]: (
+        (
+          repository: Repository,
+          job: Job<unknown>,
+          recover: (error: Error & { [temporaryError]?: boolean }) => unknown
+        ) => Promise<unknown>
+      ) | undefined;
+    };
 
     const handle = indexableHandlers[job.data.type];
     if (!handle) {
-      throw new CustomError('Invalid data type.', 'error');
+      repository.console.error(`Unrecoverable error caused by job ${job.id}.`);
+      throw new Error('Invalid data type.');
     }
 
-    return handle(repository, job).catch(async (error: unknown) => {
-      if (!(error instanceof TemporaryError)) {
-        await job.discard();
+    const recovery: { error?: Error } = {};
+    let discard = Promise.resolve();
+    return handle(repository, job, error => {
+      if (!error[temporaryError]) {
+        discard = job.discard();
       }
 
+      recovery.error = error;
+      return recovery;
+    }).catch(error => discard.then(() => {
+      if (error == recovery) {
+        throw recovery.error;
+      }
+
+      repository.console.error(`Unrecoverable error caused by job ${job.id}.`);
       throw error;
-    });
+    }));
   });
 }

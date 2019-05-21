@@ -60,6 +60,7 @@ OyJRYe+sFKZ6lXqnwdWuTrxTNucFuhw+6BVyzNn6lI5cNXLr1reH
 describe('validate', () => {
   for (const username of 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~!$&\'()*+,;=') {
     test(`accepts if username which starts with ${username}`, () => {
+      const recover = jest.fn();
       const actor = new Actor({
         repository,
         username,
@@ -68,11 +69,13 @@ describe('validate', () => {
         summary: ''
       });
 
-      expect(() => actor.validate()).not.toThrow();
+      actor.validate(recover);
+      expect(recover).not.toHaveBeenCalled();
     });
   }
 
   test('throws an error if username has invalid first character', () => {
+    const recovery = new Error;
     const actor = new Actor({
       repository,
       username: '無効',
@@ -81,28 +84,34 @@ describe('validate', () => {
       summary: ''
     });
 
-    expect(() => actor.validate()).toThrow();
+    expect(() => actor.validate(() => recovery)).toThrow(recovery);
   });
 });
 
 describe('getUri', () => {
   test('returns URI of local account', async () => {
+    const recover = jest.fn();
     const account = await fabricateLocalAccount(
       { actor: { username: 'ユーザー名', name: '' } });
 
     // host and username must be encoded.
-    await expect(unwrap(await account.select('actor')).getUri())
+    await expect(unwrap(await account.select('actor')).getUri(recover))
       .resolves
       .toBe('https://xn--kgbechtv/@%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E5%90%8D');
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
   test('loads and returns URI of remote account', async () => {
     const { id } = await fabricateRemoteAccount({ uri: { uri: 'https://ReMoTe.إختبار/' } });
     const actor = unwrap(await repository.selectActorById(unwrap(id)));
+    const recover = jest.fn();
 
-    await expect(actor.getUri())
+    await expect(actor.getUri(recover))
       .resolves
       .toBe('https://ReMoTe.إختبار/');
+
+    expect(recover).not.toHaveBeenCalled();
   });
 });
 
@@ -116,9 +125,10 @@ describe('toActivityStreams', () => {
     });
 
     const actor = unwrap(await account.select('actor'));
+    const recover = jest.fn();
 
     // URIs must properly be encoded.
-    await expect(actor.toActivityStreams()).resolves.toEqual({
+    await expect(actor.toActivityStreams(recover)).resolves.toEqual({
       id: 'https://xn--kgbechtv/@%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E5%90%8D',
       type: 'Person',
       preferredUsername: 'ユーザー名',
@@ -143,6 +153,8 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
       endpoints: { proxyUrl: 'https://xn--kgbechtv/api/proxy' },
       'miniverse:salt': 'c2FsdA=='
     });
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
   test('returns ActivityStreams representation of remote account', async () => {
@@ -157,9 +169,10 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
     });
 
     const actor = unwrap(await account.select('actor'));
+    const recover = jest.fn();
 
     // URIs must properly be encoded.
-    await expect(actor.toActivityStreams()).resolves.toEqual({
+    await expect(actor.toActivityStreams(recover)).resolves.toEqual({
       id: 'https://ReMoTe.xn--kgbechtv/',
       preferredUsername: 'ユーザー名',
       name: '',
@@ -167,5 +180,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
       inbox: 'https://xn--kgbechtv/@%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E5%90%8D@finger.remote.%D8%A5%D8%AE%D8%AA%D8%A8%D8%A7%D8%B1/inbox',
       outbox: 'https://xn--kgbechtv/@%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E5%90%8D@finger.remote.%D8%A5%D8%AE%D8%AA%D8%A8%D8%A7%D8%B1/outbox',
     });
+
+    expect(recover).not.toHaveBeenCalled();
   });
 });

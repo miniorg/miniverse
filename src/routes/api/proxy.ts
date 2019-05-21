@@ -23,6 +23,7 @@ import Actor from '../../lib/tuples/actor';
 import secure from '../_secure';
 import sendActivityStreams from '../_send_activitystreams';
 
+const recovery = {};
 const setBody = promisify(urlencoded({ extended: false })) as
   unknown as
   (request: Request, response: Response) => Promise<unknown>;
@@ -33,7 +34,18 @@ export const post = secure(async (request, response) => {
   const { body } = request;
   const { repository } = response.app.locals;
   const parsed = new ParsedActivityStreams(repository, body.id, NoHost);
-  const actor = await Actor.fromParsedActivityStreams(repository, parsed);
+  let actor;
+
+  try {
+    actor = await Actor.fromParsedActivityStreams(repository, parsed, () => recovery);
+  } catch (error) {
+    if (error == recovery) {
+      response.sendStatus(500);
+      return;
+    }
+
+    throw error;
+  }
 
   if (actor) {
     await sendActivityStreams(response, actor);

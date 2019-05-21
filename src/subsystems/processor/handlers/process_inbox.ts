@@ -16,56 +16,58 @@
 
 import { Job } from 'bull';
 import { URL } from 'url';
-import {
-  Custom as CustomError,
-  wrap as wrapErrors
-} from '../../../lib/errors';
-import ParsedActivityStreams, { TypeNotAllowed }
-  from '../../../lib/parsed_activitystreams';
+import ParsedActivityStreams from '../../../lib/parsed_activitystreams';
+import { temporaryError } from '../../../lib/transfer';
 import Actor from '../../../lib/tuples/actor';
 import Key from '../../../lib/tuples/key';
 import Repository from '../../../lib/repository';
 import { normalizeHost } from '../../../lib/tuples/uri';
+
+const ownerNotFound = Symbol('owner not found');
 
 interface Data {
   readonly body: string;
   readonly signature: { readonly keyId: string };
 }
 
-export default async function(repository: Repository, { data }: Job<Data>) {
+export type OwnerNotFound = typeof ownerNotFound;
+
+export default async function(repository: Repository, { data }: Job<Data>, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
   const { body, signature } = data;
-  const owner = await Actor.fromKeyUri(repository, signature.keyId);
+  const owner = await Actor.fromKeyUri(repository, signature.keyId, recover);
 
   if (!owner) {
-    throw new CustomError('Inbox owner not found', 'error');
+    throw recover(new Error('Key owner not found.'));
   }
 
   const key = new Key({ owner, repository });
 
-  if (await key.verifySignature(signature)) {
+  if (await key.verifySignature(signature, recover)) {
     const { host } = new URL(signature.keyId);
     const normalizedHost = normalizeHost(host);
     const parsed = JSON.parse(body);
     const collection =
       new ParsedActivityStreams(repository, parsed, normalizedHost);
 
-    const items = await collection.getItems();
-    const errors = [] as Error[];
+    const items = await collection.getItems(recover);
+    const errors = [] as (Error & { [temporaryError]?: boolean })[];
 
     await Promise.all(items.map(item => {
       if (item) {
-        return item.act(owner).catch(error => {
-          if (!(error instanceof TypeNotAllowed)) {
-            errors.push(error);
-          }
+        return item.act(owner, recover).catch(error => {
+          errors.push(error);
         });
       }
 
-      errors.push(new CustomError('Unspecified item.', 'error'));
+      errors.push(new Error('Unspecified item.'));
     }));
 
     if (errors.length) {
-      throw wrapErrors(errors);
+      throw errors.length == 1 ? errors[0] : {
+        message: errors.map(({ message }) => message).join('\n'),
+        stack: errors.map(({ stack }) => stack).join('\n\n'),
+        [temporaryError]: errors.some(error => Boolean(error[temporaryError]))
+      };
     }
   }
 }

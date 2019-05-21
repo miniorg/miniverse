@@ -15,9 +15,8 @@
 */
 
 import { Job } from 'bull';
-import { Custom as CustomError } from '../../../lib/errors';
 import Repository from '../../../lib/repository';
-import { postToInbox } from '../../../lib/transfer';
+import { postToInbox, temporaryError } from '../../../lib/transfer';
 import Create from '../../../lib/tuples/create';
 import LocalAccount from '../../../lib/tuples/local_account';
 import Note from '../../../lib/tuples/note';
@@ -27,11 +26,11 @@ interface Data {
   readonly inboxURIId: string;
 }
 
-export default async function(repository: Repository, { data }: Job<Data>) {
+export default async function(repository: Repository, { data }: Job<Data>, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
   const [[activity, sender], inboxURI] = await Promise.all([
     repository.selectStatusIncludingExtensionById(data.statusId).then(status => {
       if (!status) {
-        throw new CustomError('Status not found.', 'error');
+        throw recover(new Error('Status not found.'));
       }
 
       return Promise.all([
@@ -39,7 +38,7 @@ export default async function(repository: Repository, { data }: Job<Data>) {
           object instanceof Note ? new Create({ repository, object }) : object),
         status.select('actor').then(actor => {
           if (!actor) {
-            throw new CustomError('Actor not found.', 'error');
+            throw recover(new Error('actor not found.'));
           }
 
           return actor.select('account');
@@ -50,16 +49,16 @@ export default async function(repository: Repository, { data }: Job<Data>) {
   ]);
 
   if (!activity) {
-    throw new CustomError('Status extension not found.', 'error');
+    throw new Error('Status extension not found.');
   }
 
   if (!(sender instanceof LocalAccount)) {
-    throw new CustomError('Invalid sender\'s account.', 'error');
+    throw recover(new Error('actor\'s account invalid.'));
   }
 
   if (!inboxURI) {
-    throw new CustomError('Inbox URI not found.', 'error');
+    throw recover(new Error('actor\'s inboxURI not found.'));
   }
 
-  await postToInbox(repository, sender, inboxURI, activity);
+  await postToInbox(repository, sender, inboxURI, activity, recover);
 }

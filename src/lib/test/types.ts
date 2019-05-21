@@ -14,14 +14,12 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Custom as CustomError } from '../errors';
-
 export function unwrap<T>(value: T | null | undefined): T {
   expect(value).not.toBe(null);
   expect(value).not.toBeUndefined();
 
   if (value == null) {
-    throw new CustomError('Unexpected null.', 'error');
+    throw new Error('Unexpected null.');
   }
 
   return value;

@@ -14,10 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import ParsedActivityStreams, {
-  AnyHost,
-  TypeNotAllowed
-} from '../parsed_activitystreams';
+import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
 import {
   fabricateFollow,
   fabricateLocalAccount,
@@ -26,7 +23,7 @@ import {
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
 import Actor from './actor';
-import Follow from './follow';
+import Follow, { unexpectedType } from './follow';
 
 describe('toActivityStreams', () => {
   test('returns ActivityStreams representation', async () => {
@@ -40,14 +37,17 @@ describe('toActivityStreams', () => {
     ]);
 
     const follow = await fabricateFollow({ actor, object });
+    const recover = jest.fn();
 
-    await expect(follow.toActivityStreams())
+    await expect(follow.toActivityStreams(recover))
       .resolves
       .toEqual({
         type: 'Follow',
         actor: 'https://xn--kgbechtv/@%E8%A1%8C%E5%8B%95%E8%80%85',
         object: 'https://xn--kgbechtv/@%E8%A2%AB%E8%A1%8C%E5%8B%95%E8%80%85'
       });
+
+    expect(recover).not.toHaveBeenCalled();
   });
 });
 
@@ -82,6 +82,7 @@ describe('create', () => {
     > object.
   */
   test('creates accept activity', async () => {
+    const recover = jest.fn();
     const [actor, object] = await Promise.all([
       fabricateRemoteAccount()
         .then(account => account.select('actor'))
@@ -91,8 +92,9 @@ describe('create', () => {
         .then(unwrap)
     ]);
 
-    await Follow.create(repository, actor, object);
+    await Follow.create(repository, actor, object, recover);
 
+    expect(recover).not.toHaveBeenCalled();
     await expect((await repository.queue.getWaiting())[0])
       .toHaveProperty(['data', 'type'], 'accept');
   });
@@ -116,9 +118,11 @@ describe('createFromParsedActivityStreams', () => {
       object: 'https://xn--kgbechtv/@%E8%A2%AB%E8%A1%8C%E5%8B%95%E8%80%85'
     }, AnyHost);
 
+    const recover = jest.fn();
     const follow = await Follow.createFromParsedActivityStreams(
-      repository, activity, actor);
+      repository, activity, actor, recover);
 
+    expect(recover).not.toHaveBeenCalled();
     expect(follow).toHaveProperty('actor', actor);
 
     await expect(follow.select('object'))
@@ -141,9 +145,11 @@ describe('createFromParsedActivityStreams', () => {
       object: 'https://xn--kgbechtv/@OBJECT'
     }, AnyHost);
 
+    const recover = jest.fn();
     const follow = await Follow.createFromParsedActivityStreams(
-      repository, activity, actor);
+      repository, activity, actor, recover);
 
+    expect(recover).not.toHaveBeenCalled();
     expect(follow).toHaveProperty('actor', actor);
 
     await expect(follow.select('object'))
@@ -151,7 +157,7 @@ describe('createFromParsedActivityStreams', () => {
       .toHaveProperty('id', object.id);
   });
 
-  test('rejects with TypeNotAllowed if type is not Follow', async () => {
+  test('rejects if type is not Follow', async () => {
     const [actor] = await Promise.all([
       fabricateRemoteAccount(),
       fabricateLocalAccount({ actor: { username: 'OBJECT' } })
@@ -161,9 +167,13 @@ describe('createFromParsedActivityStreams', () => {
       object: 'https://xn--kgbechtv/@OBJECT'
     }, AnyHost);
 
+    const recovery = {};
+
     await expect(Follow.createFromParsedActivityStreams(
-      repository, activity, unwrap(await actor.select('actor'))))
-      .rejects.toBeInstanceOf(TypeNotAllowed);
+      repository, activity, unwrap(await actor.select('actor')), error => {
+        expect(error[unexpectedType]).toBe(true);
+        return recovery;
+      })).rejects.toBe(recovery);
   });
 
   test('posts to remote inbox', async () => {
@@ -180,9 +190,12 @@ describe('createFromParsedActivityStreams', () => {
       object: 'https://ObJeCt.إختبار/'
     }, AnyHost);
 
-    await expect(Follow.createFromParsedActivityStreams(
-      repository, activity, actor)).resolves.toBeInstanceOf(Follow);
+    const recover = jest.fn();
 
+    await expect(Follow.createFromParsedActivityStreams(
+      repository, activity, actor, recover)).resolves.toBeInstanceOf(Follow);
+
+    expect(recover).not.toHaveBeenCalled();
     await expect((await repository.queue.getWaiting())[0])
       .toHaveProperty(['data', 'type'], 'postFollow');
   });

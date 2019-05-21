@@ -15,9 +15,8 @@
 */
 
 import { Job } from 'bull';
-import { Custom as CustomError } from '../../../lib/errors';
 import Repository from '../../../lib/repository';
-import { postToInbox } from '../../../lib/transfer';
+import { postToInbox, temporaryError } from '../../../lib/transfer';
 import LocalAccount from '../../../lib/tuples/local_account';
 import RemoteAccount from '../../../lib/tuples/remote_account';
 
@@ -25,38 +24,38 @@ interface Data {
   readonly id: string;
 }
 
-export default async function(repository: Repository, { data }: Job<Data>) {
+export default async function(repository: Repository, { data }: Job<Data>, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
   const like = await repository.selectLikeById(data.id);
   if (!like) {
-    throw new CustomError('The like is undone.', 'error');
+    throw recover(new Error('Like not found.'));
   }
 
   const [sender, inboxURI] = await Promise.all([
     like.select('actor').then(actor => {
       if (!actor) {
-        throw new CustomError('The actor is deleted.', 'error');
+        throw recover(new Error('actor not found.'));
       }
 
       return actor.select('account');
     }),
     like.select('object').then(async note => {
       if (!note) {
-        throw new CustomError('The object is deleted.', 'error');
+        throw recover(new Error('object not found.'));
       }
 
       const status = await note.select('status');
       if (!status) {
-        throw new CustomError('The object\'s status is deleted.', 'error');
+        throw recover(new Error('object\'s status not found.'));
       }
 
       const actor = await status.select('actor');
       if (!actor) {
-        throw new CustomError('The actor which the object is attributed to is deleted.', 'error');
+        throw recover(new Error('object\'s actor not found.'));
       }
 
       const account = await actor.select('account');
       if (!(account instanceof RemoteAccount)) {
-        throw new CustomError('The account which the object is attributed to is invalid.', 'error');
+        throw recover(new Error('object\'s actor\'s account invalid.'));
       }
 
       return account.select('inboxURI');
@@ -64,12 +63,12 @@ export default async function(repository: Repository, { data }: Job<Data>) {
   ]);
 
   if (!(sender instanceof LocalAccount)) {
-    throw new CustomError('The actor\'s account is invalid', 'error');
+    throw recover(new Error('actor\'s account invalid.'));
   }
 
   if (!inboxURI) {
-    throw new CustomError('The inbox URI of the actor which the object is attributed to cannot be retrieved.', 'error');
+    throw recover(new Error('object\'s actor\'s inboxURI not found.'));
   }
 
-  await postToInbox(repository, sender, inboxURI, like);
+  await postToInbox(repository, sender, inboxURI, like, recover);
 }

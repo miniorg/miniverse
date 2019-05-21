@@ -17,7 +17,6 @@
 import { generateKeyPair } from 'crypto';
 import { domainToASCII } from 'url';
 import { promisify } from 'util';
-import { Custom as CustomError } from '../errors';
 import { Account as WebFinger } from '../generated_webfinger';
 import Actor from './actor';
 import Relation, { Reference } from './relation';
@@ -52,18 +51,18 @@ export default class LocalAccount extends Relation<Properties, References> {
   readonly serverKey!: Buffer;
   readonly storedKey!: Buffer;
 
-  async toWebFinger(): Promise<WebFinger> {
+  async toWebFinger(recover: (error: Error) => unknown): Promise<WebFinger> {
     const actor = await this.select('actor');
     if (!actor) {
-      throw new CustomError('Actor not found.', 'error');
+      throw recover(new Error('actor not found.'));
     }
 
     const encodedUserpart = encodeAcctUserpart(actor.username);
     const encodedHost = domainToASCII(this.repository.fingerHost);
-    const href = await actor.getUri();
+    const href = await actor.getUri(recover);
 
     if (!href) {
-      throw new CustomError('URI not found.', 'error');
+      throw recover(new Error('actor\'s uri not found.'));
     }
 
     return {
@@ -78,7 +77,7 @@ export default class LocalAccount extends Relation<Properties, References> {
     };
   }
 
-  static async create(repository: Repository, username: string, name: string, summary: string, admin: boolean, salt: Buffer, serverKey: Buffer, storedKey: Buffer) {
+  static async create(repository: Repository, username: string, name: string, summary: string, admin: boolean, salt: Buffer, serverKey: Buffer, storedKey: Buffer, recover: (error: Error) => unknown) {
     const account = new this({
       repository,
       actor: new Actor({
@@ -100,10 +99,10 @@ export default class LocalAccount extends Relation<Properties, References> {
 
     const actor = await account.select('actor');
     if (!actor) {
-      throw new CustomError('Actor not found.', 'error');
+      throw new Error('actor not found.');
     }
     
-    actor.validate();
+    actor.validate(recover);
     await repository.insertLocalAccount(account);
 
     return account;

@@ -27,6 +27,7 @@ import LocalAccount from '../lib/tuples/local_account';
 import Arena = require('bull-arena');
 import express = require('express');
 
+const actorError = {};
 const promisifiedRandomBytes = promisify(randomBytes);
 
 export interface Application extends express.Application {
@@ -75,11 +76,18 @@ export default function (repository: Repository, port: number): Application {
             promisifiedRandomBytes(64),
             account && account.select('actor').then(async actor => {
               if (actor) {
-                const activityStreams = await actor.toActivityStreams() as User;
-                activityStreams.inbox = [];
+                try {
+                  const activityStreams = await actor.toActivityStreams(() => actorError) as User;
+                  activityStreams.inbox = [];
+                  locals.user = account;
+                  locals.userActivityStreams = activityStreams;
+                } catch (error) {
+                  if (error != actorError) {
+                    throw error;
+                  }
 
-                locals.user = account;
-                locals.userActivityStreams = activityStreams;
+                  actor = null;
+                }
               }
 
               return actor;

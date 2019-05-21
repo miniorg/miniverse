@@ -14,16 +14,17 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Custom as CustomError } from '../errors';
 import { Announce as ActivityStreams } from '../generated_activitystreams';
-import ParsedActivityStreams, { TypeNotAllowed } from '../parsed_activitystreams';
+import ParsedActivityStreams from '../parsed_activitystreams';
 import Repository from '../repository';
-import { postStatus } from '../transfer';
+import { postStatus, temporaryError } from '../transfer';
 import Actor from './actor';
 import Note from './note';
 import Relation, { Reference } from './relation';
 import Status from './status';
 import URI from './uri';
+
+const idMissing = {};
 
 interface ObjectIdProperyties {
   objectId: string;
@@ -41,39 +42,41 @@ interface References {
 
 type Properties = { id?: string } & (ObjectIdProperyties | ObjectProperties);
 
+export const unexpectedType = Symbol();
+
 export default class Announce extends Relation<Properties, References> {
   id?: string;
   readonly object?: Reference<Note | null>;
   readonly objectId!: string;
   readonly status?: Reference<Status | null>;
 
-  async toActivityStreams(): Promise<ActivityStreams> {
+  async toActivityStreams(recover: (error: Error) => unknown): Promise<ActivityStreams> {
     const [[id, published], object] = await Promise.all([
       this.select('status').then(status => {
         if (!status) {
-          throw new CustomError('status not found', 'error');
+          throw recover(new Error('status not found.'));
         }
 
-        return Promise.all([status.getUri(), status.published]);
+        return Promise.all([status.getUri(recover), status.published]);
       }),
       this.select('object').then(async object => {
         if (!object) {
-          throw new CustomError('object not found', 'error');
+          throw recover(new Error('object not found.'));
         }
 
         const status = await object.select('status');
         if (!status) {
-          throw new CustomError('status not found', 'error');
+          throw recover(new Error('object\'s status not found.'));
         }
 
-        return status.getUri();
+        return status.getUri(recover);
       }),
     ]);
 
     return { type: 'Announce', id, published, object };
   }
 
-  static async create(repository: Repository, published: Date, actor: Actor, object: Note, uri?: string) {
+  static async create(repository: Repository, published: Date, actor: Actor, object: Note, uri: null | string, recover: (error: Error) => unknown) {
     const announce = new this({
       repository,
       status: new Status({
@@ -89,44 +92,53 @@ export default class Announce extends Relation<Properties, References> {
 
     const status = await announce.select('status');
     if (!status) {
-      throw new CustomError('status not found', 'error');
+      throw new Error('status propagation failed.');
     }
 
-    await postStatus(repository, status);
+    await postStatus(repository, status, recover);
 
     return announce;
   }
 
-  static async createFromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, actor: Actor) {
-    const type = await object.getType();
+  static async createFromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, actor: Actor, recover: (error: Error & {
+    [temporaryError]?: boolean;
+    [unexpectedType]?: boolean;
+  }) => unknown) {
+    const type = await object.getType(recover);
 
     if (!type.has('Announce')) {
-      throw new TypeNotAllowed('Unsupported type. Expected Announce.', 'info');
+      throw recover(Object.assign(new Error('Unsupported type. Expected Announce.'), { [unexpectedType]: true }));
     }
 
     const [published, uri, objectObject, objectTo] = await Promise.all([
-      object.getPublished(),
-      object.getId(),
-      object.getObject().then(async parsed => {
+      object.getPublished(recover),
+      object.getId(recover),
+      object.getObject(recover).then(async parsed => {
         if (!parsed) {
-          throw new CustomError('object unspecified.', 'error');
+          throw recover(new Error('object unspecified.'));
         }
 
-        return Note.fromParsedActivityStreams(repository, parsed);
+        return Note.fromParsedActivityStreams(repository, parsed, null, recover);
       }),
-      object.getTo().then(elements => {
+      object.getTo(recover).then(elements => {
         if (!elements) {
-          throw new CustomError('to unspecified.', 'error');
+          throw recover(new Error('to unspecified.'));
         }
 
-        return Promise.all(elements
-          .filter(Boolean as unknown as <T>(value: T | null) => value is T)
-          .map(element => element.getId()));
+        return Promise.all(elements.map(element => {
+          if (element) {
+            return element.getId(() => idMissing).catch(error => {
+              if (error != idMissing) {
+                throw error;
+              }
+            });
+          }
+        }));
       })
     ]);
 
     if (!published) {
-      throw new CustomError('published unspecified.', 'error');
+      throw recover(new Error('published unspecified.'));
     }
 
     if (!objectTo.includes('https://www.w3.org/ns/activitystreams#Public') || !objectObject) {
@@ -138,7 +150,8 @@ export default class Announce extends Relation<Properties, References> {
       published,
       actor,
       objectObject,
-      typeof uri == 'string' ? uri : undefined);
+      typeof uri == 'string' ? uri : null,
+      recover);
   }
 }
 

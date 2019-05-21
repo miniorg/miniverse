@@ -15,15 +15,14 @@
 */
 
 import { domainToASCII, domainToUnicode } from 'url';
-import { Custom as CustomError } from '../errors';
 import {
   Note as ActivityStreams,
   Hashtag as ActivityStreamsHashtag,
   Mention as ActivityStreamsMention
 } from '../generated_activitystreams';
-import ParsedActivityStreams, { NoHost, TypeNotAllowed } from '../parsed_activitystreams';
+import ParsedActivityStreams, { NoHost } from '../parsed_activitystreams';
 import Repository from '../repository';
-import { postStatus } from '../transfer';
+import { postStatus, temporaryError } from '../transfer';
 import Actor from './actor';
 import Document from './document';
 import Hashtag from './hashtag';
@@ -85,11 +84,109 @@ interface Options {
 
 type ActivityStreamsTag = ActivityStreamsHashtag | ActivityStreamsMention;
 
+const attachmentError = {};
+const idMissing = {};
+const inReplyToError = {};
+const mentionToActivityStramsFailed = {};
+const statusUriUnresolved = {};
+const tagError = {};
+
 const isNotNull = Boolean as unknown as <T>(t: T | null) => t is T;
 
 function isString(string: unknown): string is string {
   return typeof string == 'string';
 }
+
+function attachmentFromActivityStreams(repository: Repository, attachment: (ParsedActivityStreams | null)[] | null) {
+  return attachment ? Promise.all(attachment.map(async element => {
+    if (!element) {
+      return null;
+    }
+
+    let type;
+    try {
+      type = await element.getType(() => attachmentError);
+    } catch (error) {
+      if (error == attachmentError) {
+        return null;
+      }
+
+      throw error;
+    }
+
+    if (type.has('Document')) {
+      return Document.fromParsedActivityStreams(repository, element, () => attachmentError).catch(error => {
+        if (error == attachmentError) {
+          return null;
+        }
+
+        throw error;
+      });
+    } else {
+      return null;
+    }
+  })) : [];
+}
+
+function tagFromActivityStreams(repository: Repository, nullableTag: (ParsedActivityStreams | null)[] | null) {
+  if (!nullableTag) {
+    return [[], []] as [unknown[], (Actor | null)[]];
+  }
+
+  const tag = nullableTag.filter(isNotNull);
+  const asyncTypes = tag.map(element => element.getType(() => tagError));
+
+  return Promise.all([
+    Promise.all(asyncTypes.map(async (asyncType, index) => {
+      try {
+        const type = await asyncType;
+        if (!type || !type.has('Hashtag')) {
+          return null;
+        }
+
+        return tag[index].getName(() => tagError);
+      } catch (error) {
+        if (error == tagError) {
+          return null;
+        }
+
+        throw error;
+      }
+    })),
+    Promise.all(tag.map(async (element, index) => {
+      let href;
+
+      try {
+        const type = await asyncTypes[index];
+        if (!type || !type.has('Mention')) {
+          return null;
+        }
+
+        href = await element.getHref(() => tagError);
+      } catch (error) {
+        if (error == tagError) {
+          return null;
+        }
+
+        throw error;
+      }
+      if (typeof href != 'string') {
+        return null;
+      }
+
+      const parsed = new ParsedActivityStreams(repository, href, NoHost);
+      return Actor.fromParsedActivityStreams(repository, parsed, () => tagError).catch(error => {
+        if (error != tagError) {
+          throw error;
+        }
+
+        return null;
+      });
+    }))
+  ]);
+}
+
+export const unexpectedType = Symbol();
 
 export default class Note extends Relation<Properties, References> {
   id?: string;
@@ -101,7 +198,7 @@ export default class Note extends Relation<Properties, References> {
   readonly hashtags?: Reference<Hashtag[]>;
   readonly mentions?: Reference<Mention[]>;
 
-  async toActivityStreams(): Promise<ActivityStreams> {
+  async toActivityStreams(recover: (error: Error) => unknown): Promise<ActivityStreams> {
     const [
       [published, [attributedToActor, attributedTo]],
       attachment,
@@ -111,23 +208,23 @@ export default class Note extends Relation<Properties, References> {
     ] = await Promise.all([
       this.select('status').then(status => {
         if (!status) {
-          throw new CustomError('The status cannot be fetched.', 'error');
+          throw recover(new Error('status not found.'));
         }
 
         return Promise.all([
           status.published,
           status.select('actor').then(actor => {
             if (!actor) {
-              throw new CustomError('The actor who the note is attributed to cannot be fetched.', 'error');
+              throw recover(new Error('status\'s actor not found.'));
             }
 
-            return Promise.all([actor, actor.getUri()]);
+            return Promise.all([actor, actor.getUri(recover)]);
           })
         ]);
       }),
       this.select('attachments').then(array => {
         if (!array) {
-          throw new CustomError('The attachments cannot be fetched.', 'error');
+          throw new Error('status\'s attachments cannot be fetched.');
         }
 
         return Promise.all(array.map(element => element.toActivityStreams()));
@@ -135,10 +232,23 @@ export default class Note extends Relation<Properties, References> {
       this.select('hashtags').then(array =>
         Promise.all(array.map(element => element.toActivityStreams()))),
       this.select('mentions').then(array =>
-        Promise.all(array.map(element => element.toActivityStreams()))),
+        Promise.all(array.map(element =>
+          element.toActivityStreams(() => mentionToActivityStramsFailed).catch(error => {
+            if (error == mentionToActivityStramsFailed) {
+              return null;
+            }
+
+            throw error;
+          })))),
       this.inReplyToId ? this.repository.selectStatusById(this.inReplyToId).then(async status => {
         if (status) {
-          return status.getUri();
+          return status.getUri(() => statusUriUnresolved).catch(error => {
+            if (error == statusUriUnresolved) {
+              return null;
+            }
+
+            throw error;
+          })
         }
 
         if (!this.inReplyToId) {
@@ -156,7 +266,7 @@ export default class Note extends Relation<Properties, References> {
       attributedToActor.username);
 
     if (!attributedTo) {
-      throw new CustomError('The URI of the actor which the note is attributed to cannot be found.', 'error');
+      throw recover(new Error('status\'s actor\'s uri not found.'));
     }
 
     return {
@@ -176,9 +286,9 @@ export default class Note extends Relation<Properties, References> {
     };
   }
 
-  validate() {
+  validate(recover: (error: Error) => unknown) {
     if (this.summary == '') {
-      throw new CustomError('empty summary is not allowd.', 'info');
+      throw recover(new Error('summary empty.'));
     }
   }
 
@@ -190,7 +300,7 @@ export default class Note extends Relation<Properties, References> {
     attachments = [],
     hashtags = [],
     mentions = []
-  }: Options = {}) {
+  }: Options, recover: (error: Error) => unknown) {
     const note = new this({
       repository,
       status: new Status({
@@ -207,23 +317,26 @@ export default class Note extends Relation<Properties, References> {
       mentions: mentions.map(href => new Mention({ repository, href }))
     });
 
-    note.validate();
+    note.validate(recover);
     await repository.insertNote(note, inReplyToUri);
 
     const status = await note.select('status');
     if (!status) {
-      throw new CustomError('The status is not inserted.', 'error');
+      throw new Error('status not inserted.');
     }
 
-    await postStatus(repository, status);
+    await postStatus(repository, status, recover);
 
     return note;
   }
 
-  static async createFromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, givenAttributedTo?: Actor) {
-    const type = await object.getType();
+  static async createFromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, givenAttributedTo: Actor | null, recover: (error: Error & {
+    [temporaryError]?: boolean;
+    [unexpectedType]?: boolean;
+  }) => unknown) {
+    const type = await object.getType(recover);
     if (!type.has('Note')) {
-      throw new TypeNotAllowed('Unexpected type. Expected Note.', 'info');
+      throw recover(Object.assign(new Error('Unsupported type. Expected Note.'), { [unexpectedType]: true }));
     }
 
     const [
@@ -231,23 +344,37 @@ export default class Note extends Relation<Properties, References> {
       [inReplyToId, inReplyToUri], summary, content, attachments,
       [hashtags, mentions]
     ] = await Promise.all([
-      object.getId(),
-      object.getPublished(),
-      givenAttributedTo || object.getAttributedTo().then(attributedTo => {
+      object.getId(recover),
+      object.getPublished(recover),
+      givenAttributedTo || object.getAttributedTo(recover).then(attributedTo => {
         if (!attributedTo) {
-          throw new CustomError('The actor who the note is attributed to is unspecified.', 'error');
+          throw recover(new Error('attributedTo unspecified.'));
         }
 
-        return Actor.fromParsedActivityStreams(repository, attributedTo);
+        return Actor.fromParsedActivityStreams(repository, attributedTo, recover);
       }),
-      object.getTo().then(elements => elements ?
-        Promise.all(elements.filter(isNotNull).map(element => element.getId())) : []),
-      object.getInReplyTo().then(async parsed => {
+      object.getTo(recover).then(elements => elements ? Promise.all(elements.map(element => {
+        if (!element) {
+          return null;
+        }
+
+        try
+        {
+          return element.getId(() => idMissing);
+        } catch (error) {
+          if (error == idMissing) {
+            return null;
+          }
+
+          throw error;
+        }
+      })) : []),
+      object.getInReplyTo(() => inReplyToError).then(async parsed => {
         if (!parsed) {
           return [null, null];
         }
 
-        const uri = await parsed.getId();
+        const uri = await parsed.getId(() => inReplyToError);
         if (typeof uri != 'string') {
           return [null, null];
         }
@@ -255,56 +382,37 @@ export default class Note extends Relation<Properties, References> {
         const note = await tryToResolveLocalNoteByURI(repository, uri);
 
         return [note ? note.id : null, uri];
-      }),
-      object.getSummary(),
-      object.getContent(),
-      object.getAttachment().then(attachment => attachment ?
-        Promise.all(attachment.filter(isNotNull).map(async element => {
-          const type = await element.getType();
-
-          return type.has('Document') ?
-            Document.fromParsedActivityStreams(repository, element) : null;
-        })) : []),
-      object.getTag().then(async nullableTag => {
-        if (!nullableTag) {
-          return [[], []] as [Set<unknown>[], (Actor | null)[]];
+      }).catch(error => {
+        if (error == inReplyToError) {
+          return [null, null];
         }
 
-        const tag = nullableTag.filter(isNotNull);
-        const asyncTypes = tag.map(element => element.getType());
+        throw error;
+      }),
+      object.getSummary(recover),
+      object.getContent(recover),
+      object.getAttachment(() => attachmentError).then(attachment => attachmentFromActivityStreams(repository, attachment), error => {
+        if (error == attachmentError) {
+          return [] as (Document | null)[];
+        }
 
-        return Promise.all([
-          Promise.all(asyncTypes).then(types => Promise.all(types
-            .map((type, index) => [type, index] as [Set<unknown>, number])
-            .filter(([type]) => type.has('Hashtag'))
-            .map(([, index]) => tag[index].getName()))),
-          Promise.all(tag.map(async (element, index) => {
-            const type = await asyncTypes[index];
+        throw error;
+      }),
+      object.getTag(() => tagError).then(tag => tagFromActivityStreams(repository, tag), error => {
+        if (error == tagError) {
+          return [[], []] as [unknown[], (Actor | null)[]];
+        }
 
-            if (type.has('Mention')) {
-              const href = await element.getHref();
-              if (typeof href != 'string') {
-                throw new CustomError('Mention\'s href is not string', 'error');
-              }
-
-              const parsed =
-                new ParsedActivityStreams(repository, href, NoHost);
-
-              return Actor.fromParsedActivityStreams(repository, parsed);
-            }
-
-            return null;
-          }))
-        ]);
+        throw error;
       }),
     ]);
 
     if (!published) {
-      throw new CustomError('published not specified.', 'error');
+      throw recover(new Error('published not specified.'));
     }
 
     if (!attributedTo) {
-      throw new CustomError('The actor who the note is attributed to cannot be fetched', 'error');
+      throw recover(new Error('attributedTo not specified.'));
     }
 
     if (!to.includes('https://www.w3.org/ns/activitystreams#Public')) {
@@ -318,11 +426,11 @@ export default class Note extends Relation<Properties, References> {
       hashtags: hashtags.filter(isString),
       mentions: mentions.filter(isNotNull),
       inReplyToId, inReplyToUri
-    });
+    }, recover);
   }
 
-  static async fromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, givenAttributedTo?: Actor) {
-    const uri = await object.getId();
+  static async fromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, givenAttributedTo: Actor | null, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const uri = await object.getId(recover);
     if (typeof uri == 'string') {
       const localNote = await tryToResolveLocalNoteByURI(repository, uri);
       if (localNote) {
@@ -333,7 +441,7 @@ export default class Note extends Relation<Properties, References> {
       if (uriEntity) {
         const { id } = uriEntity;
         if (!id) {
-          throw new CustomError('The internal id cannot be fetched', 'error');
+          throw new Error('The internal id cannot be fetched');
         }
 
         const remoteNote = await repository.selectNoteById(id);
@@ -341,12 +449,12 @@ export default class Note extends Relation<Properties, References> {
           return remoteNote;
         }
 
-        throw new TypeNotAllowed('Unexpected type. Expected Note.', 'info');
+        throw recover(new Error('Note not found.'));
       }
     }
 
     return this.createFromParsedActivityStreams(
-      repository, object, givenAttributedTo);
+      repository, object, givenAttributedTo, recover);
   }
 }
 

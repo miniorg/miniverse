@@ -14,11 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Custom as CustomError } from '../errors';
-import ParsedActivityStreams, {
-  AnyHost,
-  TypeNotAllowed
-} from '../parsed_activitystreams';
+import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
 import {
   fabricateLocalAccount,
   fabricateNote,
@@ -26,7 +22,7 @@ import {
 } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
-import Create, { create } from './create';
+import Create, { create, unexpectedType } from './create';
 import Note from './note';
 
 describe('Create', () => {
@@ -48,8 +44,9 @@ describe('Create', () => {
       });
 
       const instance = new Create({ repository, object });
+      const recover = jest.fn();
 
-      await expect(instance.toActivityStreams()).resolves.toEqual({
+      await expect(instance.toActivityStreams(recover)).resolves.toEqual({
         type: 'Create',
         object: {
           type: 'Note',
@@ -64,6 +61,8 @@ describe('Create', () => {
           tag: []
         }
       });
+
+      expect(recover).not.toHaveBeenCalled();
     });
   });
 
@@ -84,11 +83,13 @@ describe('Create', () => {
 
       const account = await fabricateLocalAccount();
       const actor = unwrap(await account.select('actor'));
+      const recover = jest.fn();
       const create = unwrap(await Create.createFromParsedActivityStreams(
-        repository, activity, actor));
+        repository, activity, actor, recover));
 
       const object = unwrap(await create.select('object'));
 
+      expect(recover).not.toHaveBeenCalled();
       expect(create).toBeInstanceOf(Create);
       expect(object).toBeInstanceOf(Note);
       await expect(object.select('status'))
@@ -97,7 +98,7 @@ describe('Create', () => {
       expect(object.content).toBe('');
     });
 
-    test('rejects with TypeNotAllowed if type is not Create', async () => {
+    test('rejects if type is not Create', async () => {
       const activity = new ParsedActivityStreams(repository, {
         '@context': 'https://www.w3.org/ns/activitystreams',
         object: {
@@ -111,9 +112,13 @@ describe('Create', () => {
 
       const account = await fabricateLocalAccount();
       const actor = unwrap(await account.select('actor'));
+      const recovery = {};
 
       await expect(Create.createFromParsedActivityStreams(
-        repository, activity, actor)).rejects.toBeInstanceOf(TypeNotAllowed);
+        repository, activity, actor, error => {
+          expect(error[unexpectedType]).toBe(true);
+          return recovery;
+        })).rejects.toBe(recovery);
     });
   });
 });
@@ -132,9 +137,11 @@ describe('create', () => {
 
     const account = await fabricateLocalAccount();
     const actor = unwrap(await account.select('actor'));
-    const note = unwrap(await create(repository, actor, object));
+    const recover = jest.fn();
+    const note = unwrap(await create(repository, actor, object, recover));
     const status = unwrap(await note.select('status'));
 
+    expect(recover).not.toHaveBeenCalled();
     expect(note).toBeInstanceOf(Note);
     expect(status.actorId).toBe(actor.id);
     expect(note.content).toBe('');
@@ -155,9 +162,11 @@ describe('create', () => {
 
       const account = await fabricateLocalAccount({ actor: { username: '' } });
       const actor = unwrap(await account.select('actor'));
-      const note = unwrap(await create(repository, actor, object));
+      const recover = jest.fn();
+      const note = unwrap(await create(repository, actor, object, recover));
       const status = unwrap(await note.select('status'));
 
+      expect(recover).not.toHaveBeenCalled();
       expect(note).toBeInstanceOf(Note);
       expect(status.actorId).toBe(actor.id);
       expect(note.content).toBe('');
@@ -181,9 +190,13 @@ describe('create', () => {
         fabricateLocalAccount({ actor: { username: '' } })
       ]);
 
-      await expect(create(repository, expectedAttributedTo, object))
-        .rejects
-        .toBeInstanceOf(CustomError);
+      const recovery = {};
+
+      await expect(create(
+        repository,
+        expectedAttributedTo,
+        object,
+        () => recovery)).rejects.toBe(recovery);
     });
   });
 });

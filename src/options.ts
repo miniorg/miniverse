@@ -15,23 +15,18 @@
 */
 
 import { Pool } from 'pg';
-import { Custom as CustomError } from './lib/errors';
 import S3 = require('aws-sdk/clients/s3');
 
 if (!process.env.AWS_S3_BUCKET) {
-  throw new CustomError(
-    'AWS_S3_BUCKET environment variable not specified.',
-    'error');
+  throw new Error('AWS_S3_BUCKET environment variable not specified.');
 }
 
 if (!process.env.AWS_S3_URL_PREFIX) {
-  throw new CustomError(
-    'AWS_S3_URL_PREFIX environment variable not specified.',
-    'error');
+  throw new Error('AWS_S3_URL_PREFIX environment variable not specified.');
 }
 
 if (!process.env.HOST) {
-  throw new CustomError('HOST environment variable not specified.', 'error');
+  throw new Error('HOST environment variable not specified.');
 }
 
 export default {

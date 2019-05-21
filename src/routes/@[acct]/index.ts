@@ -19,6 +19,8 @@ import { normalizeHost } from '../../lib/tuples/uri';
 import secure from '../_secure';
 import sendActivityStreams from '../_send_activitystreams';
 
+const recovery = {};
+
 export const get = secure(async (request, response, next) => {
   const accepted = request.accepts([
     'html',
@@ -33,6 +35,7 @@ export const get = secure(async (request, response, next) => {
 
   const acct = decodeURIComponent(request.params.acct);
   const atIndex = acct.lastIndexOf('@');
+  let actor;
   let username;
   let normalizedHost;
 
@@ -44,8 +47,17 @@ export const get = secure(async (request, response, next) => {
     normalizedHost = normalizeHost(acct.slice(atIndex + 1));
   }
 
-  const actor = await Actor.fromUsernameAndNormalizedHost(
-    response.app.locals.repository, username, normalizedHost);
+  try {
+    actor = await Actor.fromUsernameAndNormalizedHost(
+      response.app.locals.repository, username, normalizedHost, () => recovery);
+  } catch (error) {
+    if (error == recovery) {
+      response.sendStatus(422);
+      return;
+    }
+
+    throw error;
+  }
 
   if (actor) {
     await sendActivityStreams(response, actor);

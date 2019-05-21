@@ -14,10 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import ParsedActivityStreams, {
-  AnyHost,
-  TypeNotAllowed
-} from '../parsed_activitystreams';
+import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
 import {
   fabricateAnnounce,
   fabricateFollow,
@@ -25,7 +22,7 @@ import {
 } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
-import Undo from './undo';
+import Undo, { unexpectedType } from './undo';
 
 describe('createFromParsedActivityStreams', () => {
   test('undoes announce activity', async () => {
@@ -42,8 +39,11 @@ describe('createFromParsedActivityStreams', () => {
       object: { type: 'Announce', id: 'https://NoTe.xn--kgbechtv/' }
     }, AnyHost);
 
-    await Undo.createFromParsedActivityStreams(repository, activity, actor);
+    const recover = jest.fn();
 
+    await Undo.createFromParsedActivityStreams(repository, activity, actor, recover);
+
+    expect(recover).not.toHaveBeenCalled();
     await expect(repository.selectStatusById(id)).resolves.toBe(null);
   });
 
@@ -68,14 +68,18 @@ describe('createFromParsedActivityStreams', () => {
 
     await fabricateFollow({ actor, object });
 
-    await Undo.createFromParsedActivityStreams(repository, activity, actor);
+    const recover = jest.fn();
+
+    await Undo.createFromParsedActivityStreams(repository, activity, actor, recover);
+
+    expect(recover).not.toHaveBeenCalled();
 
     await expect(repository.selectActorsByFolloweeId(unwrap(object.id)))
       .resolves
       .toEqual([]);
   });
 
-  test('rejects with TypeNotAllowed if type is unknown', async () => {
+  test('rejects if type is unknown', async () => {
     const announce = await fabricateAnnounce(
       { status: { uri: { uri: 'https://NoTe.xn--kgbechtv/' } } });
 
@@ -87,11 +91,15 @@ describe('createFromParsedActivityStreams', () => {
       object: { type: 'Announce', id: 'https://NoTe.xn--kgbechtv/' }
     }, AnyHost);
 
-    await expect(Undo.createFromParsedActivityStreams(repository, activity, actor))
-      .rejects.toBeInstanceOf(TypeNotAllowed);
+    const recovery = {};
+
+    await expect(Undo.createFromParsedActivityStreams(repository, activity, actor, error => {
+      expect(error[unexpectedType]).toBe(true);
+      return recovery;
+    })).rejects.toBe(recovery);
   });
 
-  test('rejects with TypeNotAllowed if object type is uknown', async () => {
+  test('rejects if object type is uknown', async () => {
     const activity = new ParsedActivityStreams(repository, {
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'Undo',
@@ -106,9 +114,10 @@ describe('createFromParsedActivityStreams', () => {
       fabricateLocalAccount({ actor: { username: '被行動者' } })
     ]);
     const actorActor = unwrap(await actor.select('actor'));
+    const recovery = {};
 
-    await expect(Undo.createFromParsedActivityStreams(repository, activity, actorActor))
-      .rejects.toBeInstanceOf(TypeNotAllowed);
+    await expect(Undo.createFromParsedActivityStreams(repository, activity, actorActor, () => recovery))
+      .rejects.toBe(recovery);
   });
 
   test('resolves with undo', async () => {
@@ -127,8 +136,11 @@ describe('createFromParsedActivityStreams', () => {
     const object = unwrap(await objectAccount.select('actor'));
     const follow = await fabricateFollow({ object });
     const actor = unwrap(await follow.select('actor'));
+    const recover = jest.fn();
 
-    await expect(Undo.createFromParsedActivityStreams(repository, activity, actor))
+    await expect(Undo.createFromParsedActivityStreams(repository, activity, actor, recover))
       .resolves.toBeInstanceOf(Undo);
+
+    expect(recover).not.toHaveBeenCalled();
   });
 });

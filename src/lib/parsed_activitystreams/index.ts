@@ -15,17 +15,31 @@
 */
 
 import { URL } from 'url';
-import { Custom as CustomError, Severity } from '../errors';
 import Repository from '../repository';
+import { temporaryError } from '../transfer';
 import Actor from '../tuples/actor';
-import Announce from '../tuples/announce';
-import Create from '../tuples/create';
-import Delete from '../tuples/delete';
-import Follow from '../tuples/follow';
-import Like from '../tuples/like';
-import Undo from '../tuples/undo';
+import Announce, {
+  unexpectedType as unexpectedAnnounceType
+} from '../tuples/announce';
+import Create, {
+  unexpectedType as unexpectedCreateType
+} from '../tuples/create';
+import Delete, {
+  unexpectedType as unexpectedDeleteType
+} from '../tuples/delete';
+import Follow, {
+  unexpectedType as unexpectedFollowType
+} from '../tuples/follow';
+import Like, {
+  unexpectedType as unexpectedLikeType
+} from '../tuples/like';
+import Undo, {
+  unexpectedType as unexpectedUndoType
+} from '../tuples/undo';
 import { normalizeHost } from '../tuples/uri';
 import Resolver from './resolver';
+
+const unexpectedTypeReported = {};
 
 interface Body {
   readonly [key: string]: unknown;
@@ -39,12 +53,7 @@ interface Content {
 
 export const AnyHost = {};
 export const NoHost = {};
-export class TypeNotAllowed extends CustomError {
-  constructor(message: unknown, severity: Severity, originals: Error[] | null = null) {
-    super(message, severity, originals);
-    Object.setPrototypeOf(this, new.target.prototype);
-  }
-}
+export const unexpectedType = Symbol();
 
 export default class ParsedActivityStreams {
   readonly normalizedHost: object | string;
@@ -97,40 +106,42 @@ export default class ParsedActivityStreams {
     this.parentContent = parentContent;
   }
 
-  async getActor() {
-    const { body } = (await load.call(this));
-    return getChildCheckingType.call(this, body.actor);
+  async getActor(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = (await load.call(this, recover));
+    return getChildCheckingType.call(this, body.actor, recover);
   }
 
-  async getAttachment() {
-    const { body } = await load.call(this);
-    const collection = await getChildCheckingType.call(this, body.attachment);
-    return collection && collection.getItems();
+  async getAttachment(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, recover);
+    const collection = await getChildCheckingType.call(this, body.attachment, recover);
+    return collection && collection.getItems(recover);
   }
 
-  async getAttributedTo() {
-    const { body } = await load.call(this);
-    return getChildCheckingType.call(this, body.attributedTo);
+  async getAttributedTo(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, recover);
+    return getChildCheckingType.call(this, body.attributedTo, recover);
   }
 
-  async getContent() {
-    return (await load.call(this)).body.content;
+  async getContent(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    return (await load.call(this, recover)).body.content;
   }
 
-  async getContext() {
-    const { context } = await load.call(this);
+  async getContext(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { context } = await load.call(this, recover);
     return new Set<unknown>(Array.isArray(context) ? context : [context]);
   }
 
-  async getHref() {
-    return (await load.call(this)).body.href;
+  async getHref(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    return (await load.call(this, recover)).body.href;
   }
 
-  async getItems() {
-    const getChildOfThisCheckingType = getChildCheckingType.bind(this);
+  async getItems(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const getChildOfThisCheckingType =
+      (item: unknown) => getChildCheckingType.call(this, item, recover);
+
     const [{ body }, type] = await Promise.all([
-      load.call(this),
-      this.getType()
+      load.call(this, recover),
+      this.getType(recover)
     ]);
 
     if (type.has('OrderedCollection')) {
@@ -156,7 +167,7 @@ export default class ParsedActivityStreams {
     return [this];
   }
 
-  async getId() {
+  async getId(recover: (error: Error) => unknown) {
     if (this.referenceId) {
       return this.referenceId;
     }
@@ -165,89 +176,91 @@ export default class ParsedActivityStreams {
       return ((await this.content).body as { id: unknown }).id;
     }
 
-    throw new CustomError(
-      'id is not given. Possibly invalid Activity Streams?', 'info');
+    throw recover(new Error('id missing.'));
   }
 
-  async getInbox() {
-    const { body } = await load.call(this);
-    return getChildCheckingType.call(this, body.inbox);
+  async getInbox(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, recover);
+    return getChildCheckingType.call(this, body.inbox, recover);
   }
 
-  async getInReplyTo() {
-    const { body } = await load.call(this);
-    return getChildCheckingType.call(this, body.inReplyTo);
+  async getInReplyTo(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, recover);
+    return getChildCheckingType.call(this, body.inReplyTo, recover);
   }
 
-  async getName() {
-    const { body } = await load.call(this);
+  async getName(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, recover);
     return body.name;
   }
 
-  async getObject() {
-    const { body } = await load.call(this);
-    return getChildCheckingType.call(this, body.object);
+  async getObject(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, recover);
+    return getChildCheckingType.call(this, body.object, recover);
   }
 
-  async getOwner() {
-    const { body } = await load.call(this);
-    return getChildCheckingType.call(this, body.owner);
+  async getOwner(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, recover);
+    return getChildCheckingType.call(this, body.owner, recover);
   }
 
-  async getPreferredUsername() {
-    const { body } = await load.call(this);
+  async getPreferredUsername(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, recover);
     return body.preferredUsername;
   }
 
-  async getPublicKey() {
-    const { body } = await load.call(this);
-    return getChildCheckingType.call(this, body.publicKey);
+  async getPublicKey(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, recover);
+    return getChildCheckingType.call(this, body.publicKey, recover);
   }
 
-  async getPublicKeyPem() {
-    const { body } = await load.call(this);
+  async getPublicKeyPem(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, recover);
     return body.publicKeyPem;
   }
 
-  async getPublished() {
-    const { body } = await load.call(this);
+  async getPublished(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, recover);
     return typeof body.published == 'string' ? new Date(body.published) : null;
   }
 
-  async getSummary() {
-    const { body } = await load.call(this);
+  async getSummary(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, recover);
     return body.summary;
   }
 
-  async getTag() {
-    const { body } = await load.call(this);
-    const collection = await getChildCheckingType.call(this, body.tag);
-    return collection && collection.getItems();
+  async getTag(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, recover);
+    const collection = await getChildCheckingType.call(this, body.tag, recover);
+    return collection && collection.getItems(recover);
   }
 
-  async getTo() {
-    const { body } = await load.call(this);
-    const collection = await getChildCheckingType.call(this, body.to);
+  async getTo(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, recover);
+    const collection = await getChildCheckingType.call(this, body.to, recover);
 
     return body.to === 'https://www.w3.org/ns/activitystreams#Public' ?
-      [collection] : collection && collection.getItems();
+      [collection] : collection && collection.getItems(recover);
   }
 
-  async getType() {
-    const { body: { type } } = await load.call(this);
+  async getType(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body: { type } } = await load.call(this, recover);
     return new Set<unknown>(Array.isArray(type) ? type : [type]);
   }
 
-  async getUrl() {
-    const { body } = await load.call(this);
+  async getUrl(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, recover);
     const normalized =
       typeof body.url == 'string' ? { type: 'Link', href: body.url } : body.url;
 
-    return await getChildCheckingType.call(this, normalized);
+    return await getChildCheckingType.call(this, normalized, recover);
   }
 
-  async act(actor: Actor) {
-    const uri = await this.getId();
+  async act(actor: Actor, recover: (error: Error & {
+    [temporaryError]?: boolean;
+    [unexpectedType]?: boolean;
+  }) => unknown) {
+    const uri = await this.getId(recover);
     if (typeof uri == 'string') {
       const entity = await this.repository.selectAllocatedURI(uri);
       if (entity) {
@@ -257,25 +270,42 @@ export default class ParsedActivityStreams {
 
     await Promise.all([
       Promise.all([
-        this.getActor().then(actual => actual && actual.getId()),
-        actor.getUri()
+        this.getActor(recover).then(actual => actual && actual.getId(recover)),
+        actor.getUri(recover)
       ]).then(([actual, expected]) => {
         if (actual && actual != expected) {
-          throw new CustomError(
-            'Given actor and actor in Activity Streams mismatch. Possibly invalid Activity Streams?',
-            'info');
+          throw recover(new Error('Unexpected actor.'));
         }
       })
     ]);
 
-    for (const Constructor of [Delete, Follow, Like, Undo]) {
+    for (const create of [
+      () => Delete.createFromParsedActivityStreams(
+        this.repository,
+        this,
+        actor,
+        error => error[unexpectedDeleteType] ? unexpectedTypeReported : recover(error)),
+      () => Follow.createFromParsedActivityStreams(
+        this.repository,
+        this,
+        actor,
+        error => error[unexpectedFollowType] ? unexpectedTypeReported : recover(error)),
+      () => Like.createFromParsedActivityStreams(
+        this.repository,
+        this,
+        actor,
+        error => error[unexpectedLikeType] ? unexpectedTypeReported : recover(error)),
+      () => Undo.createFromParsedActivityStreams(
+        this.repository,
+        this,
+        actor,
+        error => error[unexpectedUndoType] ? unexpectedTypeReported : recover(error)),
+    ]) {
       try {
-        await Constructor.createFromParsedActivityStreams(
-          this.repository, this, actor);
-
+        await create();
         return null;
       } catch (error) {
-        if (!(error instanceof TypeNotAllowed)) {
+        if (error != unexpectedTypeReported) {
           throw error;
         }
       }
@@ -285,14 +315,19 @@ export default class ParsedActivityStreams {
 
     try {
       created = await Announce.createFromParsedActivityStreams(
-        this.repository, this, actor);
+        this.repository,
+        this,
+        actor,
+        error => error[unexpectedAnnounceType] ? unexpectedTypeReported : recover(error));
     } catch (error) {
-      if (!(error instanceof TypeNotAllowed)) {
+      if (error != unexpectedTypeReported) {
         throw error;
       }
 
-      created = await Create.createFromParsedActivityStreams(
-        this.repository, this, actor);
+      created = await Create.createFromParsedActivityStreams(this.repository, this, actor, error =>
+        recover(error[unexpectedCreateType] ?
+          Object.assign(new Error('Unsupported type.'), { [unexpectedType]: true }) :
+          error));
 
       if (!created) {
         return null;
@@ -310,20 +345,20 @@ export default class ParsedActivityStreams {
       return null;
     }
 
-    return created.getUri();
+    return created.getUri(recover);
   }
 }
 
-function load(this: ParsedActivityStreams) {
+function load(this: ParsedActivityStreams, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
   const { repository, referenceId, parentContent } = this;
 
   if (!this.content) {
-    this.content = parentContent.then(async ({ context, resolver }) => {
-      if (!referenceId) {
-        throw new CustomError('id is unknown.', 'error');
-      }
+    if (!referenceId) {
+      throw recover(new Error('Reference id unspecified.'));
+    }
 
-      const resolved = await resolver.resolve(repository, referenceId);
+    this.content = parentContent.then(async ({ context, resolver }) => {
+      const resolved = await resolver.resolve(repository, referenceId, recover);
 
       if (!resolved.context) {
         resolved.context = context;
@@ -336,8 +371,8 @@ function load(this: ParsedActivityStreams) {
   return this.content;
 }
 
-function getChild(this: ParsedActivityStreams, body: object | string) {
-  const content = load.call(this);
+function getChild(this: ParsedActivityStreams, body: object | string, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+  const content = load.call(this, recover);
 
   return new ParsedActivityStreams(
     this.repository,
@@ -346,7 +381,7 @@ function getChild(this: ParsedActivityStreams, body: object | string) {
     content);
 }
 
-function getChildCheckingType(this: ParsedActivityStreams, body: unknown) {
+function getChildCheckingType(this: ParsedActivityStreams, body: unknown, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
   return body instanceof Object || typeof body == 'string' ?
-    getChild.call(this, body) : null;
+    getChild.call(this, body, recover) : null;
 }

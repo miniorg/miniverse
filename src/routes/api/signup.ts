@@ -16,13 +16,12 @@
 
 import { Request, Response } from 'express';
 import { raw } from 'body-parser';
-import { URLSearchParams } from 'url';
 import { promisify } from 'util';
-import { fetch } from '../../lib/transfer';
 import LocalAccount from '../../lib/tuples/local_account';
 import secure from '../_secure';
 import cookie from './_cookie';
 
+const recovery = {};
 const setBody = promisify(raw()) as
   unknown as
   (request: Request, response: Response) => Promise<unknown>;
@@ -35,26 +34,20 @@ export const post = secure(async (request, response) => {
   const salt = body.slice(0, 64);
   const serverKey = body.slice(64, 96);
   const storedKey = body.slice(96, 128);
-  const [token, username] = body.slice(128).toString().split('\0');
-  const verified = repository.captcha.verifier ?
-    await fetch(repository, repository.captcha.verifier, {
-      method: 'POST',
-      body: new URLSearchParams({
-        secret: repository.captcha.secret || undefined,
-        token,
-        hashes: '1024'
-      })
-    }).then(verification => verification.json())
-      .then(({ success }) => success) :
-    true;
+  const username = body.slice(128).toString();
+  let account;
 
-  if (!verified) {
-    response.sendStatus(422);
-    return;
+  try {
+    account = await LocalAccount.create(
+      repository, username, '', '', false, salt, serverKey, storedKey, () => recovery);
+  } catch (error) {
+    if (error == recovery) {
+      response.sendStatus(422);
+      return;
+    }
+
+    throw error;
   }
-
-  const account = await LocalAccount.create(
-    repository, username, '', '', false, salt, serverKey, storedKey);
 
   await cookie(repository, account, response);
   response.sendStatus(204);

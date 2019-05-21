@@ -14,7 +14,6 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Custom as CustomError, Temporary as TemporaryError } from './errors';
 import {
   fabricateFollow,
   fabricateLocalAccount,
@@ -23,40 +22,60 @@ import {
 } from './test/fabricator';
 import repository from './test/repository';
 import { unwrap } from './test/types';
-import { fetch, postStatus, postToInbox } from './transfer';
+import { fetch, postStatus, postToInbox, temporaryError } from './transfer';
 import nock = require('nock');
 
 describe('fetch', () => {
-  test('assigns User-Agent header if the second argument is not present',
-    () => {
-      nock('https://ReMoTe.إختبار')
-        .matchHeader('User-Agent', 'Miniverse (origin.example.com)')
-        .get('/')
-        .reply(200);
+  test('assigns User-Agent header if the second argument is null', async () => {
+    const recover = jest.fn();
 
-      return fetch(repository, 'https://ReMoTe.إختبار/').then(
-        () => expect(nock.isDone()).toBe(true), nock.cleanAll.bind(nock));
-    });
-
-  test('assigns User-Agent header and given headers if the second argument is present', () => {
     nock('https://ReMoTe.إختبار')
-      .matchHeader('Accept', 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"')
-      .matchHeader('User-Agent', 'Miniverse (origin.example.com)')
+      .matchHeader('User-Agent', 'Miniverse (xn--kgbechtv)')
       .get('/')
       .reply(200);
 
-    return fetch(repository, 'https://ReMoTe.إختبار/', {
-      headers: { Accept: 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' }
-    }).then(() => expect(nock.isDone()).toBe(true), nock.cleanAll.bind(nock));
+    try {
+      await fetch(repository, 'https://ReMoTe.إختبار/', null, recover);
+      expect(nock.isDone()).toBe(true);
+    } finally {
+      nock.cleanAll();
+    }
+
+    expect(recover).not.toHaveBeenCalled();
+  });
+
+  test('assigns User-Agent header and given headers if the second argument is not null', async () => {
+    const recover = jest.fn();
+
+    nock('https://ReMoTe.إختبار')
+      .matchHeader('Accept', 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"')
+      .matchHeader('User-Agent', 'Miniverse (xn--kgbechtv)')
+      .get('/')
+      .reply(200);
+
+    try {
+      await fetch(repository, 'https://ReMoTe.إختبار/', {
+        headers: { Accept: 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' }
+      }, recover);
+
+      expect(nock.isDone()).toBe(true);
+    } finally {
+      nock.cleanAll();
+    }
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
   for (const code of [429, 500, 502, 503, 504]) {
-    test(`rejects with TemporaryError if status code is ${code}`, async () => {
+    test(`rejects with [temporaryError] if status code is ${code}`, async () => {
+      const recovery = {};
       nock('https://ReMoTe.إختبار').get('/').reply(code);
 
       try {
-        await expect(fetch(repository, 'https://ReMoTe.إختبار/'))
-          .rejects.toBeInstanceOf(TemporaryError);
+        await expect(fetch(repository, 'https://ReMoTe.إختبار/', null, error => {
+          expect(error[temporaryError]).toBe(true);
+          return recovery;
+        })).rejects.toBe(recovery);
       } finally {
         nock.cleanAll();
       }
@@ -64,24 +83,28 @@ describe('fetch', () => {
   }
 
   test('rejects with non-temporary error if status code is 400', async () => {
+    const recovery = {};
     nock('https://ReMoTe.إختبار').get('/').reply(400);
 
     try {
-      const promise = fetch(repository, 'https://ReMoTe.إختبار/');
-
-      await expect(promise).rejects.toBeInstanceOf(CustomError);
-      await expect(promise).rejects.not.toBeInstanceOf(TemporaryError);
+      await expect(fetch(repository, 'https://ReMoTe.إختبار/', null, error => {
+        expect(error[temporaryError]).toBe(false);
+        return recovery;
+      })).rejects.toBe(recovery);
     } finally {
       nock.cleanAll();
     }
   });
 
-  test('rejects with TemporaryError in case of network error', async () => {
+  test('rejects with [temporaryError] in case of network error', async () => {
+    const recovery = {};
     nock('https://ReMoTe.إختبار').get('/').replyWithError('');
 
     try {
-      await expect(fetch(repository, 'https://ReMoTe.إختبار/'))
-        .rejects.toBeInstanceOf(TemporaryError);
+      await expect(fetch(repository, 'https://ReMoTe.إختبار/', null, error => {
+        expect(error[temporaryError]).toBe(true);
+        return recovery;
+      })).rejects.toBe(recovery);
     } finally {
       nock.cleanAll();
     }
@@ -100,8 +123,11 @@ describe('postStatus', () => {
       content: '内容'
     });
 
-    await postStatus(repository, unwrap(await note.select('status')));
+    const recover = jest.fn();
 
+    await postStatus(repository, unwrap(await note.select('status')), recover);
+
+    expect(recover).not.toHaveBeenCalled();
     expect((await actorAccount.select('inbox'))[0])
       .toHaveProperty(['extension', 'content'], '内容');
   });
@@ -112,9 +138,11 @@ describe('postStatus', () => {
     const follow = await fabricateFollow({ actor });
     const object = unwrap(await follow.select('object'));
     const note = await fabricateNote({ status: { actor: object } });
+    const recover = jest.fn();
 
-    await postStatus(repository, unwrap(await note.select('status')));
+    await postStatus(repository, unwrap(await note.select('status')), recover);
 
+    expect(recover).not.toHaveBeenCalled();
     await expect(repository.selectRecentStatusesIncludingExtensionsAndActorsFromInbox(unwrap(actorAccount.id)))
       .resolves
       .toHaveProperty('length', 0);
@@ -126,9 +154,11 @@ describe('postStatus', () => {
     const follow = await fabricateFollow({ actor });
     const object = unwrap(await follow.select('object'));
     const note = await fabricateNote({ status: { actor: object } });
+    const recover = jest.fn();
 
-    await postStatus(repository, unwrap(await note.select('status')));
+    await postStatus(repository, unwrap(await note.select('status')), recover);
 
+    expect(recover).not.toHaveBeenCalled();
     await expect((await repository.queue.getWaiting())[0])
       .toHaveProperty(['data', 'type'], 'postStatus')
   });
@@ -147,8 +177,10 @@ describe('postStatus', () => {
     await Promise.all(actors.map(actor => fabricateFollow({ actor, object })));
 
     const note = await fabricateNote({ status: { actor: object } });
-    await postStatus(repository, unwrap(await note.select('status')));
+    const recover = jest.fn();
+    await postStatus(repository, unwrap(await note.select('status')), recover);
 
+    expect(recover).not.toHaveBeenCalled();
     await expect(repository.queue.getWaiting())
       .resolves
       .toHaveProperty('length', 1);
@@ -168,7 +200,8 @@ describe('postStatus', () => {
       await fabricateFollow({ actor, object });
 
       const note = await fabricateNote({ status: { actor: object } });
-      await postStatus(repository, unwrap(await note.select('status')));
+      const recover = jest.fn();
+      await postStatus(repository, unwrap(await note.select('status')), recover);
 
       await expect(repository.queue.getWaiting())
         .resolves
@@ -177,7 +210,7 @@ describe('postStatus', () => {
 });
 
 describe('postToInbox', () => {
-  async function post() {
+  async function post(recover: (error: Error) => unknown) {
     const [sender, inboxURI] = await Promise.all([
       fabricateLocalAccount({ actor: { username: 'SeNdEr' } }),
       fabricateRemoteAccount({ inboxURI: { uri: 'https://ReCiPiEnT.إختبار/?inbox' } })
@@ -193,10 +226,12 @@ describe('postToInbox', () => {
           object: 'https://ObJeCt.إختبار/'
         };
       },
-    });
+    }, recover);
   }
 
   test('delivers to remote account', async () => {
+    const recover = jest.fn();
+
     /*
       ActivityPub
       7. Server to Server Interactions
@@ -224,20 +259,23 @@ describe('postToInbox', () => {
       .reply(200);
 
     try {
-      await post();
+      await post(recover);
       expect(nockPost.isDone()).toBe(true);
     } finally {
       nock.cleanAll();
     }
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
   test('rejects if failed to deliver to remote object', async () => {
+    const recovery = {};
     const nockPost = nock('https://ReCiPiEnT.إختبار')
       .post('/?inbox')
       .replyWithError('');
 
     try {
-      await expect(post()).rejects.toBeInstanceOf(CustomError);
+      await expect(post(() => recovery)).rejects.toBe(recovery);
       expect(nockPost.isDone());
     } finally {
       nock.cleanAll();
@@ -245,15 +283,18 @@ describe('postToInbox', () => {
   });
 
   test('resolves even if response has body', async () => {
+    const recover = jest.fn();
     const nockPost = nock('https://ReCiPiEnT.إختبار')
       .post('/?inbox')
       .reply(200, 'body');
 
     try {
-      await post();
+      await post(recover);
       expect(nockPost.isDone()).toBe(true);
     } finally {
       nock.cleanAll();
     }
+
+    expect(recover).not.toHaveBeenCalled();
   });
 });

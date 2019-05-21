@@ -17,7 +17,6 @@
 import { createPublicKey } from 'crypto';
 import { verifySignature } from 'http-signature';
 import { domainToASCII } from 'url';
-import { Custom as CustomError } from '../errors';
 import Actor from './actor';
 import LocalAccount from './local_account';
 import Relation, { Reference } from './relation';
@@ -30,22 +29,26 @@ export default class Key extends Relation<Properties, { owner: Actor | null }> {
   readonly owner?: Reference<Actor | null>;
   readonly ownerId!: string;
 
-  async getUri() {
+  async getUri(recover: (error: Error) => unknown) {
     const owner = await this.select('owner');
 
     if (!owner) {
-      throw new CustomError('The owner cannot be fetched.', 'error');
+      throw recover(new Error('owner not found.'));
     }
 
     if (owner.host) {
       const account = await owner.select('account');
+      if (!account) {
+        throw recover(new Error('owner\'s account not found'));
+      }
+
       if (!(account instanceof RemoteAccount)) {
-        throw new CustomError('The owner\'s account is invalid', 'error');
+        throw new Error('Unexpected owner\'s account type');
       }
 
       const uri = await account.select('publicKeyURI');
       if (!uri) {
-        throw new CustomError('The URI cannot be fetched.', 'error');
+        throw recover(new Error('owner\'s publicKeyURI not found.'));
       }
 
       return uri.uri;
@@ -57,15 +60,15 @@ export default class Key extends Relation<Properties, { owner: Actor | null }> {
     return `https://${host}/@${username}#key`;
   }
 
-  async verifySignature(signature: {}) {
+  async verifySignature(signature: {}, recover: (error: Error) => unknown) {
     const owner = await this.select('owner');
     if (!owner) {
-      throw new CustomError('Owner not found.', 'error');
+      throw recover(new Error('owner not found.'));
     }
 
     const account = await owner.select('account');
     if (!(account instanceof RemoteAccount)) {
-      throw new CustomError('Invalid owner\'s account.', 'error');
+      throw recover(new Error('owner\'s account invalid.'));
     }
 
     const publicKeyPem = createPublicKey({
@@ -77,31 +80,31 @@ export default class Key extends Relation<Properties, { owner: Actor | null }> {
     return verifySignature(signature, publicKeyPem as string);
   }
 
-  async selectPrivateKeyDer() {
+  async selectPrivateKeyDer(recover: (error: Error) => unknown) {
     const owner = await this.select('owner');
     if (!owner) {
-      throw new CustomError('Owner not found.', 'error');
+      throw recover(new Error('owner not found.'));
     }
   
     const account = await owner.select('account');
     if (!(account instanceof LocalAccount)) {
-      throw new CustomError('Invalid owner\'s account.', 'error');
+      throw recover(new Error('owner\'s account invalid'));
     }
 
     return account.privateKeyDer;
   }
 
-  async toActivityStreams() {
+  async toActivityStreams(recover: (error: Error) => unknown) {
     const [id, owner, key] = await Promise.all([
-      this.getUri(),
+      this.getUri(recover),
       this.select('owner').then(owner => {
         if (!owner) {
-          throw new CustomError('The owner cannot be fetched.', 'error');
+          throw recover(new Error('owner not found.'));
         }
 
-        return owner.getUri();
+        return owner.getUri(recover);
       }),
-      this.selectPrivateKeyDer()
+      this.selectPrivateKeyDer(recover)
     ]);
 
     return {

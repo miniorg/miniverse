@@ -14,9 +14,8 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Custom as CustomError, Severity } from '../errors';
 import Repository from '../repository';
-import { fetch } from '../transfer';
+import { fetch, temporaryError } from '../transfer';
 
 interface Body {
   readonly [key: string]: unknown;
@@ -50,13 +49,6 @@ function find(ids: unknown[], context: unknown, body: unknown): { context: unkno
   return null;
 }
 
-export class CircularError extends CustomError {
-  constructor(message: unknown, severity: Severity, originals: Error[] | null = null) {
-    super(message, severity, originals);
-    Object.setPrototypeOf(this, new.target.prototype);
-  }
-}
-
 export default class Resolver {
   private readonly unconsumedObjects: Map<unknown, Body | null>;
 
@@ -64,13 +56,11 @@ export default class Resolver {
     this.unconsumedObjects = iterable ? new Map(iterable) : new Map;
   }
 
-  async resolve(repository: Repository, value: string) {
+  async resolve(repository: Repository, value: string, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
     let body = this.unconsumedObjects.get(value);
 
     if (body === null) {
-      throw new CircularError(
-        'Circular reference in Activity Streams. Possibly invalid Activty Streams?',
-        'info');
+      throw recover(new Error('Circular reference detected.'));
     }
 
     const resolver = new Resolver(this.unconsumedObjects);
@@ -82,20 +72,18 @@ export default class Resolver {
 
     const response = await fetch(repository, value, {
       headers: { Accept: 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' }
-    });
+    }, recover);
 
     body = await response.json();
     if (!body) {
-      throw new CustomError('Empty body.', 'error');
+      throw recover(new Error('Object unspecified.'));
     }
 
     const hashIndex = value.indexOf('#');
 
     if (hashIndex < 0) {
       if (body.id && body.id != value) {
-        throw new CustomError(
-          'Given id and id in Activity Streams mismatch. Possibly invalid id?',
-          'info');
+        throw recover(new Error('id mismatched.'));
       }
 
       return { resolver, context: body['@context'], body };
@@ -104,9 +92,7 @@ export default class Resolver {
     const primary = value.slice(0, hashIndex);
 
     if (body.id && body.id != primary) {
-      throw new CustomError(
-        'Given id and id in Activity Streams mismatch. Possibly invalid id?',
-        'info');
+      throw recover(new Error('id mismatched'));
     }
 
     const fragment = value.slice(hashIndex);
@@ -117,6 +103,6 @@ export default class Resolver {
       return { resolver, context: found.context, body: found.body };
     }
 
-    throw new CustomError('Fragment not found. Possibly invalid id?', 'info');
+    throw recover(new Error('Fragment identified by id not found.'));
   }
 }

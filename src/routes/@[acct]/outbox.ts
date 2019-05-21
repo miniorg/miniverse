@@ -18,13 +18,16 @@ import { Request, Response, json } from 'express';
 import { promisify } from 'util';
 import ParsedActivityStreams, {
   AnyHost,
-  TypeNotAllowed
+  unexpectedType
 } from '../../lib/parsed_activitystreams';
 import { create } from '../../lib/tuples/create';
 import OrderedCollection from '../../lib/tuples/ordered_collection';
 import { normalizeHost } from '../../lib/tuples/uri';
 import secure from '../_secure';
 import sendActivityStreams from '../_send_activitystreams';
+
+const abort = {};
+const fallback = {};
 
 const setBody = promisify(json({
   /*
@@ -120,19 +123,30 @@ export const post = secure(async (request, response) => {
     > be wrapped in a Create activity by the server.
   */
   try {
-    result = await object.act(actor);
-  } catch (error) {
-    if (!(error instanceof TypeNotAllowed)) {
-      throw error;
-    }
+    try {
+      result = await object.act(
+        actor,
+        error => error[unexpectedType] ? fallback : abort);
+    } catch (error) {
+      if (error != fallback) {
+        throw error;
+      }
 
-    result = await create(repository, actor, object);
-    if (result) {
-      result = await result.select('status');
+      result = await create(repository, actor, object, () => abort);
       if (result) {
-        result = await result.getUri();
+        result = await result.select('status');
+        if (result) {
+          result = await result.getUri(() => abort);
+        }
       }
     }
+  } catch (error) {
+    if (error == abort) {
+      response.sendStatus(422);
+      return;
+    }
+
+    throw error;
   }
 
   /*

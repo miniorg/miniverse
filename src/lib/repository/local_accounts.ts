@@ -14,7 +14,6 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Custom as CustomError } from '../errors';
 import Actor from '../tuples/actor';
 import LocalAccount from '../tuples/local_account';
 import Status from '../tuples/status';
@@ -40,17 +39,17 @@ function parse(this: Repository, { id, admin, private_key_der, salt, server_key,
 }
 
 export default class {
-  getInboxChannel(this: Repository, accountOrActor: LocalAccount | Actor) {
+  getInboxChannel(this: Repository, accountOrActor: LocalAccount | Actor, recover: (error: Error) => unknown) {
     if (accountOrActor.id) {
       return `${this.redis.prefix}inbox:${accountOrActor.id}:channel`;
     }
 
-    throw new CustomError('Account or actor is not persisted.', 'error');
+    throw recover(new Error('Unpersisted Account or Actor.'));
   }
 
-  async insertLocalAccount(this: Repository, account: LocalAccount) {
+  async insertLocalAccount(this: Repository, account: LocalAccount, recover: (error: Error) => unknown) {
     if (!(account.actor instanceof Actor)) {
-      throw new CustomError('Invalid actor.', 'error');
+      throw recover(new Error('Invalid Actor.'));
     }
 
     const { rows: [ { insert_local_account } ] } = await this.pg.query({
@@ -72,18 +71,18 @@ export default class {
     account.actor.id = insert_local_account;
   }
 
-  async insertIntoInboxes(this: Repository, accountOrActors: (LocalAccount | Actor)[], item: Status) {
+  async insertIntoInboxes(this: Repository, accountOrActors: (LocalAccount | Actor)[], item: Status, recover: (error: Error) => unknown) {
     const { id } = item;
     if (!id) {
-      throw new CustomError('Unintialized status.', 'error');
+      throw recover(new Error('Status uninitialized.'));
     }
 
     const extension = await item.select('extension');
     if (!extension) {
-      throw new CustomError('Extension not found.', 'error');
+      throw recover(new Error('extension not found.'));
     }
 
-    const message = await extension.toActivityStreams() as { [key: string]: unknown };
+    const message = await extension.toActivityStreams(recover) as { [key: string]: unknown };
     message['@context'] = 'https://www.w3.org/ns/activitystreams';
 
     const string = JSON.stringify(message);

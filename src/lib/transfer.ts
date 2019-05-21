@@ -15,14 +15,9 @@
 */
 
 import { createPrivateKey } from 'crypto';
-import originalFetch, {
-  FetchError,
-  Request,
-  RequestInit,
-} from 'node-fetch';
+import originalFetch, { FetchError, Request, RequestInit } from 'node-fetch';
 import { sign } from 'http-signature';
 import { domainToASCII } from 'url';
-import { Custom as CustomError, Temporary as TemporaryError } from './errors';
 import Repository from './repository';
 import Key from './tuples/key';
 import LocalAccount from './tuples/local_account';
@@ -30,7 +25,9 @@ import RemoteAccount from './tuples/remote_account';
 import Status from './tuples/status';
 import URI from './tuples/uri';
 
-export function fetch({ host }: Repository, url: string | Request, init?: RequestInit) {
+export const temporaryError = Symbol();
+
+export function fetch({ host }: Repository, url: string | Request, init: RequestInit | null, recover: (error: Error & { [temporaryError]: boolean }) => unknown) {
   const size = 1048576;
   const timeout = 16384;
   const headers = { 'User-Agent': `Miniverse (${domainToASCII(host)})` };
@@ -42,17 +39,16 @@ export function fetch({ host }: Repository, url: string | Request, init?: Reques
       await response.buffer();
 
       if ([429, 500, 502, 503, 504].includes(response.status)) {
-        throw new TemporaryError(
-          'Temporary error status code returned.', 'info');
+        throw recover(Object.assign(new Error('Status code indicates an error.'), { [temporaryError]: true }));
       }
 
-      throw new CustomError('Error status code returned', 'info');
+      throw recover(Object.assign(new Error('Status code indicates an error'), { [temporaryError]: false }));
     }
 
     return response;
   }, error => {
     if (error instanceof FetchError) {
-      throw TemporaryError.wrap([error], 'info');
+      throw recover(Object.assign(error, { [temporaryError]: true }));
     }
 
     throw error;
@@ -65,16 +61,16 @@ function isRecipientAccount(account: LocalAccount | RemoteAccount | null): accou
   }
 
   if (!(account instanceof RemoteAccount)) {
-    throw new CustomError('Invalid account', 'error');
+    throw new Error('Unexpected account type.');
   }
 
   return true;
 }
 
-export async function postStatus(repository: Repository, status: Status) {
+export async function postStatus(repository: Repository, status: Status, recover: (error: Error) => unknown) {
   const actor = await status.select('actor');
   if (!actor) {
-    throw new CustomError('The actor is deleted.', 'error');
+    throw recover(new Error('actor not found.'));
   }
 
   const followers = await actor.select('followers');
@@ -103,16 +99,16 @@ export async function postStatus(repository: Repository, status: Status) {
   ] as unknown[]);
 }
 
-export async function postToInbox(repository: Repository, sender: LocalAccount, { uri }: URI, object: { toActivityStreams(): { [key: string]: unknown } }) {
+export async function postToInbox<T>(repository: Repository, sender: LocalAccount, { uri }: URI, object: { toActivityStreams(recover: (error: T) => unknown): { [key: string]: unknown } }, recover: (error: Error & { [temporaryError]?: boolean } | T) => unknown) {
   const [activityStreams, [keyId, key]] = await Promise.all([
-    object.toActivityStreams(),
+    object.toActivityStreams(recover),
     sender.select('actor').then(owner => {
       if (!owner) {
-        throw new CustomError('Actor not found.', 'error');
+        throw recover(Object.assign(new Error('sender\'s actor not found'), { [temporaryError]: false }));
       }
 
       const key = new Key({ owner, repository });
-      return Promise.all([key.getUri(), key.selectPrivateKeyDer()]);
+      return Promise.all([key.getUri(recover), key.selectPrivateKeyDer(recover)]);
     })
   ]);
 
@@ -133,10 +129,14 @@ export async function postToInbox(repository: Repository, sender: LocalAccount, 
         keyId
       });
     }
-  });
+  }, recover);
 
   await response.buffer().catch((error: unknown) => {
-    if (!(error instanceof FetchError && error.type == 'max-size')) {
+    if (error instanceof FetchError) {
+      if (error.type != 'max-size') {
+        throw recover(Object.assign(error, { [temporaryError]: true }));
+      }
+    } else {
       throw error;
     }
   });

@@ -29,9 +29,13 @@ describe('toActivityStreams', () => {
       href: unwrap(await account.select('actor'))
     });
 
-    await expect(mention.toActivityStreams()).resolves.toEqual({
+    const recover = jest.fn();
+
+    await expect(mention.toActivityStreams(recover)).resolves.toEqual({
       type: 'Mention',
       href: 'https://xn--kgbechtv/@%E8%A1%8C%E5%8B%95%E8%80%85'
     });
+
+    expect(recover).not.toHaveBeenCalled();
   });
 });

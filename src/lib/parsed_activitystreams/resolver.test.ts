@@ -14,9 +14,8 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Custom as CustomError } from '../errors';
 import repository from '../test/repository';
-import Resolver, { CircularError } from './resolver';
+import Resolver from './resolver';
 import nock = require('nock');
 
 function testLoading(body: unknown, callback: () => Promise<unknown>) {
@@ -47,19 +46,23 @@ describe('resolve', () => {
     '@context': 'https://www.w3.org/ns/activitystreams'
   }, async () => {
     const origin = new Resolver;
+    const recover = jest.fn();
 
     const { resolver, context, body } =
-      await origin.resolve(repository, 'https://ReMoTe.إختبار/');
+      await origin.resolve(repository, 'https://ReMoTe.إختبار/', recover);
 
+    expect(recover).not.toHaveBeenCalled();
     expect(context).toBe('https://www.w3.org/ns/activitystreams');
 
     expect(body).toEqual({
       '@context': 'https://www.w3.org/ns/activitystreams'
     });
 
-    await expect(resolver.resolve(repository, 'https://ReMoTe.إختبار/'))
+    const recovery = {};
+
+    await expect(resolver.resolve(repository, 'https://ReMoTe.إختبار/', () => recovery))
       .rejects
-      .toBeInstanceOf(CircularError);
+      .toBe(recovery);
   }));
 
   test('rejects if id mismatches URI without fragment', testLoading({
@@ -67,10 +70,11 @@ describe('resolve', () => {
     'id': 'https://ReMoTe.إختبار/yetAnother'
   }, () => {
     const origin = new Resolver;
+    const recovery = {};
 
-    return expect(origin.resolve(repository, 'https://ReMoTe.إختبار/'))
+    return expect(origin.resolve(repository, 'https://ReMoTe.إختبار/', () => recovery))
       .rejects
-      .toBeInstanceOf(CustomError);
+      .toBe(recovery);
   }));
 
   test('rejects if id mismatches URI with fragment', testLoading({
@@ -79,10 +83,11 @@ describe('resolve', () => {
     publicKey: { id: '#key' }
   }, () => {
     const origin = new Resolver;
+    const recovery = {};
 
-    return expect(origin.resolve(repository, 'https://ReMoTe.إختبار/#key'))
+    return expect(origin.resolve(repository, 'https://ReMoTe.إختبار/#key', () => recovery))
       .rejects
-      .toBeInstanceOf(CustomError);
+      .toBe(recovery);
   }));
 
   /*
@@ -95,16 +100,20 @@ describe('resolve', () => {
     publicKey: { id: '#key' }
   }, async () => {
     const origin = new Resolver;
+    const recover = jest.fn();
 
     const { resolver, context, body } =
-      await origin.resolve(repository, 'https://ReMoTe.إختبار/#key');
+      await origin.resolve(repository, 'https://ReMoTe.إختبار/#key', recover);
 
+    expect(recover).not.toHaveBeenCalled();
     expect(context).toBe('https://www.w3.org/ns/activitystreams');
     expect(body).toEqual({ id: '#key' });
 
-    await expect(resolver.resolve(repository, 'https://ReMoTe.إختبار/#key'))
+    const recovery = {};
+
+    await expect(resolver.resolve(repository, 'https://ReMoTe.إختبار/#key', () => recovery))
       .rejects
-      .toBeInstanceOf(CircularError);
+      .toBe(recovery);
   }));
 
   test('resolves frament URIs with base URIs', testLoading({
@@ -112,16 +121,20 @@ describe('resolve', () => {
     publicKey: { id: 'https://ReMoTe.إختبار/#key' }
   }, async () => {
     const origin = new Resolver;
+    const recover = jest.fn();
 
     const { resolver, context, body } =
-      await origin.resolve(repository, 'https://ReMoTe.إختبار/#key');
+      await origin.resolve(repository, 'https://ReMoTe.إختبار/#key', recover);
 
+    expect(recover).not.toHaveBeenCalled();
     expect(context).toBe('https://www.w3.org/ns/activitystreams');
     expect(body).toEqual({ id: 'https://ReMoTe.إختبار/#key' });
 
-    await expect(resolver.resolve(repository, 'https://ReMoTe.إختبار/#key'))
+    const recovery = {};
+
+    await expect(resolver.resolve(repository, 'https://ReMoTe.إختبار/#key', () => recovery))
       .rejects
-      .toBeInstanceOf(CircularError);
+      .toBe(recovery);
   }));
 
   test('resolves with fragment context', testLoading({
@@ -129,8 +142,9 @@ describe('resolve', () => {
     publicKey: { '@context': 'https://w3id.org/security/v1', id: '#key' }
   }, () => {
     const origin = new Resolver;
+    const recover = jest.fn();
 
-    return expect(origin.resolve(repository, 'https://ReMoTe.إختبار/#key'))
+    return expect(origin.resolve(repository, 'https://ReMoTe.إختبار/#key', recover))
       .resolves
       .toHaveProperty('context', 'https://w3id.org/security/v1');
   }));
@@ -142,17 +156,19 @@ describe('resolve', () => {
     ]
   }, () => {
     const origin = new Resolver;
+    const recovery = {};
 
-    return expect(origin.resolve(repository, 'https://ReMoTe.إختبار/#key'))
+    return expect(origin.resolve(repository, 'https://ReMoTe.إختبار/#key', () => recovery))
       .rejects
-      .toBeInstanceOf(Error);
+      .toBe(recovery);
   }));
 });
 
 test('rejects consumed URIs given to the constructor', () => {
+  const recovery = {};
   const resolver = new Resolver([['https://ReMoTe.إختبار/', null]]);
 
-  return expect(resolver.resolve(repository, 'https://ReMoTe.إختبار/'))
+  return expect(resolver.resolve(repository, 'https://ReMoTe.إختبار/', () => recovery))
     .rejects
-    .toBeInstanceOf(CircularError);
+    .toBe(recovery);
 });

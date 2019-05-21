@@ -14,13 +14,10 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import ParsedActivityStreams, {
-  AnyHost,
-  TypeNotAllowed
-} from '../parsed_activitystreams';
+import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
-import Document from './document';
+import Document, { unexpectedType } from './document';
 import URI from './uri';
 import nock = require('nock');
 
@@ -63,15 +60,18 @@ describe('upload', () => {
 
 describe('create', () => {
   test('creates and returns document', async () => {
+    const recover = jest.fn();
     let created;
 
     nock('https://إختبار').get('/').reply(200, svg);
 
     try {
-      created = await Document.create(repository, 'https://إختبار/');
+      created = await Document.create(repository, 'https://إختبار/', recover);
     } finally {
       nock.cleanAll();
     }
+
+    expect(recover).not.toHaveBeenCalled();
 
     const createdURL = await created.select('url');
 
@@ -98,17 +98,19 @@ describe('create', () => {
   });
 
   test('queues upload job if upload failed', async () => {
+    const recover = jest.fn();
     const { bucket } = repository.s3;
     nock('https://إختبار').get('/').reply(200, svg);
     repository.s3.bucket = `${process.env.AWS_S3_BUCKET}-test-invalid`;
 
     try {
-      await expect(Document.create(repository, 'https://إختبار/')).rejects.toEqual(expect.anything());
+      await expect(Document.create(repository, 'https://إختبار/', recover)).rejects.toEqual(expect.anything());
     } finally {
       nock.cleanAll();
       repository.s3.bucket = bucket;
     }
 
+    expect(recover).not.toHaveBeenCalled();
     await expect((await repository.queue.getWaiting())[0])
       .toHaveProperty(['data', 'type'], 'upload');
   });
@@ -120,16 +122,18 @@ describe('fromParsedActivityStreams', () => {
       type: 'Document',
       url: 'https://DoCuMeNt.إختبار/'
     }, AnyHost);
+    const recover = jest.fn();
     let created;
 
     nock('https://DoCuMeNt.إختبار').get('/').reply(200, svg);
 
     try {
-      created = await Document.fromParsedActivityStreams(repository, object);
+      created = await Document.fromParsedActivityStreams(repository, object, recover);
     } finally {
       nock.cleanAll();
     }
 
+    expect(recover).not.toHaveBeenCalled();
     await expect(created).toHaveProperty('format', 'png');
   });
 
@@ -138,39 +142,45 @@ describe('fromParsedActivityStreams', () => {
       type: 'Document',
       url: 'https://DoCuMeNt.إختبار/'
     }, AnyHost);
+    const recover = jest.fn();
     let created;
 
     nock('https://DoCuMeNt.إختبار').get('/').reply(200, svg);
 
     try {
-      created = await Document.fromParsedActivityStreams(repository, object);
+      created = await Document.fromParsedActivityStreams(repository, object, recover);
     } finally {
       nock.cleanAll();
     }
 
-    await expect(Document.fromParsedActivityStreams(repository, object))
+    await expect(Document.fromParsedActivityStreams(repository, object, recover))
       .resolves
       .toHaveProperty('id', unwrap(created).id);
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
-  test('rejects with TypeNotAllowed if type is not Document', async () => {
+  test('rejects if type is not Document', async () => {
     const object = new ParsedActivityStreams(repository, {
       type: 'https://TyPe.إختبار/',
       url: 'https://DoCuMeNt.إختبار/'
     }, AnyHost);
+    const recovery = {};
 
     nock('https://DoCuMeNt.إختبار').get('/').reply(200, svg);
 
     try {
-      await expect(Document.fromParsedActivityStreams(repository, object))
-        .rejects
-        .toBeInstanceOf(TypeNotAllowed)
+      await expect(Document.fromParsedActivityStreams(repository, object, error => {
+        expect(error[unexpectedType]).toBe(true);
+        return recovery;
+      })).rejects.toBe(recovery)
     } finally {
       nock.cleanAll();
     }
   });
 
-  test('rejects with TypeNotAllowed if url type is not Link', async () => {
+  test('rejects if url type is not Link', async () => {
+    const recovery = {};
     const object = new ParsedActivityStreams(repository, {
       type: 'Document',
       url: { type: 'https://TyPe.إختبار/', href: 'https://DoCuMeNt.إختبار/' }
@@ -179,9 +189,9 @@ describe('fromParsedActivityStreams', () => {
     nock('https://DoCuMeNt.إختبار').get('/').reply(200, svg);
 
     try {
-      await expect(Document.fromParsedActivityStreams(repository, object))
+      await expect(Document.fromParsedActivityStreams(repository, object, () => recovery))
         .rejects
-        .toBeInstanceOf(TypeNotAllowed)
+        .toBe(recovery);
     } finally {
       nock.cleanAll();
     }

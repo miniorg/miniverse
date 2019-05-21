@@ -16,10 +16,23 @@
 
 import { Response } from 'express';
 
+const recovery = {};
+
 export default async (response: Response, object: {
-  toActivityStreams(): Promise<{ [key: string]: unknown }>;
+  toActivityStreams(recover: (error: Error) => unknown): Promise<{ [key: string]: unknown }>;
 }) => {
-  const message = await object.toActivityStreams();
+  let message;
+
+  try {
+    message = await object.toActivityStreams(() => recovery);
+  } catch (error) {
+    if (error == recovery) {
+      response.sendStatus(500);
+      return;
+    }
+
+    throw error;
+  }
 
   message['@context'] = [
     'https://miniverse.social/ns',

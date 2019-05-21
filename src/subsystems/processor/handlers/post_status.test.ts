@@ -41,14 +41,17 @@ test('delivers announce to remote account', async () => {
     inboxURIId: recipient.inboxURIId
   });
 
+  const recover = jest.fn();
   const post = nock('https://ReCiPiEnT.إختبار').post('/?inbox').reply(200);
 
   try {
-    await postStatus(repository, job);
+    await postStatus(repository, job, recover);
     expect(post.isDone()).toBe(true);
   } finally {
     nock.cleanAll();
   }
+
+  expect(recover).not.toHaveBeenCalled();
 });
 
 test('delivers note to remote account', async () => {
@@ -67,12 +70,15 @@ test('delivers note to remote account', async () => {
     inboxURIId: recipient.inboxURIId
   });
 
+  const recover = jest.fn();
   const post = nock('https://ReCiPiEnT.إختبار').post('/?inbox').reply(200);
 
   try {
-    await postStatus(repository, job);
+    await postStatus(repository, job, recover);
     expect(post.isDone()).toBe(true);
   } finally {
     nock.cleanAll();
   }
+
+  expect(recover).not.toHaveBeenCalled();
 });

@@ -15,13 +15,13 @@
 */
 
 import { createPrivateKey } from 'crypto';
-import { Custom as CustomError } from '../errors';
 import { fabricateLocalAccount } from '../test/fabricator';
 import repository from '../test/repository';
 import LocalAccount from './local_account';
 
 describe('toWebFinger', () => {
   test('returns WebFinger representation', async () => {
+    const recover = jest.fn();
     const account = await fabricateLocalAccount({
       actor: {
         // See if it correctly encodes username.
@@ -29,7 +29,7 @@ describe('toWebFinger', () => {
       }
     });
 
-    await expect(account.toWebFinger()).resolves.toEqual({
+    await expect(account.toWebFinger(recover)).resolves.toEqual({
       links: [
         {
           href: 'https://xn--kgbechtv/@name%20of%20user',
@@ -39,6 +39,8 @@ describe('toWebFinger', () => {
       ],
       subject: 'acct:name%20of%20user@finger.xn--kgbechtv'
     });
+
+    expect(recover).not.toHaveBeenCalled();
   });
 });
 
@@ -51,6 +53,7 @@ describe('create', () => {
     const salt = Buffer.from('salt');
     const serverKey = Buffer.from('serverKey');
     const storedKey = Buffer.from('storedKey');
+    const recover = jest.fn();
 
     const account = await LocalAccount.create(
       repository,
@@ -60,7 +63,8 @@ describe('create', () => {
       admin,
       salt,
       serverKey,
-      storedKey);
+      storedKey,
+      recover);
 
     const privateKey = createPrivateKey({
       format: 'der',
@@ -68,6 +72,7 @@ describe('create', () => {
       key: account.privateKeyDer
     });
 
+    expect(recover).not.toHaveBeenCalled();
     expect(account).toHaveProperty('repository', repository);
     expect(account).toHaveProperty(['actor', 'repository'], repository);
     expect(account).toHaveProperty(['actor', 'username'], username);
@@ -91,6 +96,7 @@ describe('create', () => {
     const salt = Buffer.from('salt');
     const serverKey = Buffer.from('serverKey');
     const storedKey = Buffer.from('storedKey');
+    const recovery = {};
 
     await expect(LocalAccount.create(
       repository,
@@ -100,6 +106,7 @@ describe('create', () => {
       admin,
       salt,
       serverKey,
-      storedKey)).rejects.toBeInstanceOf(CustomError);
+      storedKey,
+      () => recovery)).rejects.toBe(recovery);
   });
 });

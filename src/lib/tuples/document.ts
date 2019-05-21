@@ -15,12 +15,11 @@
 */
 
 import { Body } from 'aws-sdk/clients/s3';
-import { Custom as CustomError } from '../errors';
 import { Document as ActivityStreams } from '../generated_activitystreams';
 import generateUuid from '../generate_uuid';
-import ParsedActivityStreams, { TypeNotAllowed } from '../parsed_activitystreams';
+import ParsedActivityStreams from '../parsed_activitystreams';
 import Repository from '../repository';
-import { fetch } from '../transfer';
+import { fetch, temporaryError } from '../transfer';
 import Relation, { Reference } from './relation';
 import URI from './uri';
 import sharp = require('sharp');
@@ -34,6 +33,8 @@ interface Properties {
   uuid: string;
   format: string;
 }
+
+export const unexpectedType = Symbol();
 
 export default class Document extends Relation<Properties, References> {
   id?: string;
@@ -58,10 +59,10 @@ export default class Document extends Relation<Properties, References> {
     }).promise();
   }
 
-  static async create(repository: Repository, url: string) {
+  static async create(repository: Repository, url: string, recover: (error: Error & { [temporaryError]: boolean }) => unknown) {
     const [uuid, { data, info }] = await Promise.all([
       generateUuid(),
-      fetch(repository, url).then(({ body }) =>
+      fetch(repository, url, null, recover).then(({ body }) =>
         body.pipe(sharp()).toBuffer({ resolveWithObject: true }))
     ]);
 
@@ -84,38 +85,41 @@ export default class Document extends Relation<Properties, References> {
     return document;
   }
 
-  static async fromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams) {
-    const type = await object.getType();
+  static async fromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, recover: (error: Error & {
+    [temporaryError]?: boolean;
+    [unexpectedType]?: boolean;
+  }) => unknown) {
+    const type = await object.getType(recover);
     if (!type.has('Document')) {
-      throw new TypeNotAllowed('Unsupported type. Expected Document.', 'info');
+      throw recover(Object.assign(new Error('Unsupported type. Expected Document.'), { [unexpectedType]: true }));
     }
 
-    const url = await object.getUrl();
+    const url = await object.getUrl(recover);
     if (!url) {
-      throw new CustomError('url unspecified.', 'error');
+      throw recover(new Error('url unspecified.'));
     }
 
-    const urlType = await url.getType();
+    const urlType = await url.getType(recover);
     if (!urlType.has('Link')) {
-      throw new TypeNotAllowed('Unsupported type. Expected Link.', 'info');
+      throw recover(new Error('Unsupported url type. Expected Link.'));
     }
 
-    const href = await url.getHref();
+    const href = await url.getHref(recover);
     if (typeof href != 'string') {
-      throw new CustomError('Unsupported URL href. Expected string.', 'error');
+      throw recover(new Error('Unsupported url\'s href type. Expected string.'));
     }
 
     const urlEntity = await repository.selectAllocatedURI(href);
 
     if (urlEntity) {
       if (!urlEntity.id) {
-        throw new CustomError('URI\'s id cannot be fetched.', 'error');
+        throw new Error('URI\'s id cannot be fetched.');
       }
 
       return repository.selectDocumentById(urlEntity.id);
     }
 
-    return this.create(repository, href);
+    return this.create(repository, href, recover);
   }
 }
 

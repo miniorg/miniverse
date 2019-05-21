@@ -14,27 +14,32 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Custom as CustomError } from '../errors';
-import ParsedActivityStreams, { TypeNotAllowed } from '../parsed_activitystreams';
+import ParsedActivityStreams from '../parsed_activitystreams';
 import Repository from '../repository';
+import { temporaryError } from '../transfer';
 import Actor from './actor';
 
+export const unexpectedType = Symbol();
+
 export default class Delete {
-  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor) {
-    const type = await activity.getType();
+  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor, recover: (error: Error & {
+    [temporaryError]?: boolean;
+    [unexpectedType]?: boolean;
+  }) => unknown) {
+    const type = await activity.getType(recover);
 
     if (!type.has('Delete')) {
-      throw new TypeNotAllowed('Unexpected type. Expected Delete.', 'info');
+      throw recover(Object.assign(new Error('Unsupported type. Expected Delete.'), { [unexpectedType]: true }));
     }
 
-    const object = await activity.getObject();
+    const object = await activity.getObject(recover);
     if (!object) {
-      throw new CustomError('Unspecified object.', 'error');
+      throw recover(new Error('object unspecified.'));
     }
 
-    const id = await object.getId();
+    const id = await object.getId(recover);
     if (typeof id != 'string') {
-      throw new CustomError('id is invalid. Expected string.', 'error');
+      throw recover(new Error('Unsupported id type. Expected string.'));
     }
 
     const uri = await repository.selectAllocatedURI(id);

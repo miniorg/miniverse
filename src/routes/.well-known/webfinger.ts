@@ -18,6 +18,8 @@ import Actor from '../../lib/tuples/actor';
 import { normalizeHost } from '../../lib/tuples/uri';
 import secure from '../_secure';
 
+const recovery = {};
+
 export const get = secure(async ({ query }, response) => {
   const lowerResource = query.resource;
   const parsed = /(?:acct:)?(.*)@(.*)/.exec(lowerResource);
@@ -29,11 +31,23 @@ export const get = secure(async ({ query }, response) => {
 
   const [, userpart, host] = parsed;
   const { repository } = response.app.locals;
+  let actor;
 
-  const actor = await (host == normalizeHost(repository.fingerHost) ?
-    repository.selectActorByUsernameAndNormalizedHost(
-      decodeURI(userpart), null) :
-    Actor.fromUsernameAndNormalizedHost(repository, decodeURI(userpart), host));
+  if (host == normalizeHost(repository.fingerHost)) {
+    actor = await repository.selectActorByUsernameAndNormalizedHost(
+      decodeURI(userpart), null);
+  } else {
+    try {
+      actor = await Actor.fromUsernameAndNormalizedHost(repository, decodeURI(userpart), host, _error => recovery);
+    } catch (error) {
+      if (error == recovery) {
+        response.sendStatus(500);
+        return;
+      }
+
+      throw error;
+    }
+  }
   if (!actor) {
     response.sendStatus(404);
     return;
@@ -45,5 +59,14 @@ export const get = secure(async ({ query }, response) => {
     return;
   }
 
-  response.json(await account.toWebFinger());
+  try {
+    response.json(await account.toWebFinger(_error => recovery));
+  } catch (error) {
+    if (error == recovery) {
+      response.sendStatus(500);
+      return;
+    }
+
+    throw error;
+  }
 });

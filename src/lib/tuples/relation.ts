@@ -14,7 +14,6 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Custom as CustomError } from '../errors';
 import Repository from '../repository';
 
 interface Descriptor<References, Key extends keyof References> {
@@ -78,7 +77,7 @@ export default class Relation<Properties, References> {
         const reference = getReferenceOf(this, keyOfReferences);
 
         if (!reference) {
-          throw new CustomError('Reference cannot be found', 'error');
+          throw new Error('Reference cannot be found');
         }
 
         setPropertyOf<Properties, any>(this, reference.id, (referenced as { readonly id: string }).id as any);

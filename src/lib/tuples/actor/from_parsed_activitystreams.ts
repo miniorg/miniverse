@@ -15,11 +15,11 @@
 */
 
 import { domainToASCII } from 'url';
-import { Custom as CustomError } from '../../errors';
-import ParsedActivityStreams, { TypeNotAllowed } from '../../parsed_activitystreams';
+import ParsedActivityStreams from '../../parsed_activitystreams';
 import Repository from '../../repository';
 import RemoteAccount from '../remote_account';
-import Base from './base';
+import { temporaryError } from '../../transfer';
+import Base, { unexpectedType } from './base';
 import { lookup } from './resolver';
 import { createPublicKey } from 'crypto';
 
@@ -27,10 +27,13 @@ const actorTypes =
   ['Application', 'Group', 'Organization', 'Person', 'Service'];
 
 export default class extends Base {
-  static async createFromHostAndParsedActivityStreams(repository: Repository, host: string, object: ParsedActivityStreams) {
-    const type = await object.getType();
+  static async createFromHostAndParsedActivityStreams(repository: Repository, host: string, object: ParsedActivityStreams, recover: (error: Error & {
+    [temporaryError]?: boolean;
+    [unexpectedType]?: boolean;
+  }) => unknown) {
+    const type = await object.getType(recover);
     if (!actorTypes.some(type.has, type)) {
-      throw new TypeNotAllowed('Unsupported actor type.', 'info');
+      throw recover(Object.assign(new Error('Unsupported type. Expected Application, Group, Organization, Person or Service.'), { [unexpectedType]: true }));
     }
 
     const [
@@ -41,65 +44,61 @@ export default class extends Base {
       summary,
       [publicKeyId, publicKeyPem]
     ] = await Promise.all([
-      object.getId(),
-      object.getInbox().then(inbox => {
+      object.getId(recover),
+      object.getInbox(recover).then(inbox => {
         if (!inbox) {
-          throw new CustomError('Inbox unspecified.', 'error');
+          throw recover(new Error('inbox unspecified.'));
         }
 
-        return inbox.getId();
+        return inbox.getId(recover);
       }),
-      object.getPreferredUsername(),
-      object.getName(),
-      object.getSummary(),
-      object.getPublicKey().then(key => {
+      object.getPreferredUsername(recover),
+      object.getName(recover),
+      object.getSummary(recover),
+      object.getPublicKey(recover).then(key => {
         if (!key) {
-          throw new CustomError('Key unspecified.', 'error');
+          throw recover(new Error('key unspecified.'));
         }
 
         if (object.normalizedHost != key.normalizedHost) {
-          throw new CustomError(
-            'Actor host and publicKey host mismatches. Possibly invalid Activity Streams?',
-            'info');
+          throw recover(new Error('Key host mismatches.'));
         }
 
-        return Promise.all([key.getId(), key.getPublicKeyPem()]);
+        return Promise.all([key.getId(recover), key.getPublicKeyPem(recover)]);
       }),
-      object.getContext().then(context => {
+      object.getContext(recover).then(context => {
         if (!context.has('https://w3id.org/security/v1')) {
-          throw new CustomError(
-            'Security context not found. Possibly unsupported Activity Streams?',
-            'info');
+          throw recover(new Error('Security context unspecified.'));
         }
       })
     ]);
 
     if (typeof publicKeyPem != 'string') {
-      throw new CustomError('Invalid publicKeyPem.', 'error');
+      throw recover(new Error('Unsupported publicKeyPem type.'));
     }
 
     if (typeof username != 'string') {
-      throw new CustomError('Invalid username', 'error');
+      throw recover(new Error('Unsupported username type.'));
     }
 
     if (typeof name != 'string') {
-      throw new CustomError('Invalid name', 'error');
+      throw recover(new Error('Unsupported name type.'));
     }
 
     if (typeof summary != 'string') {
-      throw new CustomError('Invalid summary', 'error');
+      throw recover(new Error('Unsupported summary type.'));
     }
 
     if (typeof id != 'string') {
-      throw new CustomError('Invalid id.', 'error');
+      throw recover(new Error('Unsupported id type.'));
     }
 
     if (typeof inboxId != 'string') {
-      throw new CustomError('Invalid inbox id.', 'error');
+      throw recover(new Error('Unsupported inbox\'s id type.'));
     }
 
     if (typeof publicKeyId != 'string') {
-      throw new CustomError('Invalid key Id', 'error');
+      throw recover(new Error('Unsupported publicKey\'s id type.'));
     }
 
     const publicKeyDer = createPublicKey(publicKeyPem)
@@ -113,17 +112,21 @@ export default class extends Base {
       summary,
       id,
       { uri: inboxId },
-      { uri: publicKeyId, publicKeyDer });
+      { uri: publicKeyId, publicKeyDer },
+      recover);
 
     return account.select('actor');
   }
 
-  static async fromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams) {
+  static async fromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, recover: (error: Error & {
+    [temporaryError]?: boolean;
+    [unexpectedType]?: boolean;
+  }) => unknown) {
     const localUserPrefix = `https://${domainToASCII(repository.host)}/@`;
-    const uri = await object.getId();
+    const uri = await object.getId(recover);
 
     if (typeof uri != 'string') {
-      throw new CustomError('Invalid id.', 'error');
+      throw recover(new Error('Unexpected id type'));
     }
 
     if (uri.startsWith(localUserPrefix)) {
@@ -135,36 +138,34 @@ export default class extends Base {
 
     if (uriEntity) {
       if (!uriEntity.id) {
-        throw new CustomError('The internal id cannot be resolved.', 'error');
+        throw new Error('The internal id cannot be resolved.');
       }
 
       const account = await repository.selectRemoteAccountById(uriEntity.id);
       if (!account) {
-        throw new CustomError('Account not found.', 'error');
+        throw recover(new Error('Account not found.'));
       }
 
       return account.select('actor');
     }
 
-    const { subject } = await lookup(repository, uri);
+    const { subject } = await lookup(repository, uri, recover);
     if (typeof subject != 'string') {
-      throw new CustomError('Invalid WebFinger subject.', 'error');
+      throw recover(new Error('Unsupported WebFinger subject type.'));
     }
 
-    const { links } = await lookup(repository, subject);
+    const { links } = await lookup(repository, subject, recover);
     if (!Array.isArray(links)) {
-      throw new CustomError('Invalid links.', 'error');
+      throw recover(new Error('Unsupported WebFinger links type.'));
     }
 
     if (links.every(({ href, rel }) => href != uri || rel != 'self')) {
-      throw new CustomError(
-        'WebFinger does not return self representation. Possibly unsupported WebFinger?',
-        'info');
+      throw recover(new Error('WebFinger does not contain self.'));
     }
 
     const host = subject.split('@', 2)[1];
 
     return this.createFromHostAndParsedActivityStreams(
-      repository, host, object);
+      repository, host, object, recover);
   }
 }

@@ -32,6 +32,7 @@ describe('getUri', () => {
   test('loads and returns URI of local key', async () => {
     const owner = await fabricateLocalAccount({ actor: { username: '所有者' } });
     const key = new Key({ ownerId: unwrap(owner.id), repository });
+    const recover = jest.fn();
 
     /*
       The host name should only be consisted with ASCII characters valid as
@@ -41,9 +42,11 @@ describe('getUri', () => {
       Support more variations of ActivityPub keyId in signature (#4630) · tootsuite/mastodon@72bb3e0
       https://github.com/tootsuite/mastodon/commit/72bb3e03fdf4d8c886d41f3459000b336a3a362b
      */
-    await expect(key.getUri())
+    await expect(key.getUri(recover))
       .resolves
       .toBe('https://xn--kgbechtv/@%E6%89%80%E6%9C%89%E8%80%85#key');
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
   test('loads and returns URI of remote key', async () => {
@@ -51,10 +54,13 @@ describe('getUri', () => {
       { publicKeyURI: { uri: 'https://OwNeR.xn--kgbechtv/' } });
 
     const key = new Key({ ownerId: unwrap(owner.id), repository });
+    const recover = jest.fn();
 
-    await expect(key.getUri())
+    await expect(key.getUri(recover))
       .resolves
       .toBe('https://OwNeR.xn--kgbechtv/');
+
+    expect(recover).not.toHaveBeenCalled();
   });
 });
 
@@ -99,8 +105,10 @@ ewIDAQAB
     });
 
     const key = new Key({ ownerId: unwrap(owner.id), repository });
+    const recover = jest.fn();
 
-    await expect(key.verifySignature(signature)).resolves.toBe(true);
+    await expect(key.verifySignature(signature, recover)).resolves.toBe(true);
+    expect(recover).not.toHaveBeenCalled();
   });
 
   test('loads account and returns false if signature is invalid', async () => {
@@ -117,10 +125,13 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
     });
 
     const key = new Key({ ownerId: unwrap(owner.id), repository });
+    const recover = jest.fn();
 
-    await expect(key.verifySignature(signature))
+    await expect(key.verifySignature(signature, recover))
       .resolves
       .toBe(false);
+
+    expect(recover).not.toHaveBeenCalled();
   });
 });
 
@@ -130,8 +141,10 @@ describe('selectPrivateKeyDer', () => {
     const privateKeyDer = privateKey.export({ format: 'der', type: 'pkcs1' });
     const owner = await fabricateLocalAccount({ privateKeyDer });
     const key = new Key({ ownerId: unwrap(owner.id), repository });
-    const selectedPrivateKeyDer = await key.selectPrivateKeyDer();
+    const recover = jest.fn();
+    const selectedPrivateKeyDer = await key.selectPrivateKeyDer(recover);
 
+    expect(recover).not.toHaveBeenCalled();
     await expect(selectedPrivateKeyDer.equals(privateKeyDer)).toBe(true);
   });
 });
@@ -146,12 +159,15 @@ describe('toActivityStreams', () => {
     });
 
     const key = new Key({ ownerId: unwrap(owner.id), repository });
+    const recover = jest.fn();
 
-    await expect(key.toActivityStreams()).resolves.toEqual({
+    await expect(key.toActivityStreams(recover)).resolves.toEqual({
       id: 'https://xn--kgbechtv/@#key',
       type: 'Key',
       owner: 'https://xn--kgbechtv/@',
       publicKeyPem: publicKey.export({ format: 'pem', type: 'pkcs1' })
     });
+
+    expect(recover).not.toHaveBeenCalled();
   });
 });

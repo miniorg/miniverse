@@ -40,13 +40,16 @@ test('delivers to remote account', async () => {
 
   const { id } = await fabricateLike({ actor, object });
   const job = await repository.queue.add({ id: unwrap(id) });
+  const recover = jest.fn();
 
   const post = nock('https://ObJeCt.إختبار').post('/?inbox').reply(200);
 
   try {
-    await postLike(repository, job);
+    await postLike(repository, job, recover);
     expect(post.isDone()).toBe(true);
   } finally {
     nock.cleanAll();
   }
+
+  expect(recover).not.toHaveBeenCalled();
 });

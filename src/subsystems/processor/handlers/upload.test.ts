@@ -33,14 +33,16 @@ test('uploads', async () => {
 
   await repository.insertDocument(document);
   const job = await repository.queue.add({ id: unwrap(document.id) });
+  const recover = jest.fn();
   nock('https://إختبار').get('/').reply(200, svg);
 
   try {
-    await upload(repository, job);
+    await upload(repository, job, recover);
   } finally {
     nock.cleanAll();
   }
 
+  expect(recover).not.toHaveBeenCalled();
   await expect(repository.s3.service.headObject({
     Bucket: repository.s3.bucket,
     Key: `documents/00000000-0000-1000-8000-010000000000.png`

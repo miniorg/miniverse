@@ -15,14 +15,13 @@
 */
 
 import { URL } from 'url';
-import { Custom as CustomError } from '../../errors';
 import ParsedActivityStreams, { AnyHost } from '../../parsed_activitystreams';
 import Repository from '../../repository';
-import { fetch } from '../../transfer';
+import { fetch, temporaryError } from '../../transfer';
 import { encodeAcctUserpart } from '../uri';
-import Base from './base';
+import Base, { unexpectedType } from './base';
 
-export async function lookup(repository: Repository, resource: string) {
+export async function lookup(repository: Repository, resource: string, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
   const { pathname, protocol, origin } = new URL(resource);
 
   const webFingerOrigin = protocol == 'acct:' ?
@@ -32,13 +31,18 @@ export async function lookup(repository: Repository, resource: string) {
 
   const response = await fetch(
     repository,
-    `${webFingerOrigin}/.well-known/webfinger?resource=${webFingerResource}`);
+    `${webFingerOrigin}/.well-known/webfinger?resource=${webFingerResource}`,
+    null,
+    recover);
 
   return response.json() as { [key: string]: unknown };
 }
 
 export default class extends Base {
-  static async fromUsernameAndNormalizedHost(repository: Repository, username: string, normalizedHost: null | string) {
+  static async fromUsernameAndNormalizedHost(repository: Repository, username: string, normalizedHost: null | string, recover: (error: Error & {
+    [temporaryError]?: boolean;
+    [unexpectedType]?: boolean;
+  }) => unknown) {
     const actor = await repository.selectActorByUsernameAndNormalizedHost(
       username, normalizedHost);
 
@@ -49,14 +53,14 @@ export default class extends Base {
 
       const encodedUsername = encodeAcctUserpart(username);
       const firstFinger =
-        await lookup(repository, `acct:${encodedUsername}@${normalizedHost}`);
+        await lookup(repository, `acct:${encodedUsername}@${normalizedHost}`, recover);
 
       if (typeof firstFinger.subject != 'string') {
-        throw new CustomError('Invalid WebFinger subject', 'error');
+        throw recover(new Error('Unsupported WebFinger subject type.'));
       }
 
       if (!Array.isArray(firstFinger.links)) {
-        throw new CustomError('Invalid WebFinger links', 'error');
+        throw recover(new Error('Unsupported WebFinger links type.'));
       }
 
       const host = firstFinger.subject.split('@', 2)[1];
@@ -64,22 +68,23 @@ export default class extends Base {
       const activityStreams =
         new ParsedActivityStreams(repository, href, AnyHost);
 
-      await lookup(repository, href).then(secondFinger => {
+      await lookup(repository, href, recover).then(secondFinger => {
         if (firstFinger.subject != secondFinger.subject) {
-          throw new CustomError(
-            'WebFinger subject verification failed. Possibly invalid WebFinger?',
-            'info');
+          throw recover(new Error('WebFinger subject verification failed.'));
         }
       });
 
       return this.createFromHostAndParsedActivityStreams(
-        repository, host, activityStreams);
+        repository, host, activityStreams, recover);
     }
 
     return actor;
   }
 
-  static async fromKeyUri(repository: Repository, keyUri: string) {
+  static async fromKeyUri(repository: Repository, keyUri: string, recover: (error: Error & {
+    [temporaryError]?: boolean;
+    [unexpectedType]?: boolean;
+  }) => unknown) {
     const keyUriEntity = await repository.selectAllocatedURI(keyUri);
 
     if (keyUriEntity) {
@@ -90,30 +95,26 @@ export default class extends Base {
         return account.select('actor');
       }
 
-      throw new CustomError(
-        'Key URI entity not found. Possibly invalid URI or key deleted?',
-        'info');
+      throw recover(new Error('Key owner not found.'));
     }
 
     const key = new ParsedActivityStreams(repository, keyUri, AnyHost);
-    const owner = await key.getOwner();
+    const owner = await key.getOwner(recover);
     if (!owner) {
-      throw new CustomError('Key owner not found.', 'error');
+      throw recover(new Error('Key owner unspecified.'));
     }
 
-    const ownedKey = await owner.getPublicKey();
+    const ownedKey = await owner.getPublicKey(recover);
     if (!ownedKey) {
-      throw new CustomError('Key owner\'s key not found.', 'error');
+      throw recover(new Error('Key owner\'s key unspecified.'));
     }
 
-    const ownedKeyUri = await ownedKey.getId();
+    const ownedKeyUri = await ownedKey.getId(recover);
 
     if (ownedKeyUri != keyUri) {
-      throw new CustomError(
-        'Key id mismatches. Possibly invalid Activity Streams?',
-        'info');
+      throw recover(new Error('Key id verification failed.'));
     }
 
-    return this.fromParsedActivityStreams(repository, owner);
+    return this.fromParsedActivityStreams(repository, owner, recover);
   }
 }

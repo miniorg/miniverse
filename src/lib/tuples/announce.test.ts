@@ -14,10 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import ParsedActivityStreams, {
-  AnyHost,
-  TypeNotAllowed
-} from '../parsed_activitystreams';
+import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
 import {
   fabricateAnnounce,
   fabricateFollow,
@@ -27,28 +24,32 @@ import {
 } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
-import Announce from './announce';
+import Announce, { unexpectedType } from './announce';
 
 describe('toActivityStreams', () => {
   test('resolves with its ActivityStreams representation', async () => {
+    const recover = jest.fn();
     const announce = unwrap(await fabricateAnnounce({
       status: { published: new Date('2000-01-01T00:00:00.000Z') },
       object: await fabricateNote(
         { status: { uri: { uri: 'https://ReMoTe.xn--kgbechtv/' } } })
     }));
 
-    await expect(announce.toActivityStreams()).resolves.toEqual({
+    await expect(announce.toActivityStreams(recover)).resolves.toEqual({
       id: 'https://xn--kgbechtv/@6/' + announce.id,
       type: 'Announce',
       published: new Date('2000-01-01T00:00:00.000Z'),
       object: 'https://ReMoTe.xn--kgbechtv/'
     });
+
+    expect(recover).not.toHaveBeenCalled();
   });
 });
 
 describe('create', () => {
   test('inserts and returns a new Announce', async () => {
     const published = new Date;
+    const recover = jest.fn();
     const [actor, object] = await Promise.all([
       fabricateRemoteAccount()
         .then(account => account.select('actor'))
@@ -62,7 +63,10 @@ describe('create', () => {
       published,
       actor,
       object,
-      'https://ReMoTe.xn--kgbechtv/AnNoUnCe');
+      'https://ReMoTe.xn--kgbechtv/AnNoUnCe',
+      recover);
+
+    expect(recover).not.toHaveBeenCalled();
 
     await Promise.all([
       announce.select('status').then(nullableStatus => {
@@ -97,8 +101,10 @@ describe('create', () => {
       fabricateNote()
     ]);
 
-    const announce = await Announce.create(repository, new Date, object, note);
+    const recover = jest.fn();
+    const announce = await Announce.create(repository, new Date, object, note, null, recover);
 
+    expect(recover).not.toHaveBeenCalled
     expect((await actorAccount.select('inbox'))[0])
       .toHaveProperty('id', announce.id);
   });
@@ -114,6 +120,7 @@ describe('createFromParsedActivityStreams', () => {
         { status: { uri: { uri: 'https://ReMoTe.xn--kgbechtv/oBjEcT' } } })
     ]);
 
+    const recover = jest.fn();
     const announce = unwrap(await Announce.createFromParsedActivityStreams(
       repository,
       new ParsedActivityStreams(repository, {
@@ -123,7 +130,10 @@ describe('createFromParsedActivityStreams', () => {
         to: 'https://www.w3.org/ns/activitystreams#Public',
         object: 'https://ReMoTe.xn--kgbechtv/oBjEcT'
       }, AnyHost),
-      actor));
+      actor,
+      recover));
+
+    expect(recover).not.toHaveBeenCalled();
 
     const status = unwrap(await announce.select('status'));
 
@@ -143,7 +153,8 @@ describe('createFromParsedActivityStreams', () => {
     ]);
   });
 
-  test('rejects with TypeNotAllowed if type is not Announce', async () => {
+  test('rejects if type is not Announce', async () => {
+    const recovery = {};
     const [actor] = await Promise.all([
       fabricateRemoteAccount()
         .then(account => account.select('actor'))
@@ -159,10 +170,15 @@ describe('createFromParsedActivityStreams', () => {
         to: 'https://www.w3.org/ns/activitystreams#Public',
         object: 'https://ReMoTe.xn--kgbechtv/oBjEcT'
       }, AnyHost),
-      actor)).rejects.toBeInstanceOf(TypeNotAllowed);
+      actor,
+      error => {
+        expect(error[unexpectedType]).toBe(true);
+        return recovery;
+      })).rejects.toBe(recovery);
   });
 
   test('resolves with null if audience does not include public', async () => {
+    const recover = jest.fn();
     const [actor] = await Promise.all([
       fabricateRemoteAccount()
         .then(account => account.select('actor'))
@@ -180,6 +196,9 @@ describe('createFromParsedActivityStreams', () => {
         to: [],
         object: 'https://ReMoTe.xn--kgbechtv/oBjEcT'
       }, AnyHost),
-      actor)).resolves.toBe(null);
+      actor,
+      recover)).resolves.toBe(null);
+
+    expect(recover).not.toHaveBeenCalled();
   });
 });

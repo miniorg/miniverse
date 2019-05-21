@@ -14,11 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Custom as CustomError } from '../errors';
-import ParsedActivityStreams, {
-  AnyHost,
-  TypeNotAllowed
-} from '../parsed_activitystreams';
+import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
 import {
   fabricateFollow,
   fabricateNote,
@@ -27,7 +23,7 @@ import {
 } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
-import Note from './note';
+import Note, { unexpectedType } from './note';
 
 describe('toActivityStreams', () => {
   test('resolves with ActivityStreams representation of local Note', async () => {
@@ -47,7 +43,9 @@ describe('toActivityStreams', () => {
       mentions: [{ href: actor }]
     });
 
-    return expect(note.toActivityStreams()).resolves.toEqual({
+    const recover = jest.fn();
+
+    await expect(note.toActivityStreams(recover)).resolves.toEqual({
       type: 'Note',
       id: 'https://xn--kgbechtv/@AtTrIbUTeDtO/' + note.id,
       published: new Date('2000-01-01T00:00:00.000Z'),
@@ -62,6 +60,8 @@ describe('toActivityStreams', () => {
         { type: 'Mention', href: 'https://xn--kgbechtv/@AtTrIbUTeDtO' }
       ]
     });
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
   test('resolves with ActivityStreams representation of remote Note', async () => {
@@ -85,7 +85,9 @@ describe('toActivityStreams', () => {
       mentions: [{ href: actor }]
     });
 
-    return expect(note.toActivityStreams()).resolves.toEqual({
+    const recover = jest.fn();
+
+    await expect(note.toActivityStreams(recover)).resolves.toEqual({
       type: 'Note',
       published: new Date('2000-01-01T00:00:00.000Z'),
       attributedTo: 'https://AtTrIbUTeDtO.xn--kgbechtv/',
@@ -100,6 +102,8 @@ describe('toActivityStreams', () => {
         { type: 'Mention', href: 'https://AtTrIbUTeDtO.xn--kgbechtv/' }
       ]
     });
+
+    expect(recover).not.toHaveBeenCalled();
   });
 });
 
@@ -108,13 +112,15 @@ describe('create', () => {
     const attributedTo = await fabricateLocalAccount();
     const attributedToActor = unwrap(await attributedTo.select('actor'));
     const published = new Date;
+    const recover = jest.fn();
 
     const note = await Note.create(
       repository,
       published,
       attributedToActor,
       '内容',
-      { hashtags: ['名前'], mentions: [attributedToActor] });
+      { hashtags: ['名前'], mentions: [attributedToActor] },
+      recover);
 
     const [
       status, hashtags, mentions, ownedStatuses,
@@ -128,6 +134,7 @@ describe('create', () => {
       attributedTo.select('inbox')
     ]);
 
+    expect(recover).not.toHaveBeenCalled();
     expect(note).toBeInstanceOf(Note);
     expect(status.published).toBe(published);
     expect(status.select('actor')).resolves.toBe(attributedToActor);
@@ -141,14 +148,17 @@ describe('create', () => {
 
   test('sanitizes HTML', async () => {
     const attributedTo = await fabricateLocalAccount();
+    const recover = jest.fn();
 
     const note = await Note.create(
       repository,
       new Date,
       unwrap(await attributedTo.select('actor')),
       '内容<script>alert("XSS");</script>',
-      { summary: '要約<script>alert("XSS");</script>' });
+      { summary: '要約<script>alert("XSS");</script>' },
+      recover);
 
+    expect(recover).not.toHaveBeenCalled();
     expect(note).toHaveProperty('content', '内容');
     expect(note).toHaveProperty('summary', '要約');
   });
@@ -158,9 +168,11 @@ describe('create', () => {
     const actor = unwrap(await actorAccount.select('actor'));
     const follow = await fabricateFollow({ actor });
     const object = unwrap(await follow.select('object'));
+    const recover = jest.fn();
 
-    await Note.create(repository, new Date, object, '内容');
+    await Note.create(repository, new Date, object, '内容', {}, recover);
 
+    expect(recover).not.toHaveBeenCalled();
     expect((await actorAccount.select('inbox'))[0])
       .toHaveProperty(['extension', 'content'], '内容');
   });
@@ -189,6 +201,7 @@ describe('createFromParsedActivityStreams', () => {
     });
 
     const unwrappedObject = unwrap(object);
+    const recover = jest.fn();
 
     const note = unwrap(await Note.createFromParsedActivityStreams(
       repository,
@@ -203,7 +216,8 @@ describe('createFromParsedActivityStreams', () => {
           { type: 'Mention', href: 'https://xn--kgbechtv/@MeNtIoNeD' }
         ]
       }, AnyHost),
-      unwrappedObject));
+      unwrappedObject,
+      recover));
 
     const objectId = unwrap(unwrappedObject.id);
     const [hashtags, mentions, ownedStatuses] = await Promise.all([
@@ -212,6 +226,7 @@ describe('createFromParsedActivityStreams', () => {
       repository.selectRecentStatusesIncludingExtensionsByActorId(objectId)
     ]);
 
+    expect(recover).not.toHaveBeenCalled();
     expect(note).toBeInstanceOf(Note);
     expect(note).toHaveProperty(['status', 'actor'], object);
     expect(note).toHaveProperty('content', '内容');
@@ -223,6 +238,7 @@ describe('createFromParsedActivityStreams', () => {
   });
 
   test('infers attribution if attributedTo argument is not given', async () => {
+    const recover = jest.fn();
     const account = await fabricateRemoteAccount(
       { uri: { uri: 'https://AtTrIbUTeDtO.xn--kgbechtv/' } });
 
@@ -237,11 +253,16 @@ describe('createFromParsedActivityStreams', () => {
         content: '内容',
         attachment: [],
         tag: []
-      }, AnyHost))).resolves.toHaveProperty(['status', 'actorId'], account.id);
+      }, AnyHost),
+      null,
+      recover)).resolves.toHaveProperty(['status', 'actorId'], account.id);
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
   test('does not create if to does not include public', async () => {
     const account = await fabricateLocalAccount();
+    const recover = jest.fn();
 
     await expect(Note.createFromParsedActivityStreams(
       repository,
@@ -253,10 +274,15 @@ describe('createFromParsedActivityStreams', () => {
         attachment: [],
         tag: []
       }, AnyHost),
-      unwrap(await account.select('actor')))).resolves.toBe(null);
+      unwrap(await account.select('actor')),
+      recover)).resolves.toBe(null);
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
-  test('rejects with TypeNotAllowed if type is not Note', async () => {
+  test('rejects if type is not Note', async () => {
+    const recovery = {};
+
     await fabricateRemoteAccount(
       { uri: { uri: 'https://AtTrIbUTeDtO.xn--kgbechtv/' } });
 
@@ -270,15 +296,21 @@ describe('createFromParsedActivityStreams', () => {
         content: '',
         attachment: [],
         tag: []
-      }, AnyHost))).rejects.toBeInstanceOf(TypeNotAllowed);
+      }, AnyHost),
+      null,
+      error => {
+        expect(error[unexpectedType]).toBe(true);
+        return recovery;
+      })).rejects.toBe(recovery);
   });
 
   test('resolves inReplyTo with a local note', async () => {
+    const recover = jest.fn();
     const [[inReplyToId, inReplyTo]] = await Promise.all([
       fabricateNote({ status: { uri: null } })
         .then(note => note.select('status'))
         .then(unwrap)
-        .then(status => Promise.all([status.id, status.getUri()])),
+        .then(status => Promise.all([status.id, status.getUri(recover)])),
       fabricateRemoteAccount(
         { uri: { uri: 'https://AtTrIbUTeDtO.xn--kgbechtv/' } })
     ]);
@@ -295,13 +327,18 @@ describe('createFromParsedActivityStreams', () => {
         content: '',
         attachment: [],
         tag: []
-      }, AnyHost))).resolves.toHaveProperty('inReplyToId', inReplyToId);
+      }, AnyHost),
+      null,
+      recover)).resolves.toHaveProperty('inReplyToId', inReplyToId);
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
   test('resolves inReplyTo with a remote note', async () => {
     await fabricateRemoteAccount(
       { uri: { uri: 'https://AtTrIbUTeDtO.xn--kgbechtv/' } });
 
+    const recover = jest.fn();
     const { inReplyToId } = unwrap(await Note.createFromParsedActivityStreams(
       repository,
       new ParsedActivityStreams(repository, {
@@ -314,7 +351,11 @@ describe('createFromParsedActivityStreams', () => {
         content: '',
         attachment: [],
         tag: []
-      }, AnyHost)));
+      }, AnyHost),
+      null,
+      recover));
+
+    expect(recover).not.toHaveBeenCalled();
 
     await expect(repository.selectURIById(unwrap(inReplyToId)))
       .resolves
@@ -326,32 +367,40 @@ describe('fromParsedActivityStreams', () => {
   test('resolves with an existent local note', async () => {
     const account = await fabricateLocalAccount({ actor: { username: '' } });
     const actor = unwrap(await account.select('actor'));
-
     const { id } = await fabricateNote({ status: { actor }, content: '内容' });
+    const recover = jest.fn();
 
     await expect(Note.fromParsedActivityStreams(
       repository,
       new ParsedActivityStreams(
         repository,
         'https://xn--kgbechtv/@/' + id,
-        AnyHost))).resolves.toHaveProperty('content', '内容');
+        AnyHost),
+      null,
+      recover)).resolves.toHaveProperty('content', '内容');
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
   test('rejects local URI with incorrect username', async () => {
     const account = await fabricateLocalAccount({ actor: { username: '' } });
     const actor = unwrap(await account.select('actor'));
-
     const note = await fabricateNote({ status: { actor } });
+    const recovery = {};
 
     await expect(Note.fromParsedActivityStreams(
       repository,
       new ParsedActivityStreams(
         repository,
         'https://xn--kgbechtv/@incorrect/' + note.id,
-        AnyHost))).rejects.toBeInstanceOf(CustomError);
+        AnyHost),
+      null,
+      () => recovery)).rejects.toBe(recovery);
   });
 
   test('resolves with an existent remote note', async () => {
+    const recover = jest.fn();
+
     await fabricateNote({
       status: { uri: { uri: 'https://NoTe.xn--kgbechtv/' } },
       content: '内容'
@@ -362,12 +411,17 @@ describe('fromParsedActivityStreams', () => {
       new ParsedActivityStreams(
         repository,
         'https://NoTe.xn--kgbechtv/',
-        AnyHost))).resolves.toHaveProperty('content', '内容');
+        AnyHost),
+      null,
+      recover)).resolves.toHaveProperty('content', '内容');
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
   test('creates and returns note from ActivityStreams representation', async () => {
     const account = await fabricateLocalAccount();
     const actor = unwrap(await account.select('actor'));
+    const recover = jest.fn();
 
     const note = await Note.fromParsedActivityStreams(
       repository,
@@ -379,8 +433,10 @@ describe('fromParsedActivityStreams', () => {
         attachment: [],
         tag: []
       }, AnyHost),
-      actor);
+      actor,
+      recover);
 
+    expect(recover).not.toHaveBeenCalled();
     expect(note).toBeInstanceOf(Note);
     expect(note).toHaveProperty(['status', 'actor'], actor);
   });

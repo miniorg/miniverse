@@ -15,9 +15,8 @@
 */
 
 import { Job } from 'bull';
-import { Custom as CustomError } from '../../../lib/errors';
 import Repository from '../../../lib/repository';
-import { postToInbox } from '../../../lib/transfer';
+import { postToInbox, temporaryError } from '../../../lib/transfer';
 import Accept from '../../../lib/tuples/accept';
 import LocalAccount from '../../../lib/tuples/local_account';
 import RemoteAccount from '../../../lib/tuples/remote_account';
@@ -26,13 +25,12 @@ interface Data {
   readonly objectId: string;
 }
 
-export default async function(repository: Repository, { data }: Job<Data>) {
+export default async function(repository: Repository, { data }: Job<Data>, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
   const accept = new Accept({ objectId: data.objectId, repository });
 
   const object = await accept.select('object');
   if (!object) {
-    throw new CustomError(
-      'Object to accept not found. Possibly deleted?', 'info');
+    throw recover(new Error('object not found.'));
   }
 
   const [sender, inboxURI] = await Promise.all([
@@ -41,23 +39,29 @@ export default async function(repository: Repository, { data }: Job<Data>) {
         return actor.select('account');
       }
 
-      throw new CustomError('Object of follow activity not found.', 'error');
+      throw recover(new Error('object\'s object not found.'));
     }),
     object.select('actor').then(async actor => {
-      if (actor) {
-        const account = await actor.select('account');
-        if (account instanceof RemoteAccount) {
-          return account.select('inboxURI');
-        }
+      if (!actor) {
+        throw recover(new Error('object\'s actor not found.'));
       }
 
-      throw new CustomError('Actor of follow activity not found.', 'error');
+      const account = await actor.select('account');
+      if (!(account instanceof RemoteAccount)) {
+        throw recover(new Error('object\'s actor\'s account invalid.'));
+      }
+
+      return account.select('inboxURI');
     })
   ]);
 
-  if (!(sender instanceof LocalAccount) || !inboxURI) {
-    throw new CustomError('Invalid accept activity to post to remote', 'error');
+  if (!(sender instanceof LocalAccount)) {
+    throw recover(new Error('object\'s object\'s account invalid.'));
   }
 
-  await postToInbox(repository, sender, inboxURI, accept);
+  if (!inboxURI) {
+    throw recover(new Error('object\'s actor\'s inboxURI not found.'));
+  }
+
+  await postToInbox(repository, sender, inboxURI, accept, recover);
 }

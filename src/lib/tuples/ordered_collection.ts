@@ -16,8 +16,10 @@
 
 import { Any, OrderedCollection } from '../generated_activitystreams';
 
+const recovery = {};
+
 interface ToActivityStreams {
-  toActivityStreams(): Promise<Any>;
+  toActivityStreams(recover: (error: Error) => unknown): Promise<Any>;
 }
 
 export default class {
@@ -30,8 +32,14 @@ export default class {
   async toActivityStreams(): Promise<OrderedCollection> {
     return {
       type: 'OrderedCollection',
-      orderedItems: await Promise.all(this.orderedItems.map(
-        item => item.toActivityStreams()))
+      orderedItems: (await Promise.all(this.orderedItems.map(
+        item => item.toActivityStreams(() => recovery).catch(error => {
+          if (error != recovery) {
+            throw error;
+          }
+
+          return recovery;
+        })))).filter(item => item != recovery) as Any[]
     };
   }
 }

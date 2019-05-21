@@ -15,11 +15,11 @@
 */
 
 import { domainToASCII, domainToUnicode } from 'url';
-import { Custom as CustomError } from '../../errors';
 import {
   Actor as ActivityStreams,
   LocalActor as LocalActivityStreams
 } from '../../generated_activitystreams';
+import { temporaryError } from '../../transfer';
 import Key from '../key';
 import LocalAccount from '../local_account';
 import Relation, { Reference } from '../relation';
@@ -30,6 +30,8 @@ import ParsedActivityStreams from '../../parsed_activitystreams';
 import Repository from '../../repository';
 import FromParsedActivityStreams from './from_parsed_activitystreams';
 import Resolver from './resolver';
+
+export const unexpectedType = Symbol();
 
 interface Properties {
   id?: string;
@@ -56,17 +58,21 @@ export default class Base extends Relation<Properties, References>
   readonly followers?: Reference<this[]>;
   readonly statuses?: Reference<Status[]>;
 
-  validate() {
+  validate(recover: (error: Error) => unknown) {
     if (!/^[\w-.~!$&'()*+,;=].*$/.test(this.username)) {
-      throw new CustomError('username validation failed.', 'info');
+      throw recover(new Error('Invalid username.'));
     }
   }
 
-  async getUri() {
+  async getUri(recover: (error: Error) => unknown) {
     if (this.host) {
       const account = await this.select('account');
+      if (!account) {
+        throw recover(new Error('account not found.'));
+      }
+
       if (!(account instanceof RemoteAccount)) {
-        throw new CustomError('Invalid account.', 'error');
+        throw new Error('Invalid account.');
       }
 
       const uri = await account.select('uri');
@@ -79,16 +85,16 @@ export default class Base extends Relation<Properties, References>
     return `https://${host}/@${username}`;
   }
 
-  async toActivityStreams(): Promise<ActivityStreams | LocalActivityStreams> {
+  async toActivityStreams(recover: (error: Error) => unknown): Promise<ActivityStreams | LocalActivityStreams> {
     const asciiHost = domainToASCII(this.repository.host);
 
     if (this.host) {
       const acct = `${this.username}@${domainToUnicode(this.host)}`;
       const proxyBase = `https://${asciiHost}/@${encodeSegment(acct)}`;
-      const id = await this.getUri();
+      const id = await this.getUri(recover);
 
       if (!id) {
-        throw new CustomError('id cannot be resolved', 'error');
+        throw recover(new Error('id unresolved.'));
       }
 
       return {
@@ -104,17 +110,21 @@ export default class Base extends Relation<Properties, References>
     const key = new Key({ owner: this, repository: this.repository });
 
     const [id, publicKey, account] = await Promise.all([
-      this.getUri(),
-      key.toActivityStreams(),
+      this.getUri(recover),
+      key.toActivityStreams(recover),
       this.select('account')
     ]);
 
+    if (!account) {
+      throw recover(new Error('account not found'));
+    }
+
     if (!(account instanceof LocalAccount)) {
-      throw new CustomError('Invalid account.', 'error');
+      throw new Error('Invalid account.');
     }
 
     if (!id) {
-      throw new CustomError('id cannot be resolved', 'error');
+      throw recover(new Error('id unresolved.'));
     }
 
     return {
@@ -132,19 +142,31 @@ export default class Base extends Relation<Properties, References>
   }
 
   static readonly createFromHostAndParsedActivityStreams:
-  (repository: Repository, host: string, object: ParsedActivityStreams) => Promise<Base | null>;
+  (repository: Repository, host: string, object: ParsedActivityStreams, recover: (error: Error & {
+    [temporaryError]?: boolean;
+    [unexpectedType]?: boolean;
+  }) => unknown) => Promise<Base | null>;
   static readonly fromParsedActivityStreams:
-  (repository: Repository, object: ParsedActivityStreams) => Promise<Base | null>;
+  (repository: Repository, object: ParsedActivityStreams, recover: (error: Error & {
+    [temporaryError]?: boolean;
+    [unexpectedType]?: boolean;
+  }) => unknown) => Promise<Base | null>;
   static readonly fromUsernameAndNormalizedHost:
-  (repository: Repository, username: string, normalizedHost: string | null) => Promise<Base | null>;
+  (repository: Repository, username: string, normalizedHost: string | null, recover: (error: Error & {
+    [temporaryError]?: boolean;
+    [unexpectedType]?: boolean;
+  }) => unknown) => Promise<Base | null>;
   static readonly fromKeyUri:
-  (repository: Repository, keyUri: string) => Promise<Base | null>;
+  (repository: Repository, keyUri: string, recover: (error: Error & {
+    [temporaryError]?: boolean;
+    [unexpectedType]?: boolean;
+  }) => unknown) => Promise<Base | null>;
 
   static references = {
     account: {
       query({ repository, id, host }: Base) {
-        if (!id) {
-          throw new CustomError('Invalid id.', 'error');
+        if (id == null) {
+          throw new Error('Invalid id.');
         }
   
         return host ?

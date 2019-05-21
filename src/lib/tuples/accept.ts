@@ -14,7 +14,6 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Custom as CustomError } from '../errors';
 import { Accept as ActivityStreams } from '../generated_activitystreams';
 import Follow from './follow';
 import Relation, { Reference } from './relation';
@@ -30,30 +29,30 @@ export default class Accept extends Relation<Properties, References> {
   readonly object?: Reference<Follow | null>;
   readonly objectId!: string;
 
-  async toActivityStreams(): Promise<ActivityStreams> {
+  async toActivityStreams(recover: (error: Error) => unknown): Promise<ActivityStreams> {
     const object = await this.select('object');
 
     if (!object) {
-      throw new CustomError('object not found.', 'error');
+      throw recover(new Error('object not found.'));
     }
 
     return {
       type: 'Accept',
-      object: await object.toActivityStreams()
+      object: await object.toActivityStreams(recover)
     };
   }
 
-  static async create(repository: Repository, object: Follow) {
+  static async create(repository: Repository, object: Follow, recover: (error: Error) => unknown) {
     const accept = new this({ object, repository });
     const [objectActor, objectObject] =
       await Promise.all([object.select('actor'), object.select('object')]);
 
     if (!objectActor) {
-      throw new CustomError('object actor not found.', 'error');
+      throw recover(new Error('object\'s actor not found.'));
     }
 
     if (!objectObject) {
-      throw new CustomError('object object not found.', 'error');
+      throw recover(new Error('object\'s object not found.'));
     }
 
     if (!objectObject.host && objectActor.host) {

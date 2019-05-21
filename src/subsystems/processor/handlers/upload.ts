@@ -15,27 +15,26 @@
 */
 
 import { Job } from 'bull';
-import { Custom as CustomError } from '../../../lib/errors';
 import Repository from '../../../lib/repository';
-import { fetch } from '../../../lib/transfer';
+import { fetch, temporaryError } from '../../../lib/transfer';
 import sharp = require('sharp');
 
 interface Data {
   readonly id: string;
 }
 
-export default async function (repository: Repository, { data }: Job<Data>) {
+export default async function (repository: Repository, { data }: Job<Data>, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
   const document = await repository.selectDocumentById(data.id);
   if (!document) {
-    throw new CustomError('Document not found.', 'error');
+    throw recover(new Error('Document not found.'));
   }
 
   const url = await document.select('url');
   if (!url) {
-    throw new CustomError('Document URL not found.', 'error');
+    throw recover(new Error('Document url not found.'));
   }
 
-  const { body } = await fetch(repository, url.uri);
+  const { body } = await fetch(repository, url.uri, null, recover);
 
   await document.upload(body.pipe(sharp().toFormat(document.format)));
 }

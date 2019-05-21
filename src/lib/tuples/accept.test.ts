@@ -39,7 +39,9 @@ describe('toActivityStreams', () => {
       object: await fabricateFollow({ actor, object })
     });
 
-    return expect(accept.toActivityStreams()).resolves.toEqual({
+    const recover = jest.fn();
+
+    await expect(accept.toActivityStreams(recover)).resolves.toEqual({
       type: 'Accept',
       object: {
         type: 'Follow',
@@ -47,14 +49,18 @@ describe('toActivityStreams', () => {
         object: 'https://xn--kgbechtv/@%E8%A2%AB%E8%A1%8C%E5%8B%95%E8%80%85'
       }
     });
+
+    expect(recover).not.toHaveBeenCalled();
   });
 });
 
 describe('create', () => {
   test('returns a promise which will be resolved with an Accept', async () => {
     const follow = await fabricateFollow();
-    const accept = await Accept.create(repository, follow);
+    const recover = jest.fn();
+    const accept = await Accept.create(repository, follow, recover);
 
+    expect(recover).not.toHaveBeenCalled();
     expect(accept).toBeInstanceOf(Accept);
     await expect(accept.select('object')).resolves.toBe(follow);
   });
@@ -70,8 +76,9 @@ describe('create', () => {
     ]);
 
     const follow = await fabricateFollow({ actor, object });
+    const recover = jest.fn();
 
-    await Accept.create(repository, follow);
+    await Accept.create(repository, follow, recover);
 
     await expect((await repository.queue.getWaiting())[0])
       .toHaveProperty(['data', 'type'], 'accept');

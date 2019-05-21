@@ -15,11 +15,7 @@
 */
 
 import { createPublicKey } from 'crypto';
-import { Custom as CustomError } from '../../errors';
-import ParsedActivityStreams, {
-  AnyHost,
-  TypeNotAllowed
-} from '../../parsed_activitystreams';
+import ParsedActivityStreams, { AnyHost } from '../../parsed_activitystreams';
 import {
   fabricateLocalAccount,
   fabricateRemoteAccount
@@ -27,10 +23,12 @@ import {
 import repository from '../../test/repository';
 import { unwrap } from '../../test/types';
 import Actor from './index';
+import { unexpectedType } from './base';
 import nock = require('nock');
 
 describe('createFromHostAndParsedActivityStreams', () => {
   test('creates and resolves with an actor', async () => {
+    const recover = jest.fn();
     const actor = await Actor.createFromHostAndParsedActivityStreams(
       repository,
       'finger.remote.xn--kgbechtv',
@@ -54,8 +52,9 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `
         }
-      }, AnyHost));
+      }, AnyHost), recover);
 
+    expect(recover).not.toHaveBeenCalled();
     expect(actor).toBeInstanceOf(Actor);
     expect(actor).toHaveProperty('username', 'preferred username');
     expect(actor).toHaveProperty('host', 'finger.remote.xn--kgbechtv');
@@ -95,7 +94,9 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
     > * Person
     > * Service
   */
-  test('rejects if type is not an actor type', () =>
+  test('rejects if type is not an actor type', () => {
+    const recovery = {};
+
     expect(Actor.createFromHostAndParsedActivityStreams(
       repository,
       'finger.remote.xn--kgbechtv',
@@ -118,9 +119,15 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `
         }
-      }, AnyHost))).rejects.toBeInstanceOf(TypeNotAllowed));
+      }, AnyHost), error => {
+        expect(error[unexpectedType]).toBe(true);
+        return recovery;
+      })).rejects.toBe(recovery);
+  });
 
   test('rejects if host of its own ID and ID of public key mismatches', () => {
+    const recovery = {};
+
     return expect(Actor.createFromHostAndParsedActivityStreams(
       repository,
       'finger.remote.xn--kgbechtv',
@@ -144,10 +151,12 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `
         }
-      }, AnyHost))).rejects.toBeInstanceOf(CustomError);
+      }, AnyHost), () => recovery)).rejects.toBe(recovery);
   });
 
-  test('rejects if its context does not include https://w3id.org/security/v1', () =>
+  test('rejects if its context does not include https://w3id.org/security/v1', () => {
+    const recovery = {};
+
     expect(Actor.createFromHostAndParsedActivityStreams(
       repository,
       'finger.remote.xn--kgbechtv',
@@ -170,7 +179,8 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `
         }
-      }, AnyHost))).rejects.toBeInstanceOf(CustomError));
+      }, AnyHost), () => recovery)).rejects.toBe(recovery);
+  });
 });
 
 describe('fromParsedActivityStreams', () => {
@@ -178,34 +188,49 @@ describe('fromParsedActivityStreams', () => {
     const account =
       await fabricateLocalAccount({ actor: { username: 'UsErNaMe' } });
 
+    const recover = jest.fn();
+
     await expect(Actor.fromParsedActivityStreams(
       repository,
       new ParsedActivityStreams(
         repository,
         'https://xn--kgbechtv/@UsErNaMe',
-        AnyHost)))
+        AnyHost), recover))
       .resolves.toHaveProperty('id', unwrap(await account.select('actor')).id);
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
-  test('resolves with null if URI is for local actor not present', () =>
-    expect(Actor.fromParsedActivityStreams(
+  test('resolves with null if URI is for local actor not present', async () => {
+    const recover = jest.fn();
+
+    await expect(Actor.fromParsedActivityStreams(
       repository,
-      new ParsedActivityStreams(repository, 'https://xn--kgbechtv/@UsErNaMe', AnyHost)))
+      new ParsedActivityStreams(repository, 'https://xn--kgbechtv/@UsErNaMe', AnyHost),
+      recover))
       .resolves
-      .toBe(null));
+      .toBe(null);
+
+    expect(recover).not.toHaveBeenCalled();
+  });
 
   test('resolves remote actor already fetched', async () => {
+    const recover = jest.fn();
     const { id } = await fabricateRemoteAccount(
       { uri: { uri: 'https://ReMoTe.إختبار/' } });
 
     await expect(Actor.fromParsedActivityStreams(
       repository,
-      new ParsedActivityStreams(repository, 'https://ReMoTe.إختبار/', AnyHost)))
+      new ParsedActivityStreams(repository, 'https://ReMoTe.إختبار/', AnyHost),
+      recover))
       .resolves
       .toHaveProperty('id', id);
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
   test('resolves remote actor not fetched yet', async () => {
+    const recover = jest.fn();
     const webfinger = {
       subject: `acct:preferred%20username@FiNgEr.ReMoTe.xn--kgbechtv`,
       links: [
@@ -246,12 +271,14 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `
         }
-      }, AnyHost))).resolves.toHaveProperty(
+      }, AnyHost), recover)).resolves.toHaveProperty(
         ['account', 'uri', 'uri'],
         'https://remote.xn--kgbechtv/@preferred%20username');
     } finally {
       nock.cleanAll();
     }
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
   test('rejects if WebFinger representations for acct URI and ActivityStreams URI mismatches', async () => {
@@ -299,6 +326,8 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
       }
     };
 
+    const recovery = {};
+
     try {
       // See if it correctly encodes username
       nock('https://finger.remote.xn--kgbechtv')
@@ -313,9 +342,9 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
         .get('/@preferred%20username')
         .reply(200, activitystreams);
 
-      await expect(Actor.fromKeyUri(repository, 'https://remote.xn--kgbechtv/@preferred%20username#key'))
+      await expect(Actor.fromKeyUri(repository, 'https://remote.xn--kgbechtv/@preferred%20username#key', () => recovery))
         .rejects
-        .toBeInstanceOf(CustomError);
+        .toBe(recovery);
     } finally {
       nock.cleanAll();
     }
