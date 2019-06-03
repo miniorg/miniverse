@@ -51,11 +51,17 @@ export default async function(repository: Repository, { data }: Job<Data>, recov
 
     const items = await collection.getItems(recover);
     const errors = [] as (Error & { [temporaryError]?: boolean })[];
+    const recovery = {};
 
     await Promise.all(items.map(item => {
       if (item) {
-        return item.act(owner, recover).catch(error => {
+        return item.act(owner, error => {
           errors.push(error);
+          return recovery;
+        }).catch(error => {
+          if (error != recovery) {
+            throw error;
+          }
         });
       }
 
@@ -63,11 +69,12 @@ export default async function(repository: Repository, { data }: Job<Data>, recov
     }));
 
     if (errors.length) {
-      throw errors.length == 1 ? errors[0] : {
+      throw recover(errors.length == 1 ? errors[0] : {
         message: errors.map(({ message }) => message).join('\n'),
+        name: 'Error',
         stack: errors.map(({ stack }) => stack).join('\n\n'),
         [temporaryError]: errors.some(error => Boolean(error[temporaryError]))
-      };
+      });
     }
   }
 }

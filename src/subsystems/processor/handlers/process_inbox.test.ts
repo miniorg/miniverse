@@ -109,7 +109,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
     .toEqual([]);
 });
 
-xtest('rejects without [temporaryError] if all rejections are not temporary', async () => {
+test('rejects without [temporaryError] if all rejections are not temporary', async () => {
   const recovery = {};
   const [actor, object] = await Promise.all([
     fabricateRemoteAccount({
@@ -134,7 +134,10 @@ ewIDAQAB
 
   await expect(processInbox(repository, await repository.queue.add({
     signature,
-    body: '{ "type": "Follow", "object": "https://xn--kgbechtv/@oBjEcT" }'
+    body: `[
+  { "type": "Follow", "object": "https://xn--kgbechtv/@oBjEcT" },
+  { "type": "Follow", "object": "https://xn--kgbechtv/@oBjEcT" }
+]`
   }), error => {
     expect(error[temporaryError]).toBe(false);
     return recovery;
@@ -163,7 +166,7 @@ ewIDAQAB
   try {
     await expect(processInbox(repository, await repository.queue.add({
       signature,
-      body: '["https://uNrEaChAbLe.إختبار/"]',
+      body: `["https://uNrEaChAbLe.إختبار/", "https://uNrEaChAbLe.إختبار/"]`,
     }), error => {
       expect(error[temporaryError]).toBe(true);
       return recovery;
