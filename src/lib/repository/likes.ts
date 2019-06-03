@@ -28,14 +28,24 @@ export default class {
     });
   }
 
-  async insertLike(this: Repository, like: Like) {
-    const { rows } = await this.pg.query({
-      name: 'insertLike',
-      text: 'INSERT INTO likes (actor_id, object_id) VALUES ($1, $2) RETURNING id',
-      values: [like.actorId, like.objectId]
-    });
+  async insertLike(this: Repository, like: Like, recover: (error: Error) => unknown) {
+    let result;
 
-    like.id = rows[0].id;
+    try {
+      result = await this.pg.query({
+        name: 'insertLike',
+        text: 'INSERT INTO likes (actor_id, object_id) VALUES ($1, $2) RETURNING id',
+        values: [like.actorId, like.objectId]
+      });
+    } catch (error) {
+      if (error.code == '23505') {
+        throw recover(new Error('Already liked.'));
+      }
+
+      throw error;
+    }
+
+    like.id = result.rows[0].id;
   }
 
   async selectLikeById(this: Repository, id: string): Promise<Like | null> {

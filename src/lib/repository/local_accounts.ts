@@ -52,23 +52,33 @@ export default class {
       throw recover(new Error('Invalid Actor.'));
     }
 
-    const { rows: [ { insert_local_account } ] } = await this.pg.query({
-      name: 'insertLocalAccount',
-      text: 'SELECT insert_local_account($1, $2, $3, $4, $5, $6, $7, $8)',
-      values: [
-        account.actor.username,
-        account.actor.name,
-        account.actor.summary,
-        account.admin,
-        account.privateKeyDer,
-        account.salt,
-        account.serverKey,
-        account.storedKey
-      ]
-    });
+    let result;
 
-    account.id = insert_local_account;
-    account.actor.id = insert_local_account;
+    try {
+      result = await this.pg.query({
+        name: 'insertLocalAccount',
+        text: 'SELECT insert_local_account($1, $2, $3, $4, $5, $6, $7, $8)',
+        values: [
+          account.actor.username,
+          account.actor.name,
+          account.actor.summary,
+          account.admin,
+          account.privateKeyDer,
+          account.salt,
+          account.serverKey,
+          account.storedKey
+        ]
+      });
+    } catch (error) {
+      if (error.code == '23505') {
+        throw recover(new Error('username conflicts.'));
+      }
+
+      throw error;
+    }
+
+    account.id = result.rows[0].insert_local_account;
+    account.actor.id = account.id;
   }
 
   async insertIntoInboxes(this: Repository, accountOrActors: (LocalAccount | Actor)[], item: Status, recover: (error: Error) => unknown) {

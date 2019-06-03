@@ -318,7 +318,7 @@ export default class Note extends Relation<Properties, References> {
     });
 
     note.validate(recover);
-    await repository.insertNote(note, inReplyToUri);
+    await repository.insertNote(note, inReplyToUri, recover);
 
     const status = await note.select('status');
     if (!status) {

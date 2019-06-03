@@ -98,7 +98,11 @@ test('inserts note with inReplyTo URI which is already resolved', async () => {
     mentions: []
   });
 
-  await repository.insertNote(note, 'https://ReMoTe.إختبار/');
+  const recover = jest.fn();
+
+  await repository.insertNote(note, 'https://ReMoTe.إختبار/', recover);
+
+  expect(recover).not.toHaveBeenCalled();
   expect(note).toHaveProperty('inReplyToId', status.id);
 
   await expect(repository.selectNoteById(unwrap(note.id)))
@@ -121,19 +125,22 @@ test('inserts notes with inReplyTo URI which is not resolved yet', async () => {
       mentions: []
     });
 
-    await repository.insertNote(note, 'https://ReMoTe.إختبار/');
+    const recover = jest.fn();
 
-    await Promise.all([
-      expect(repository.selectURIById(unwrap(note.inReplyToId)))
-        .resolves
-        .toHaveProperty('uri', 'https://ReMoTe.إختبار/')
-    ]);
+    await repository.insertNote(note, 'https://ReMoTe.إختبار/', recover);
+
+    expect(recover).not.toHaveBeenCalled();
+
+    await expect(repository.selectURIById(unwrap(note.inReplyToId)))
+      .resolves
+      .toHaveProperty('uri', 'https://ReMoTe.إختبار/');
   }
 });
 
 test('inserts notes with inReplyTo URI and allows to resolve later', async () => {
   const [note, actor] = await Promise.all([
     fabricateLocalAccount().then(async account => {
+      const recover = jest.fn();
       const note = new Note({
         repository,
         status: new Status({
@@ -148,7 +155,9 @@ test('inserts notes with inReplyTo URI and allows to resolve later', async () =>
         mentions: []
       });
 
-      await repository.insertNote(note, 'https://ReMoTe.إختبار/');
+      await repository.insertNote(note, 'https://ReMoTe.إختبار/', recover);
+
+      expect(recover).not.toHaveBeenCalled();
 
       await expect(repository.selectURIById(unwrap(note.inReplyToId)))
         .resolves
@@ -180,7 +189,10 @@ test('inserts notes with inReplyTo URI and allows to resolve later', async () =>
     mentions: []
   });
 
-  await repository.insertNote(inReplyTo);
+  const recover = jest.fn();
+
+  await repository.insertNote(inReplyTo, null, recover);
+  expect(recover).not.toHaveBeenCalled();
   expect(inReplyTo).toHaveProperty('id', note.inReplyToId);
 
   await expect(repository.selectNoteById(unwrap(note.inReplyToId)))

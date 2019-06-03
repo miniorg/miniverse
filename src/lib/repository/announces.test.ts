@@ -49,14 +49,18 @@ test('inserts announce with URI and allows to query it', async () => {
     object
   });
 
-  await repository.insertAnnounce(announce);
+  const recover = jest.fn();
 
+  await repository.insertAnnounce(announce as any, recover);
+
+  expect(recover).not.toHaveBeenCalled();
   await expect(repository.selectURIById(unwrap(announce.id)))
     .resolves
     .toHaveProperty('uri', 'https://ReMoTe.إختبار/');
 });
 
-test('inserts announce with URI which reserved for note inReplyTo and allows to query it', async () => {
+test('inserts announce with URI reserved for note inReplyTo and allows to query it', async () => {
+  const recover = jest.fn();
   const [actor, object] = await Promise.all([
     fabricateRemoteAccount()
       .then(account => account.select('actor'))
@@ -77,7 +81,7 @@ test('inserts announce with URI which reserved for note inReplyTo and allows to 
         mentions: []
       });
 
-      await repository.insertNote(note, 'https://ReMoTe.إختبار/');
+      await repository.insertNote(note, 'https://ReMoTe.إختبار/', recover);
     })
   ]);
 
@@ -96,11 +100,55 @@ test('inserts announce with URI which reserved for note inReplyTo and allows to 
     object
   });
 
-  await repository.insertAnnounce(announce);
+  await repository.insertAnnounce(announce as any, recover);
 
+  expect(recover).not.toHaveBeenCalled();
   await expect(repository.selectURIById(unwrap(announce.id)))
     .resolves
     .toHaveProperty('uri', 'https://ReMoTe.إختبار/');
+});
+
+test('rejects announce with conflicting URI', async () => {
+  const [actor, object] = await Promise.all([
+    fabricateRemoteAccount()
+      .then(account => account.select('actor'))
+      .then(unwrap),
+    fabricateNote()
+  ]);
+
+  const recover = jest.fn();
+  const recovery = {};
+
+  await repository.insertAnnounce(new Announce({
+    repository,
+    status: new Status({
+      repository,
+      published: new Date,
+      actor,
+      uri: new URI({
+        repository,
+        uri: 'https://ReMoTe.إختبار/',
+        allocated: true
+      })
+    }),
+    object
+  }) as any, recover);
+  expect(recover).not.toHaveBeenCalled();
+
+  await expect(repository.insertAnnounce(new Announce({
+    repository,
+    status: new Status({
+      repository,
+      published: new Date,
+      actor,
+      uri: new URI({
+        repository,
+        uri: 'https://ReMoTe.إختبار/',
+        allocated: true
+      })
+    }),
+    object
+  }) as any, () => recovery)).rejects.toBe(recovery);
 });
 
 test('inserts announce without URI', async () => {
@@ -117,8 +165,11 @@ test('inserts announce without URI', async () => {
     object
   });
 
-  await repository.insertAnnounce(announce);
+  const recover = jest.fn();
 
+  await repository.insertAnnounce(announce as any, recover);
+
+  expect(recover).not.toHaveBeenCalled();
   await expect(repository.selectURIById(unwrap(announce.id)))
     .resolves
     .toBe(null);

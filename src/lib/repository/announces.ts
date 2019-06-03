@@ -22,19 +22,29 @@ import Repository from '.';
 export default class {
   async insertAnnounce(this: Repository, announce: Announce & {
     readonly status: Status & { readonly uri: URI };
-  }) {
-    const { rows } = await this.pg.query({
-      name: 'insertAnnounce',
-      text: 'SELECT insert_announce($1, $2, $3, $4)',
-      values: [
-        announce.status.published,
-        announce.status.uri && announce.status.uri.uri,
-        announce.status.actorId,
-        announce.objectId
-      ]
-    });
+  }, recover: (error: Error) => unknown) {
+    let result;
 
-    announce.id = rows[0].insert_announce;
+    try {
+      result = await this.pg.query({
+        name: 'insertAnnounce',
+        text: 'SELECT insert_announce($1, $2, $3, $4)',
+        values: [
+          announce.status.published,
+          announce.status.uri && announce.status.uri.uri,
+          announce.status.actorId,
+          announce.objectId
+        ]
+      });
+    } catch (error) {
+      if (error.code == '23502') {
+        throw recover(new Error('uri conflicts.'));
+      }
+
+      throw error;
+    }
+
+    announce.id = result.rows[0].insert_announce;
     announce.status.id = announce.id;
 
     if (announce.status.uri) {

@@ -65,7 +65,7 @@ export default class Like extends Relation<Properties, References> {
 
         return status.select('actor');
       }),
-      repository.insertLike(like)
+      repository.insertLike(like, recover)
     ]);
 
     if (!recipient) {

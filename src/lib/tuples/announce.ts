@@ -88,7 +88,7 @@ export default class Announce extends Relation<Properties, References> {
       object
     });
 
-    await repository.insertAnnounce(announce);
+    await repository.insertAnnounce(announce as any, recover);
 
     const status = await announce.select('status');
     if (!status) {

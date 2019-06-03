@@ -21,16 +21,18 @@ import Document from '../tuples/document';
 import URI from '../tuples/uri';
 
 test('inserts and allows to query documents by id', async () => {
+  const recover = jest.fn();
   const inserted = new Document({
     repository,
     uuid: '00000000-0000-1000-8000-010000000000',
     format: 'png',
     url: new URI({ repository, uri: 'https://إختبار/', allocated: true })
   });
-  await repository.insertDocument(inserted);
+  await repository.insertDocument(inserted as any, recover);
 
   const queried = await repository.selectDocumentById(unwrap(inserted.id));
 
+  expect(recover).not.toHaveBeenCalled();
   expect(queried).toHaveProperty('repository', repository);
   expect(queried).toHaveProperty('id', inserted.id);
   expect(queried).toHaveProperty('uuid', '00000000-0000-1000-8000-010000000000');
@@ -44,29 +46,54 @@ test('inserts document with URL and allows to query the URL', async () => {
     format: 'png',
     url: new URI({ repository, uri: 'https://إختبار/', allocated: true })
   });
+  const recover = jest.fn();
   const url = unwrap(await inserted.select('url'));
-  await repository.insertDocument(inserted);
+  await repository.insertDocument(inserted as any, recover);
 
+  expect(recover).not.toHaveBeenCalled();
   await expect(repository.selectAllocatedURI('https://إختبار/'))
     .resolves
     .toHaveProperty('id', url.id);
 });
 
 test('inserts and allows to query documents by attached note id', async () => {
+  const recover = jest.fn();
   const inserted = new Document({
     repository,
     uuid: '00000000-0000-1000-8000-010000000000',
     format: 'png',
     url: new URI({ repository, uri: 'https://إختبار/', allocated: true })
   });
-  await repository.insertDocument(inserted);
+  await repository.insertDocument(inserted as any, recover);
   const note = await fabricateNote({ attachments: [inserted] });
   const noteId = unwrap(note.id);
 
   const [queried] = await repository.selectDocumentsByAttachedNoteId(noteId);
 
+  expect(recover).not.toHaveBeenCalled();
   expect(queried).toHaveProperty('repository', repository);
   expect(queried).toHaveProperty('id', inserted.id);
   expect(queried).toHaveProperty('uuid', '00000000-0000-1000-8000-010000000000');
   expect(queried).toHaveProperty('format', 'png');
+});
+
+test('rejects when inserting document with conflicting URI', async () => {
+  const recover = jest.fn();
+  const recovery = {};
+
+  await repository.insertDocument(new Document({
+    repository,
+    uuid: '00000000-0000-1000-8000-010000000000',
+    format: 'png',
+    url: new URI({ repository, uri: 'https://إختبار/', allocated: true })
+  }) as any, recover);
+
+  expect(recover).not.toHaveBeenCalled();
+
+  await expect(repository.insertDocument(new Document({
+    repository,
+    uuid: '00000000-0000-1000-8000-010000000000',
+    format: 'png',
+    url: new URI({ repository, uri: 'https://إختبار/', allocated: true })
+  }) as any, () => recovery)).rejects.toBe(recovery);
 });

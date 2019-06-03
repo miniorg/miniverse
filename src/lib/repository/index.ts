@@ -42,7 +42,6 @@ import LocalAccounts from './local_accounts';
 import Mentions from './mentions';
 import RemoteAccounts from './remote_accounts';
 import Notes from './notes';
-import Pg from './pg';
 import Statuses from './statuses';
 import Subscribers, { Listen } from './subscribers';
 import Syslog from './syslog';
@@ -101,7 +100,7 @@ export default class Repository implements
     this.listeners = Object.create(null);
     this.host = host;
     this.fingerHost = fingerHost || host;
-    this.pg = new Pg(pg);
+    this.pg = pg;
     this.s3 = s3;
   
     this.redis = {
@@ -143,8 +142,9 @@ export default class Repository implements
   readonly selectActorsMentionedByNoteId!:
   (id: string) => Promise<Actor[]>;
 
-  readonly insertAnnounce!:
-  (announce: Announce) => Promise<void>;
+  readonly insertAnnounce!: (announce: Announce & {
+    readonly status: Status & { readonly uri: URI };
+  }, recover: (error: Error) => unknown) => Promise<void>;
 
   readonly insertChallenge!:
   (challenge: Challenge) => Promise<void>;
@@ -155,7 +155,7 @@ export default class Repository implements
   (cookie: Cookie) => Promise<void>;
 
   readonly insertDocument!:
-  (document: Document) => Promise<void>;
+  (document: Document & { readonly url: URI }, recover: (error: Error) => unknown) => Promise<void>;
   readonly selectDocumentById!:
   (id: string) => Promise<Document | null>;
   readonly selectDocumentsByAttachedNoteId!:
@@ -164,7 +164,7 @@ export default class Repository implements
   readonly deleteFollowByActorAndObject!:
   (actor: Actor, object: Actor) => Promise<void>;
   readonly insertFollow!:
-  (follow: Follow) => Promise<void>;
+  (follow: Follow, recover: (error: Error) => unknown) => Promise<void>;
   readonly selectFollowIncludingActorAndObjectById!:
   (id: string) => Promise<Follow | null>;
 
@@ -174,14 +174,14 @@ export default class Repository implements
   readonly deleteLikeByActorAndObject!:
   (actor: Actor, object: Note) => Promise<void>;
   readonly insertLike!:
-  (like: Like) => Promise<void>;
+  (like: Like, recover: (error: Error) => unknown) => Promise<void>;
   readonly selectLikeById!:
   (id: string) => Promise<Like | null>;
 
   readonly getInboxChannel!:
   (accountOrActor: LocalAccount | Actor) => string;
   readonly insertLocalAccount!:
-  (account: LocalAccount) => Promise<void>;
+  (account: LocalAccount, recover: (error: Error) => unknown) => Promise<void>;
   readonly insertIntoInboxes!:
   (accountOrActors: (LocalAccount | Actor)[], item: Status) => Promise<void>;
   readonly selectLocalAccountByDigestOfCookie!:
@@ -193,7 +193,7 @@ export default class Repository implements
   (id: string) => Promise<Mention[]>;
 
   readonly insertNote!:
-  (note: Note, inReplyToUri?: string | null) => Promise<void>;
+  (note: Note, inReplyToUri: string | null, recover: (error: Error) => unknown) => Promise<void>;
   readonly selectNoteById!:
   (id: string) => Promise<Note | null>;
 
@@ -236,7 +236,7 @@ export default class Repository implements
   readonly content: Content;
   readonly host: string;
   readonly fingerHost: string;
-  readonly pg: Pg;
+  readonly pg: Pool;
   readonly redis: RedisRepository;
   readonly s3: {
     readonly service: S3;

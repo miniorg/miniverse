@@ -27,14 +27,24 @@ export default class {
     });
   }
 
-  async insertFollow(this: Repository, follow: Follow) {
-    const { rows } = await this.pg.query({
-      name: 'insertFollow',
-      text: 'INSERT INTO follows (actor_id, object_id) VALUES ($1, $2) RETURNING id',
-      values: [follow.actorId, follow.objectId]
-    });
+  async insertFollow(this: Repository, follow: Follow, recover: (error: Error) => unknown) {
+    let result;
 
-    follow.id = rows[0].id;
+    try {
+      result = await this.pg.query({
+        name: 'insertFollow',
+        text: 'INSERT INTO follows (actor_id, object_id) VALUES ($1, $2) RETURNING id',
+        values: [follow.actorId, follow.objectId]
+      });
+    } catch (error) {
+      if (error.code == '23505') {
+        throw recover(new Error('Already followed.'));
+      }
+
+      throw error;
+    }
+
+    follow.id = result.rows[0].id;
   }
 
   async selectFollowIncludingActorAndObjectById(this: Repository, id: string): Promise<Follow | null> {

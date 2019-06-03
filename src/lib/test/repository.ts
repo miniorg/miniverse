@@ -61,7 +61,7 @@ const asyncTruncateQuery =
 afterAll(() => {
   redis.client.disconnect();
   redis.subscriber.disconnect();
-  return testRepository.pg.pg.end();
+  return testRepository.pg.end();
 });
 
 afterEach(() => Promise.all([

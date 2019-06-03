@@ -52,11 +52,30 @@ test('inserts like and allows to query it by id', async () => {
   ]);
 
   const inserted = new Like({ repository, actor, object });
-  await repository.insertLike(inserted);
+  const recover = jest.fn();
+  await repository.insertLike(inserted, recover);
 
   const queried = await repository.selectLikeById(unwrap(inserted.id));
+  expect(recover).not.toHaveBeenCalled();
   expect(queried).toHaveProperty('repository', repository);
   expect(queried).toHaveProperty('id', inserted.id);
   expect(queried).toHaveProperty('actorId', actor.id);
   expect(queried).toHaveProperty('objectId', object.id);
+});
+
+test('rejects when inserting a duplicate like', async () => {
+  const [actor, object] = await Promise.all([
+    fabricateLocalAccount()
+      .then(account => account.select('actor'))
+      .then(unwrap),
+    fabricateNote()
+  ]);
+
+  const recover = jest.fn();
+  const recovery = {};
+  await repository.insertLike(new Like({ repository, actor, object }), recover);
+
+  await expect(repository.insertLike(
+    new Like({ repository, actor, object }),
+    () => recovery)).rejects.toBe(recovery);
 });

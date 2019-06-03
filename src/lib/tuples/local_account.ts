@@ -103,7 +103,7 @@ export default class LocalAccount extends Relation<Properties, References> {
     }
     
     actor.validate(recover);
-    await repository.insertLocalAccount(account);
+    await repository.insertLocalAccount(account, recover);
 
     return account;
   }

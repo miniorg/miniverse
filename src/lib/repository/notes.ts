@@ -43,27 +43,37 @@ export default class {
     readonly attachments: Document[];
     readonly hashtags: Hashtag[];
     readonly mentions: Mention[];
-  }, inReplyToUri?: string) {
-    const { rows } = await this.pg.query({
-      name: 'insertNote',
-      text: 'SELECT * FROM insert_note($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) AS (id BIGINT, in_reply_to_id BIGINT)',
-      values: [
-        note.status.published,
-        note.status.uri && note.status.uri.uri,
-        note.status.actorId,
-        note.inReplyToId,
-        inReplyToUri,
-        note.summary || '',
-        note.content,
-        note.attachments.map(({ id }) => id),
-        note.hashtags.map(({ name }) => name),
-        note.mentions.map(({ hrefId }) => hrefId)
-      ]
-    });
+  }, inReplyToUri: null | string, recover: (error: Error) => unknown) {
+    let result;
 
-    note.id = rows[0].id;
+    try {
+      result = await this.pg.query({
+        name: 'insertNote',
+        text: 'SELECT * FROM insert_note($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) AS (id BIGINT, in_reply_to_id BIGINT)',
+        values: [
+          note.status.published,
+          note.status.uri && note.status.uri.uri,
+          note.status.actorId,
+          note.inReplyToId,
+          inReplyToUri,
+          note.summary || '',
+          note.content,
+          note.attachments.map(({ id }) => id),
+          note.hashtags.map(({ name }) => name),
+          note.mentions.map(({ hrefId }) => hrefId)
+        ]
+      });
+    } catch (error) {
+      if (error.code == '23502') {
+        throw recover(new Error('uri conflicts.'));
+      }
+
+      throw error;
+    }
+
+    note.id = result.rows[0].id;
     note.status.id = note.id;
-    note.inReplyToId = rows[0].in_reply_to_id;
+    note.inReplyToId = result.rows[0].in_reply_to_id;
 
     if (note.status.uri) {
       note.status.uri.id = note.id;

@@ -27,15 +27,25 @@ function parse(this: Repository, { id, uuid, format }: {
 }
 
 export default class {
-  async insertDocument(this: Repository, document: Document & { readonly url: URI }) {
-    const { rows } = await this.pg.query({
-      name: 'insertDocument',
-      text: 'SELECT insert_document_with_url($1, $2, $3)',
-      values: [document.uuid, document.format, document.url.uri]
-    });
+  async insertDocument(this: Repository, document: Document & { readonly url: URI }, recover: (error: Error) => unknown) {
+    let result;
 
-    document.id = rows[0].insert_document_with_url;
-    document.url.id = rows[0].insert_document_with_url;
+    try {
+      result = await this.pg.query({
+        name: 'insertDocument',
+        text: 'SELECT insert_document_with_url($1, $2, $3)',
+        values: [document.uuid, document.format, document.url.uri]
+      });
+    } catch (error) {
+      if (error.code == '23502') {
+        throw recover(new Error('uri conflicts.'));
+      }
+
+      throw error;
+    }
+
+    document.id = result.rows[0].insert_document_with_url;
+    document.url.id = result.rows[0].insert_document_with_url;
   }
 
   async selectDocumentById(this: Repository, id: string): Promise<Document | null> {

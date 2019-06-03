@@ -98,7 +98,10 @@ test('inserts accounts with inbox whose URI is reserved for note inReplyTo', asy
     mentions: []
   });
 
-  await repository.insertNote(reply, 'https://ReMoTe.إختبار/');
+  const recover = jest.fn();
+
+  await repository.insertNote(reply, 'https://ReMoTe.إختبار/', recover);
+  expect(recover).not.toHaveBeenCalled();
 
   await expect(fabricateRemoteAccount({
     inboxURI: { uri: 'https://ReMoTe.إختبار/inbox' }
@@ -122,7 +125,10 @@ test('inserts accounts with key whose URI is reserved for note inReplyTo', async
     mentions: []
   });
 
-  await repository.insertNote(reply, 'https://ReMoTe.إختبار/');
+  const recover = jest.fn();
+
+  await repository.insertNote(reply, 'https://ReMoTe.إختبار/', recover);
+  expect(recover).not.toHaveBeenCalled();
 
   await expect(fabricateRemoteAccount({
     publicKeyURI: { uri: 'https://ReMoTe.إختبار/inbox' }

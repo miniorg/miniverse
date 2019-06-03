@@ -72,7 +72,7 @@ export default class Follow extends Relation<Properties, References> {
   static async create(repository: Repository, actor: Actor, object: Actor, recover: (error: Error) => unknown) {
     const follow = new this({ actor, object, repository });
 
-    await repository.insertFollow(follow);
+    await repository.insertFollow(follow, recover);
 
     await Promise.all([
       Accept.create(repository, follow, recover),

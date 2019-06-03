@@ -24,6 +24,7 @@ import nock = require('nock');
 const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8" />';
 
 test('uploads', async () => {
+  const recover = jest.fn();
   const document = new Document({
     repository,
     uuid: '00000000-0000-1000-8000-010000000000',
@@ -31,9 +32,8 @@ test('uploads', async () => {
     url: new URI({ repository, uri: 'https://إختبار/', allocated: true })
   });
 
-  await repository.insertDocument(document);
+  await repository.insertDocument(document as any, recover);
   const job = await repository.queue.add({ id: unwrap(document.id) });
-  const recover = jest.fn();
   nock('https://إختبار').get('/').reply(200, svg);
 
   try {
@@ -43,6 +43,7 @@ test('uploads', async () => {
   }
 
   expect(recover).not.toHaveBeenCalled();
+
   await expect(repository.s3.service.headObject({
     Bucket: repository.s3.bucket,
     Key: `documents/00000000-0000-1000-8000-010000000000.png`

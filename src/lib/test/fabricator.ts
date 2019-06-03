@@ -100,6 +100,7 @@ export async function fabricateLocalAccount(properties?: {
   readonly serverKey?: Buffer;
   readonly storedKey?: Buffer;
 }) {
+  const recover = jest.fn();
   const account = new LocalAccount(Object.assign({
     repository,
     admin: true,
@@ -117,7 +118,8 @@ export async function fabricateLocalAccount(properties?: {
     }, properties && properties.actor))
   }));
 
-  await repository.insertLocalAccount(account);
+  await repository.insertLocalAccount(account, recover);
+  expect(recover).not.toHaveBeenCalled();
 
   return account;
 }
@@ -188,7 +190,10 @@ export async function fabricateFollow(properties?: {
   const follow = new Follow(Object.assign(
     { repository, actor, object }, properties));
 
-  await repository.insertFollow(follow);
+  const recover = jest.fn();
+
+  await repository.insertFollow(follow, recover);
+  expect(recover).not.toHaveBeenCalled();
 
   return follow;
 }
@@ -235,7 +240,10 @@ export async function fabricateNote(properties?: {
       []
   }));
 
-  await repository.insertNote(note);
+  const recover = jest.fn();
+
+  await repository.insertNote(note, null, recover);
+  expect(recover).not.toHaveBeenCalled();
 
   return note;
 }
@@ -267,7 +275,10 @@ export async function fabricateAnnounce(properties?: {
       properties && properties.status))
   }));
 
-  await repository.insertAnnounce(announce);
+  const recover = jest.fn();
+
+  await repository.insertAnnounce(announce as any, recover);
+  expect(recover).not.toHaveBeenCalled();
 
   return announce;
 }
@@ -306,6 +317,7 @@ export async function fabricateDocument(properties?: {
   readonly format?: string;
   readonly url?: URIProperties;
 }) {
+  const recover = jest.fn();
   const document = new Document(Object.assign({
     repository,
     uuid: '00000000-0000-1000-8000-010000000000',
@@ -319,13 +331,15 @@ export async function fabricateDocument(properties?: {
   }));
 
   await Promise.all([
-    repository.insertDocument(document),
+    repository.insertDocument(document as any, recover),
     repository.s3.service.upload({
       Bucket: repository.s3.bucket,
       Body: join(__dirname, __filename),
       Key: `${repository.s3.keyPrefix}${document.uuid}.${document.format}`
     }).promise()
   ]);
+
+  expect(recover).not.toHaveBeenCalled();
 
   return document;
 }
@@ -345,7 +359,10 @@ export async function fabricateLike(properties?: {
   const like = new Like(Object.assign(
     { repository, actor, object }, properties));
 
-  await repository.insertLike(like);
+  const recover = jest.fn();
+
+  await repository.insertLike(like, recover);
+  expect(recover).not.toHaveBeenCalled();
 
   return like;
 }

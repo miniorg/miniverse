@@ -59,7 +59,7 @@ export default class Document extends Relation<Properties, References> {
     }).promise();
   }
 
-  static async create(repository: Repository, url: string, recover: (error: Error & { [temporaryError]: boolean }) => unknown) {
+  static async create(repository: Repository, url: string, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
     const [uuid, { data, info }] = await Promise.all([
       generateUuid(),
       fetch(repository, url, null, recover).then(({ body }) =>
@@ -73,7 +73,7 @@ export default class Document extends Relation<Properties, References> {
       url: new URI({ repository, uri: url, allocated: true })
     });
 
-    await repository.insertDocument(document);
+    await repository.insertDocument(document as any, recover);
 
     try {
       await document.upload(data);
