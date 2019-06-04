@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController, AbortSignal } from 'abort-controller';
 import { Job } from 'bull';
 import { globalAgent } from 'https';
 import Repository from '../../lib/repository';
@@ -27,8 +28,9 @@ export default function(repository: Repository) {
         (
           repository: Repository,
           job: Job<unknown>,
+          signal: AbortSignal,
           recover: (error: Error & { [temporaryError]?: boolean }) => unknown
-        ) => Promise<unknown>
+        ) => Promise<void>
       ) | undefined;
     };
 
@@ -38,9 +40,13 @@ export default function(repository: Repository) {
       throw new Error('Invalid data type.');
     }
 
+    const controller = new AbortController;
     const recovery: { error?: Error } = {};
     let discard = Promise.resolve();
-    return handle(repository, job, error => {
+
+    const promise: Promise<void> & {
+      cancel?: () => unknown;
+    } = handle(repository, job, controller.signal, error => {
       if (!error[temporaryError]) {
         discard = job.discard();
       }
@@ -55,5 +61,8 @@ export default function(repository: Repository) {
       repository.console.error(`Unrecoverable error caused by job ${job.id}.`);
       throw error;
     }));
+
+    promise.cancel = () => controller.abort();
+    return promise;
   });
 }

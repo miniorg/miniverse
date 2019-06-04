@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import Repository from '../repository';
 import { fetch, temporaryError } from '../transfer';
 
@@ -56,7 +57,7 @@ export default class Resolver {
     this.unconsumedObjects = iterable ? new Map(iterable) : new Map;
   }
 
-  async resolve(repository: Repository, value: string, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+  async resolve(repository: Repository, value: string, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
     let body = this.unconsumedObjects.get(value);
 
     if (body === null) {
@@ -71,7 +72,8 @@ export default class Resolver {
     }
 
     const response = await fetch(repository, value, {
-      headers: { Accept: 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' }
+      headers: { Accept: 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' },
+      signal
     }, recover);
 
     body = await response.json();

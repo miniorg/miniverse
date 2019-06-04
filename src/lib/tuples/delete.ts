@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import ParsedActivityStreams from '../parsed_activitystreams';
 import Repository from '../repository';
 import { temporaryError } from '../transfer';
@@ -22,17 +23,17 @@ import Actor from './actor';
 export const unexpectedType = Symbol();
 
 export default class Delete {
-  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor, recover: (error: Error & {
+  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor, signal: AbortSignal, recover: (error: Error & {
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) {
-    const type = await activity.getType(recover);
+    const type = await activity.getType(signal, recover);
 
     if (!type.has('Delete')) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Delete.'), { [unexpectedType]: true }));
     }
 
-    const object = await activity.getObject(recover);
+    const object = await activity.getObject(signal, recover);
     if (!object) {
       throw recover(new Error('object unspecified.'));
     }

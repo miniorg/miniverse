@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { Create as ActivityStreams } from '../generated_activitystreams';
 import ParsedActivityStreams from '../parsed_activitystreams';
 import Repository from '../repository';
@@ -31,9 +32,9 @@ type Properties = { objectId: string } | { objectId?: string; object: Note };
 export const unexpectedObjectType = Symbol();
 export const unexpectedType = Symbol();
 
-export async function create(repository: Repository, attributedTo: Actor, object: ParsedActivityStreams, recover: (error: Error) => unknown) {
+export async function create(repository: Repository, attributedTo: Actor, object: ParsedActivityStreams, signal: AbortSignal, recover: (error: Error) => unknown) {
   const [actual, expected] = await Promise.all([
-    object.getAttributedTo(recover)
+    object.getAttributedTo(signal, recover)
       .then(actual => actual && actual.getId(recover)),
     attributedTo.getUri(recover)
   ]);
@@ -42,7 +43,7 @@ export async function create(repository: Repository, attributedTo: Actor, object
     throw recover(new Error('attributedTo verification failed.'));
   }
 
-  return Note.fromParsedActivityStreams(repository, object, attributedTo, recover);
+  return Note.fromParsedActivityStreams(repository, object, attributedTo, signal, recover);
 }
 
 export default class Create extends Relation<Properties, References> {
@@ -61,21 +62,21 @@ export default class Create extends Relation<Properties, References> {
     };
   }
 
-  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor, recover: (error: Error & {
+  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor, signal: AbortSignal, recover: (error: Error & {
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) {
-    const type = await activity.getType(recover);
+    const type = await activity.getType(signal, recover);
     if (!type.has('Create')) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Create.'), { [unexpectedType]: true }));
     }
 
-    const objectActivityStreams = await activity.getObject(recover);
+    const objectActivityStreams = await activity.getObject(signal, recover);
     if (!objectActivityStreams) {
       throw recover(new Error('object unspecified.'));
     }
 
-    const object = await create(repository, actor, objectActivityStreams, recover);
+    const object = await create(repository, actor, objectActivityStreams, signal, recover);
     if (!object) {
       return null;
     }

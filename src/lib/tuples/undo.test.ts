@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
 import {
   fabricateAnnounce,
@@ -23,6 +24,8 @@ import {
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
 import Undo, { unexpectedType } from './undo';
+
+const { signal } = new AbortController;
 
 describe('createFromParsedActivityStreams', () => {
   test('undoes announce activity', async () => {
@@ -41,7 +44,7 @@ describe('createFromParsedActivityStreams', () => {
 
     const recover = jest.fn();
 
-    await Undo.createFromParsedActivityStreams(repository, activity, actor, recover);
+    await Undo.createFromParsedActivityStreams(repository, activity, actor, signal, recover);
 
     expect(recover).not.toHaveBeenCalled();
     await expect(repository.selectStatusById(id)).resolves.toBe(null);
@@ -70,7 +73,7 @@ describe('createFromParsedActivityStreams', () => {
 
     const recover = jest.fn();
 
-    await Undo.createFromParsedActivityStreams(repository, activity, actor, recover);
+    await Undo.createFromParsedActivityStreams(repository, activity, actor, signal, recover);
 
     expect(recover).not.toHaveBeenCalled();
 
@@ -93,7 +96,7 @@ describe('createFromParsedActivityStreams', () => {
 
     const recovery = {};
 
-    await expect(Undo.createFromParsedActivityStreams(repository, activity, actor, error => {
+    await expect(Undo.createFromParsedActivityStreams(repository, activity, actor, signal, error => {
       expect(error[unexpectedType]).toBe(true);
       return recovery;
     })).rejects.toBe(recovery);
@@ -116,7 +119,7 @@ describe('createFromParsedActivityStreams', () => {
     const actorActor = unwrap(await actor.select('actor'));
     const recovery = {};
 
-    await expect(Undo.createFromParsedActivityStreams(repository, activity, actorActor, () => recovery))
+    await expect(Undo.createFromParsedActivityStreams(repository, activity, actorActor, signal, () => recovery))
       .rejects.toBe(recovery);
   });
 
@@ -138,7 +141,7 @@ describe('createFromParsedActivityStreams', () => {
     const actor = unwrap(await follow.select('actor'));
     const recover = jest.fn();
 
-    await expect(Undo.createFromParsedActivityStreams(repository, activity, actor, recover))
+    await expect(Undo.createFromParsedActivityStreams(repository, activity, actor, signal, recover))
       .resolves.toBeInstanceOf(Undo);
 
     expect(recover).not.toHaveBeenCalled();

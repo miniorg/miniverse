@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { domainToASCII, domainToUnicode } from 'url';
 import {
   Actor as ActivityStreams,
@@ -142,22 +143,22 @@ export default class Base extends Relation<Properties, References>
   }
 
   static readonly createFromHostAndParsedActivityStreams:
-  (repository: Repository, host: string, object: ParsedActivityStreams, recover: (error: Error & {
+  (repository: Repository, host: string, object: ParsedActivityStreams, signal: AbortSignal, recover: (error: Error & {
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) => Promise<Base | null>;
   static readonly fromParsedActivityStreams:
-  (repository: Repository, object: ParsedActivityStreams, recover: (error: Error & {
+  (repository: Repository, object: ParsedActivityStreams, signal: AbortSignal, recover: (error: Error & {
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) => Promise<Base | null>;
   static readonly fromUsernameAndNormalizedHost:
-  (repository: Repository, username: string, normalizedHost: string | null, recover: (error: Error & {
+  (repository: Repository, username: string, normalizedHost: string | null, signal: AbortSignal, recover: (error: Error & {
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) => Promise<Base | null>;
   static readonly fromKeyUri:
-  (repository: Repository, keyUri: string, recover: (error: Error & {
+  (repository: Repository, keyUri: string, signal: AbortSignal, recover: (error: Error & {
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) => Promise<Base | null>;

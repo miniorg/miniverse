@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { Like as ActivityStreams } from '../generated_activitystreams';
 import ParsedActivityStreams from '../parsed_activitystreams';
 import { temporaryError } from '../transfer';
@@ -73,27 +74,27 @@ export default class Like extends Relation<Properties, References> {
     }
 
     if (!actor.host && recipient.host) {
-      await repository.queue.add({ type: 'postLike', id: like.id });
+      await repository.queue.add({ type: 'postLike', id: like.id }, { timeout: 16384 });
     }
 
     return like;
   }
 
-  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor, recover: (error: Error & {
+  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor, signal: AbortSignal, recover: (error: Error & {
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) {
-    const type = await activity.getType(recover);
+    const type = await activity.getType(signal, recover);
     if (!type.has('Like')) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Like.'), { [unexpectedType]: true }));
     }
 
-    const object = await activity.getObject(recover);
+    const object = await activity.getObject(signal, recover);
     if (!object) {
       throw recover(new Error('object unspecified.'));
     }
 
-    const note = await Note.fromParsedActivityStreams(repository, object, null, recover);
+    const note = await Note.fromParsedActivityStreams(repository, object, null, signal, recover);
     if (!note) {
       throw recover(new Error('object not found.'));
     }

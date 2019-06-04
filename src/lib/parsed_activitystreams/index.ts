@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { URL } from 'url';
 import Repository from '../repository';
 import { temporaryError } from '../transfer';
@@ -106,42 +107,42 @@ export default class ParsedActivityStreams {
     this.parentContent = parentContent;
   }
 
-  async getActor(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    const { body } = (await load.call(this, recover));
-    return getChildCheckingType.call(this, body.actor, recover);
+  async getActor(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = (await load.call(this, signal, recover));
+    return getChildCheckingType.call(this, body.actor, signal, recover);
   }
 
-  async getAttachment(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    const { body } = await load.call(this, recover);
-    const collection = await getChildCheckingType.call(this, body.attachment, recover);
-    return collection && collection.getItems(recover);
+  async getAttachment(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, signal, recover);
+    const collection = await getChildCheckingType.call(this, body.attachment, signal, recover);
+    return collection && collection.getItems(signal, recover);
   }
 
-  async getAttributedTo(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    const { body } = await load.call(this, recover);
-    return getChildCheckingType.call(this, body.attributedTo, recover);
+  async getAttributedTo(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, signal, recover);
+    return getChildCheckingType.call(this, body.attributedTo, signal, recover);
   }
 
-  async getContent(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    return (await load.call(this, recover)).body.content;
+  async getContent(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    return (await load.call(this, signal, recover)).body.content;
   }
 
-  async getContext(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    const { context } = await load.call(this, recover);
+  async getContext(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { context } = await load.call(this, signal, recover);
     return new Set<unknown>(Array.isArray(context) ? context : [context]);
   }
 
-  async getHref(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    return (await load.call(this, recover)).body.href;
+  async getHref(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    return (await load.call(this, signal, recover)).body.href;
   }
 
-  async getItems(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+  async getItems(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
     const getChildOfThisCheckingType =
-      (item: unknown) => getChildCheckingType.call(this, item, recover);
+      (item: unknown) => getChildCheckingType.call(this, item, signal, recover);
 
     const [{ body }, type] = await Promise.all([
-      load.call(this, recover),
-      this.getType(recover)
+      load.call(this, signal, recover),
+      this.getType(signal, recover)
     ]);
 
     if (type.has('OrderedCollection')) {
@@ -179,84 +180,84 @@ export default class ParsedActivityStreams {
     throw recover(new Error('id missing.'));
   }
 
-  async getInbox(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    const { body } = await load.call(this, recover);
-    return getChildCheckingType.call(this, body.inbox, recover);
+  async getInbox(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, signal, recover);
+    return getChildCheckingType.call(this, body.inbox, signal, recover);
   }
 
-  async getInReplyTo(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    const { body } = await load.call(this, recover);
-    return getChildCheckingType.call(this, body.inReplyTo, recover);
+  async getInReplyTo(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, signal, recover);
+    return getChildCheckingType.call(this, body.inReplyTo, signal, recover);
   }
 
-  async getName(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    const { body } = await load.call(this, recover);
+  async getName(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, signal, recover);
     return body.name;
   }
 
-  async getObject(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    const { body } = await load.call(this, recover);
-    return getChildCheckingType.call(this, body.object, recover);
+  async getObject(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, signal, recover);
+    return getChildCheckingType.call(this, body.object, signal, recover);
   }
 
-  async getOwner(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    const { body } = await load.call(this, recover);
-    return getChildCheckingType.call(this, body.owner, recover);
+  async getOwner(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, signal, recover);
+    return getChildCheckingType.call(this, body.owner, signal, recover);
   }
 
-  async getPreferredUsername(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    const { body } = await load.call(this, recover);
+  async getPreferredUsername(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, signal, recover);
     return body.preferredUsername;
   }
 
-  async getPublicKey(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    const { body } = await load.call(this, recover);
-    return getChildCheckingType.call(this, body.publicKey, recover);
+  async getPublicKey(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, signal, recover);
+    return getChildCheckingType.call(this, body.publicKey, signal, recover);
   }
 
-  async getPublicKeyPem(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    const { body } = await load.call(this, recover);
+  async getPublicKeyPem(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, signal, recover);
     return body.publicKeyPem;
   }
 
-  async getPublished(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    const { body } = await load.call(this, recover);
+  async getPublished(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, signal, recover);
     return typeof body.published == 'string' ? new Date(body.published) : null;
   }
 
-  async getSummary(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    const { body } = await load.call(this, recover);
+  async getSummary(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, signal, recover);
     return body.summary;
   }
 
-  async getTag(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    const { body } = await load.call(this, recover);
-    const collection = await getChildCheckingType.call(this, body.tag, recover);
-    return collection && collection.getItems(recover);
+  async getTag(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, signal, recover);
+    const collection = await getChildCheckingType.call(this, body.tag, signal, recover);
+    return collection && collection.getItems(signal, recover);
   }
 
-  async getTo(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    const { body } = await load.call(this, recover);
-    const collection = await getChildCheckingType.call(this, body.to, recover);
+  async getTo(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, signal, recover);
+    const collection = await getChildCheckingType.call(this, body.to, signal, recover);
 
     return body.to === 'https://www.w3.org/ns/activitystreams#Public' ?
-      [collection] : collection && collection.getItems(recover);
+      [collection] : collection && collection.getItems(signal, recover);
   }
 
-  async getType(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    const { body: { type } } = await load.call(this, recover);
+  async getType(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body: { type } } = await load.call(this, signal, recover);
     return new Set<unknown>(Array.isArray(type) ? type : [type]);
   }
 
-  async getUrl(recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    const { body } = await load.call(this, recover);
+  async getUrl(signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+    const { body } = await load.call(this, signal, recover);
     const normalized =
       typeof body.url == 'string' ? { type: 'Link', href: body.url } : body.url;
 
-    return await getChildCheckingType.call(this, normalized, recover);
+    return await getChildCheckingType.call(this, normalized, signal, recover);
   }
 
-  async act(actor: Actor, recover: (error: Error & {
+  async act(actor: Actor, signal: AbortSignal, recover: (error: Error & {
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) {
@@ -270,7 +271,7 @@ export default class ParsedActivityStreams {
 
     await Promise.all([
       Promise.all([
-        this.getActor(recover).then(actual => actual && actual.getId(recover)),
+        this.getActor(signal, recover).then(actual => actual && actual.getId(recover)),
         actor.getUri(recover)
       ]).then(([actual, expected]) => {
         if (actual && actual != expected) {
@@ -284,21 +285,25 @@ export default class ParsedActivityStreams {
         this.repository,
         this,
         actor,
+        signal,
         error => error[unexpectedDeleteType] ? unexpectedTypeReported : recover(error)),
       () => Follow.createFromParsedActivityStreams(
         this.repository,
         this,
         actor,
+        signal,
         error => error[unexpectedFollowType] ? unexpectedTypeReported : recover(error)),
       () => Like.createFromParsedActivityStreams(
         this.repository,
         this,
         actor,
+        signal,
         error => error[unexpectedLikeType] ? unexpectedTypeReported : recover(error)),
       () => Undo.createFromParsedActivityStreams(
         this.repository,
         this,
         actor,
+        signal,
         error => error[unexpectedUndoType] ? unexpectedTypeReported : recover(error)),
     ]) {
       try {
@@ -318,13 +323,14 @@ export default class ParsedActivityStreams {
         this.repository,
         this,
         actor,
+        signal,
         error => error[unexpectedAnnounceType] ? unexpectedTypeReported : recover(error));
     } catch (error) {
       if (error != unexpectedTypeReported) {
         throw error;
       }
 
-      created = await Create.createFromParsedActivityStreams(this.repository, this, actor, error =>
+      created = await Create.createFromParsedActivityStreams(this.repository, this, actor, signal, error =>
         recover(error[unexpectedCreateType] ?
           Object.assign(new Error('Unsupported type.'), { [unexpectedType]: true }) :
           error));
@@ -349,7 +355,7 @@ export default class ParsedActivityStreams {
   }
 }
 
-function load(this: ParsedActivityStreams, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+function load(this: ParsedActivityStreams, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
   const { repository, referenceId, parentContent } = this;
 
   if (!this.content) {
@@ -358,7 +364,7 @@ function load(this: ParsedActivityStreams, recover: (error: Error & { [temporary
     }
 
     this.content = parentContent.then(async ({ context, resolver }) => {
-      const resolved = await resolver.resolve(repository, referenceId, recover);
+      const resolved = await resolver.resolve(repository, referenceId, signal, recover);
 
       if (!resolved.context) {
         resolved.context = context;
@@ -371,8 +377,8 @@ function load(this: ParsedActivityStreams, recover: (error: Error & { [temporary
   return this.content;
 }
 
-function getChild(this: ParsedActivityStreams, body: object | string, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-  const content = load.call(this, recover);
+function getChild(this: ParsedActivityStreams, body: object | string, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+  const content = load.call(this, signal, recover);
 
   return new ParsedActivityStreams(
     this.repository,
@@ -381,7 +387,7 @@ function getChild(this: ParsedActivityStreams, body: object | string, recover: (
     content);
 }
 
-function getChildCheckingType(this: ParsedActivityStreams, body: unknown, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+function getChildCheckingType(this: ParsedActivityStreams, body: unknown, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
   return body instanceof Object || typeof body == 'string' ?
-    getChild.call(this, body, recover) : null;
+    getChild.call(this, body, signal, recover) : null;
 }

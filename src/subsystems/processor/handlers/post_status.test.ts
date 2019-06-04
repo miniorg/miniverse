@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import {
   fabricateAnnounce,
   fabricateLocalAccount,
@@ -45,7 +46,7 @@ test('delivers announce to remote account', async () => {
   const post = nock('https://ReCiPiEnT.إختبار').post('/?inbox').reply(200);
 
   try {
-    await postStatus(repository, job, recover);
+    await postStatus(repository, job, (new AbortController).signal, recover);
     expect(post.isDone()).toBe(true);
   } finally {
     nock.cleanAll();
@@ -74,7 +75,7 @@ test('delivers note to remote account', async () => {
   const post = nock('https://ReCiPiEnT.إختبار').post('/?inbox').reply(200);
 
   try {
-    await postStatus(repository, job, recover);
+    await postStatus(repository, job, (new AbortController).signal, recover);
     expect(post.isDone()).toBe(true);
   } finally {
     nock.cleanAll();

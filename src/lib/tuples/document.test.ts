@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
@@ -21,6 +22,7 @@ import Document, { unexpectedType } from './document';
 import URI from './uri';
 import nock = require('nock');
 
+const { signal } = new AbortController;
 const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8" />';
 
 describe('toActivityStreams', () => {
@@ -66,7 +68,7 @@ describe('create', () => {
     nock('https://إختبار').get('/').reply(200, svg);
 
     try {
-      created = await Document.create(repository, 'https://إختبار/', recover);
+      created = await Document.create(repository, 'https://إختبار/', signal, recover);
     } finally {
       nock.cleanAll();
     }
@@ -104,7 +106,7 @@ describe('create', () => {
     repository.s3.bucket = `${process.env.AWS_S3_BUCKET}-test-invalid`;
 
     try {
-      await expect(Document.create(repository, 'https://إختبار/', recover)).rejects.toEqual(expect.anything());
+      await expect(Document.create(repository, 'https://إختبار/', signal, recover)).rejects.toEqual(expect.anything());
     } finally {
       nock.cleanAll();
       repository.s3.bucket = bucket;
@@ -128,7 +130,7 @@ describe('fromParsedActivityStreams', () => {
     nock('https://DoCuMeNt.إختبار').get('/').reply(200, svg);
 
     try {
-      created = await Document.fromParsedActivityStreams(repository, object, recover);
+      created = await Document.fromParsedActivityStreams(repository, object, signal, recover);
     } finally {
       nock.cleanAll();
     }
@@ -148,12 +150,12 @@ describe('fromParsedActivityStreams', () => {
     nock('https://DoCuMeNt.إختبار').get('/').reply(200, svg);
 
     try {
-      created = await Document.fromParsedActivityStreams(repository, object, recover);
+      created = await Document.fromParsedActivityStreams(repository, object, signal, recover);
     } finally {
       nock.cleanAll();
     }
 
-    await expect(Document.fromParsedActivityStreams(repository, object, recover))
+    await expect(Document.fromParsedActivityStreams(repository, object, signal, recover))
       .resolves
       .toHaveProperty('id', unwrap(created).id);
 
@@ -170,7 +172,7 @@ describe('fromParsedActivityStreams', () => {
     nock('https://DoCuMeNt.إختبار').get('/').reply(200, svg);
 
     try {
-      await expect(Document.fromParsedActivityStreams(repository, object, error => {
+      await expect(Document.fromParsedActivityStreams(repository, object, signal, error => {
         expect(error[unexpectedType]).toBe(true);
         return recovery;
       })).rejects.toBe(recovery)
@@ -189,7 +191,7 @@ describe('fromParsedActivityStreams', () => {
     nock('https://DoCuMeNt.إختبار').get('/').reply(200, svg);
 
     try {
-      await expect(Document.fromParsedActivityStreams(repository, object, () => recovery))
+      await expect(Document.fromParsedActivityStreams(repository, object, signal, () => recovery))
         .rejects
         .toBe(recovery);
     } finally {

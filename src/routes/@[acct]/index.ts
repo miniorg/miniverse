@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import Actor from '../../lib/tuples/actor';
 import { normalizeHost } from '../../lib/tuples/uri';
 import secure from '../_secure';
@@ -33,11 +34,14 @@ export const get = secure(async (request, response, next) => {
     return;
   }
 
+  const controller = new AbortController;
   const acct = decodeURIComponent(request.params.acct);
   const atIndex = acct.lastIndexOf('@');
   let actor;
   let username;
   let normalizedHost;
+
+  request.on('aborted', () => controller.abort());
 
   if (atIndex < 0) {
     username = acct;
@@ -49,7 +53,11 @@ export const get = secure(async (request, response, next) => {
 
   try {
     actor = await Actor.fromUsernameAndNormalizedHost(
-      response.app.locals.repository, username, normalizedHost, () => recovery);
+      response.app.locals.repository,
+      username,
+      normalizedHost,
+      controller.signal,
+      () => recovery);
   } catch (error) {
     if (error == recovery) {
       response.sendStatus(422);

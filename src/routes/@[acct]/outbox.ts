@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import { Request, Response, json } from 'express';
 import { promisify } from 'util';
 import ParsedActivityStreams, {
@@ -123,16 +124,26 @@ export const post = secure(async (request, response) => {
     > be wrapped in a Create activity by the server.
   */
   try {
+    const controller = new AbortController;
+
+    request.on('aborted', () => controller.abort());
+
     try {
       result = await object.act(
         actor,
+        controller.signal,
         error => error[unexpectedType] ? fallback : abort);
     } catch (error) {
       if (error != fallback) {
         throw error;
       }
 
-      result = await create(repository, actor, object, () => abort);
+      result = await create(
+        repository,
+        actor,
+        object,
+        controller.signal,
+        () => abort);
       if (result) {
         result = await result.select('status');
         if (result) {

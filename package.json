@@ -24,6 +24,7 @@
   },
   "homepage": "https://github.com/miniorg/miniverse#readme",
   "dependencies": {
+    "abort-controller": "^3.0.0",
     "aws-sdk": "^2.453.0",
     "body-parser": "^1.19.0",
     "bull": "^3.9.1",

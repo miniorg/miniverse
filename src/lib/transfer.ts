@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { createPrivateKey } from 'crypto';
 import originalFetch, { FetchError, Request, RequestInit } from 'node-fetch';
 import { sign } from 'http-signature';
@@ -27,12 +28,11 @@ import URI from './tuples/uri';
 
 export const temporaryError = Symbol();
 
-export function fetch({ host }: Repository, url: string | Request, init: RequestInit | null, recover: (error: Error & { [temporaryError]: boolean }) => unknown) {
+export function fetch({ host }: Repository, url: string | Request, init: RequestInit & { signal: {} }, recover: (error: Error & { [temporaryError]: boolean }) => unknown) {
   const size = 1048576;
-  const timeout = 16384;
   const headers = { 'User-Agent': `Miniverse (${domainToASCII(host)})` };
 
-  return originalFetch(url, Object.assign({ size, timeout }, init, {
+  return originalFetch(url, Object.assign({ size }, init, {
     headers: init ? Object.assign(headers, init.headers) : headers
   })).then(async response => {
     if (!response.ok) {
@@ -49,6 +49,10 @@ export function fetch({ host }: Repository, url: string | Request, init: Request
   }, error => {
     if (error instanceof FetchError) {
       throw recover(Object.assign(error, { [temporaryError]: true }));
+    }
+
+    if (error.name == 'AbortError') {
+      throw recover(Object.assign(error, { [temporaryError]: false }));
     }
 
     throw error;
@@ -89,7 +93,7 @@ export async function postStatus(repository: Repository, status: Status, recover
               type: 'postStatus',
               statusId: status.id,
               inboxURIId
-            });
+            }, { timeout: 16384 });
           }
         })());
       }),
@@ -99,7 +103,7 @@ export async function postStatus(repository: Repository, status: Status, recover
   ] as unknown[]);
 }
 
-export async function postToInbox<T>(repository: Repository, sender: LocalAccount, { uri }: URI, object: { toActivityStreams(recover: (error: T) => unknown): { [key: string]: unknown } }, recover: (error: Error & { [temporaryError]?: boolean } | T) => unknown) {
+export async function postToInbox<T>(repository: Repository, sender: LocalAccount, { uri }: URI, object: { toActivityStreams(recover: (error: T) => unknown): { [key: string]: unknown } }, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean } | T) => unknown) {
   const [activityStreams, [keyId, key]] = await Promise.all([
     object.toActivityStreams(recover),
     sender.select('actor').then(owner => {
@@ -118,6 +122,7 @@ export async function postToInbox<T>(repository: Repository, sender: LocalAccoun
     method: 'POST',
     body: JSON.stringify(activityStreams),
     headers: { 'Content-Type': 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' },
+    signal,
     size: -1,
     onrequest(request) {
       sign(request, {
@@ -131,11 +136,13 @@ export async function postToInbox<T>(repository: Repository, sender: LocalAccoun
     }
   }, recover);
 
-  await response.buffer().catch((error: unknown) => {
+  await response.buffer().catch((error: Error) => {
     if (error instanceof FetchError) {
       if (error.type != 'max-size') {
         throw recover(Object.assign(error, { [temporaryError]: true }));
       }
+    } else if (error.name == 'AbortError') {
+      throw recover(Object.assign(error, { [temporaryError]: false }));
     } else {
       throw error;
     }

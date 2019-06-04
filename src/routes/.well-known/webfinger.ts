@@ -14,14 +14,15 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import Actor from '../../lib/tuples/actor';
 import { normalizeHost } from '../../lib/tuples/uri';
 import secure from '../_secure';
 
 const recovery = {};
 
-export const get = secure(async ({ query }, response) => {
-  const lowerResource = query.resource;
+export const get = secure(async (request, response) => {
+  const lowerResource = request.query.resource;
   const parsed = /(?:acct:)?(.*)@(.*)/.exec(lowerResource);
 
   if (!parsed) {
@@ -31,14 +32,22 @@ export const get = secure(async ({ query }, response) => {
 
   const [, userpart, host] = parsed;
   const { repository } = response.app.locals;
+  const controller = new AbortController;
   let actor;
+
+  request.on('aborted', () => controller.abort());
 
   if (host == normalizeHost(repository.fingerHost)) {
     actor = await repository.selectActorByUsernameAndNormalizedHost(
       decodeURI(userpart), null);
   } else {
     try {
-      actor = await Actor.fromUsernameAndNormalizedHost(repository, decodeURI(userpart), host, _error => recovery);
+      actor = await Actor.fromUsernameAndNormalizedHost(
+        repository,
+        decodeURI(userpart),
+        host,
+        controller.signal,
+        () => recovery);
     } catch (error) {
       if (error == recovery) {
         response.sendStatus(500);

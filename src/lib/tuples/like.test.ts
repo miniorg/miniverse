@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
 import {
   fabricateLike,
@@ -99,6 +100,7 @@ describe('createFromParsedActivityStreams', () => {
       new ParsedActivityStreams(
         repository, { type: 'Like', object: objectUri }, AnyHost),
       actor,
+      (new AbortController).signal,
       recover);
 
     expect(recover).not.toHaveBeenCalled();
@@ -128,6 +130,7 @@ describe('createFromParsedActivityStreams', () => {
         object: objectUri
       }, AnyHost),
       unwrap(actor),
+      (new AbortController).signal,
       error => {
         expect(error[unexpectedType]).toBe(true);
         return recovery;

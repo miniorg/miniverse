@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import {
   fabricateAnnounce,
   fabricateFollow,
@@ -26,6 +27,8 @@ import { unwrap } from '../test/types';
 import ParsedActivityStreams, { AnyHost } from './index';
 import Resolver from './resolver';
 import nock = require('nock');
+
+const { signal } = new AbortController;
 
 async function testLoading(object: unknown, callback: () => Promise<unknown> | unknown) {
   const get = nock('https://ReMoTe.إختبار').get('/').reply(200, object);
@@ -109,7 +112,7 @@ describe('constructor', () => {
     const recovery = {};
 
     expect(object).toHaveProperty('parentContent', content);
-    expect(object.getActor(() => recovery)).rejects.toBe(recovery);
+    expect(object.getActor(signal, () => recovery)).rejects.toBe(recovery);
   });
 });
 
@@ -122,7 +125,7 @@ describe('getActor', () => {
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
       actor: 'https://ReMoTe.إختبار/actor'
-    }, () => expect(object.getActor(recover))
+    }, () => expect(object.getActor(signal, recover))
       .resolves
       .toHaveProperty('referenceId', 'https://ReMoTe.إختبار/actor'));
 
@@ -140,7 +143,7 @@ describe('getAttachment', () => {
       '@context': 'https://www.w3.org/ns/activitystreams',
       attachment: ['https://ReMoTe.إختبار/attachment']
     }, () =>
-      object.getAttachment(recover).then(attachment =>
+      object.getAttachment(signal, recover).then(attachment =>
         expect(unwrap(attachment)[0])
           .toHaveProperty('referenceId', 'https://ReMoTe.إختبار/attachment')));await
 
@@ -157,7 +160,7 @@ describe('getAttributedTo', () => {
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
       attributedTo: 'https://ReMoTe.إختبار/attributedTo'
-    }, () => expect(object.getAttributedTo(recover))
+    }, () => expect(object.getAttributedTo(signal, recover))
       .resolves
       .toHaveProperty('referenceId', 'https://ReMoTe.إختبار/attributedTo'));
 
@@ -174,7 +177,7 @@ describe('getContent', () => {
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
       content: '内容'
-    }, () => expect(object.getContent(recover)).resolves.toBe('内容'));
+    }, () => expect(object.getContent(signal, recover)).resolves.toBe('内容'));
 
     expect(recover).not.toHaveBeenCalled();
   });
@@ -188,7 +191,7 @@ describe('getContext', () => {
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams'
-    }, () => object.getContext(recover).then(context =>
+    }, () => object.getContext(signal, recover).then(context =>
       expect(context.has('https://www.w3.org/ns/activitystreams')).toBe(true)));
 
     expect(recover).not.toHaveBeenCalled();
@@ -201,7 +204,7 @@ describe('getContext', () => {
 
     await testLoading({
       '@context': ['https://www.w3.org/ns/activitystreams']
-    }, () => object.getContext(recover).then(context =>
+    }, () => object.getContext(signal, recover).then(context =>
       expect(context.has('https://www.w3.org/ns/activitystreams')).toBe(true)));
 
     expect(recover).not.toHaveBeenCalled();
@@ -217,7 +220,7 @@ describe('getHref', () => {
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
       href: 'https://ReMoTe.إختبار/actor'
-    }, () => object.getHref(recover).then(href =>
+    }, () => object.getHref(signal, recover).then(href =>
       expect(href).toBe('https://ReMoTe.إختبار/actor')));
 
     expect(recover).not.toHaveBeenCalled();
@@ -234,7 +237,7 @@ describe('getItems', () => {
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'OrderedCollection',
       orderedItems: ['https://ReMoTe.إختبار/item']
-    }, async () => expect((await object.getItems(recover))[0])
+    }, async () => expect((await object.getItems(signal, recover))[0])
       .toHaveProperty('referenceId', 'https://ReMoTe.إختبار/item'));
 
     expect(recover).not.toHaveBeenCalled();
@@ -249,7 +252,7 @@ describe('getItems', () => {
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'Collection',
       items: ['https://ReMoTe.إختبار/item']
-    }, async () => expect((await object.getItems(recover))[0])
+    }, async () => expect((await object.getItems(signal, recover))[0])
       .toHaveProperty('referenceId', 'https://ReMoTe.إختبار/item'));
 
     expect(recover).not.toHaveBeenCalled();
@@ -262,7 +265,7 @@ describe('getItems', () => {
       ['https://ReMoTe.إختبار/item'],
       AnyHost);
 
-    await expect((await object.getItems(recover))[0])
+    await expect((await object.getItems(signal, recover))[0])
       .toHaveProperty('referenceId', 'https://ReMoTe.إختبار/item');
 
     expect(recover).not.toHaveBeenCalled();
@@ -275,7 +278,7 @@ describe('getItems', () => {
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams'
-    }, () => object.getItems(recover).then(([loaded]) =>
+    }, () => object.getItems(signal, recover).then(([loaded]) =>
       expect(unwrap(loaded).content).resolves.toHaveProperty(
         'body', { '@context': 'https://www.w3.org/ns/activitystreams' })));
 
@@ -312,7 +315,7 @@ describe('getInbox', () => {
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
       inbox: 'https://ReMoTe.إختبار/inbox',
-    }, () => expect(object.getInbox(recover))
+    }, () => expect(object.getInbox(signal, recover))
       .resolves
       .toHaveProperty('referenceId', 'https://ReMoTe.إختبار/inbox'));
 
@@ -329,7 +332,7 @@ describe('getInReplyTo', () => {
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
       inReplyTo: 'https://ReMoTe.إختبار/inReplyTo'
-    }, () => expect(object.getInReplyTo(recover))
+    }, () => expect(object.getInReplyTo(signal, recover))
       .resolves
       .toHaveProperty('referenceId', 'https://ReMoTe.إختبار/inReplyTo'));
 
@@ -346,7 +349,7 @@ describe('getName', () => {
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
       name: '名前',
-    }, () => expect(object.getName(recover)).resolves.toBe('名前'));
+    }, () => expect(object.getName(signal, recover)).resolves.toBe('名前'));
 
     expect(recover).not.toHaveBeenCalled();
   });
@@ -361,7 +364,7 @@ describe('getObject', () => {
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
       object: 'https://ReMoTe.إختبار/object',
-    }, () => expect(object.getObject(recover))
+    }, () => expect(object.getObject(signal, recover))
       .resolves
       .toHaveProperty('referenceId', 'https://ReMoTe.إختبار/object'));
 
@@ -378,7 +381,7 @@ describe('getOwner', () => {
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
       owner: 'https://ReMoTe.إختبار/owner',
-    }, () => expect(object.getOwner(recover))
+    }, () => expect(object.getOwner(signal, recover))
       .resolves
       .toHaveProperty('referenceId', 'https://ReMoTe.إختبار/owner'));
 
@@ -395,7 +398,7 @@ describe('getPreferredUsername', () => {
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
       preferredUsername: '希望されたユーザー名'
-    }, () => expect(object.getPreferredUsername(recover))
+    }, () => expect(object.getPreferredUsername(signal, recover))
       .resolves
       .toBe('希望されたユーザー名'));
 
@@ -412,7 +415,7 @@ describe('getPublicKey', () => {
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
       publicKey: 'https://ReMoTe.إختبار/publickey',
-    }, () => expect(object.getPublicKey(recover))
+    }, () => expect(object.getPublicKey(signal, recover))
       .resolves
       .toHaveProperty('referenceId', 'https://ReMoTe.إختبار/publickey'));
 
@@ -437,7 +440,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 +DHYFaVXQy60WzCEFjiQPZ8XdNQKvDyjKwIDAQAB
 -----END RSA PUBLIC KEY-----
 `
-    }, () => expect(object.getPublicKeyPem(recover))
+    }, () => expect(object.getPublicKeyPem(signal, recover))
       .resolves
       .toBe(`-----BEGIN RSA PUBLIC KEY-----
 MIIBCgKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGTrcO6
@@ -463,7 +466,7 @@ describe('getPublished', () => {
       published: '2000-01-01T00:00:00.000Z'
     }, async () => {
       const recover = jest.fn();
-      const published = unwrap(await object.getPublished(recover));
+      const published = unwrap(await object.getPublished(signal, recover));
       expect(recover).not.toHaveBeenCalled();
       expect(published.toISOString()).toBe('2000-01-01T00:00:00.000Z');
     });
@@ -477,7 +480,7 @@ describe('getPublished', () => {
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
       published: null
-    }, () => expect(object.getPublished(recover)).resolves.toBe(null));
+    }, () => expect(object.getPublished(signal, recover)).resolves.toBe(null));
 
     expect(recover).not.toHaveBeenCalled();
   });
@@ -492,7 +495,7 @@ describe('getSummary', () => {
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
       summary: '要約'
-    }, () => expect(object.getSummary(recover)).resolves.toBe('要約'));
+    }, () => expect(object.getSummary(signal, recover)).resolves.toBe('要約'));
 
     expect(recover).not.toHaveBeenCalled();
   });
@@ -507,8 +510,8 @@ describe('getTag', () => {
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
       tag: [{ href: 'https://ReMoTe.إختبار/actor' }]
-    }, () => object.getTag(recover).then(tag =>
-      expect(unwrap(unwrap(tag)[0]).getHref(recover))
+    }, () => object.getTag(signal, recover).then(tag =>
+      expect(unwrap(unwrap(tag)[0]).getHref(signal, recover))
         .resolves
         .toBe('https://ReMoTe.إختبار/actor')));
 
@@ -525,7 +528,7 @@ describe('getTo', () => {
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
       to: ['https://ReMoTe.إختبار/0']
-    }, async () => expect(unwrap(unwrap(await object.getTo(recover))[0]).getId(recover))
+    }, async () => expect(unwrap(unwrap(await object.getTo(signal, recover))[0]).getId(recover))
       .resolves
       .toBe('https://ReMoTe.إختبار/0'));
 
@@ -540,7 +543,7 @@ describe('getTo', () => {
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
       to: 'https://www.w3.org/ns/activitystreams#Public'
-    }, async () => expect(unwrap(unwrap(await object.getTo(recover))[0]).getId(recover))
+    }, async () => expect(unwrap(unwrap(await object.getTo(signal, recover))[0]).getId(recover))
       .resolves
       .toBe('https://www.w3.org/ns/activitystreams#Public'));
 
@@ -572,7 +575,7 @@ describe('getType', () => {
       ]
     }, async () => {
       const recover = jest.fn();
-      const type = await object.getType(recover);
+      const type = await object.getType(signal, recover);
 
       expect(recover).not.toHaveBeenCalled();
       expect(type).toBeInstanceOf(Set);
@@ -589,7 +592,7 @@ describe('getType', () => {
       type: 'Add'
     }, async () => {
       const recover = jest.fn();
-      const type = await object.getType(recover);
+      const type = await object.getType(signal, recover);
 
       expect(recover).not.toHaveBeenCalled();
       expect(type).toBeInstanceOf(Set);
@@ -618,10 +621,10 @@ describe('getUrl', () => {
         url
       }, async () => {
         const recover = jest.fn();
-        const link = unwrap(await object.getUrl(recover));
+        const link = unwrap(await object.getUrl(signal, recover));
         const [type] = await Promise.all([
-          link.getType(recover),
-          expect(link.getHref(recover)).resolves.toBe('https://link.إختبار/')
+          link.getType(signal, recover),
+          expect(link.getHref(signal, recover)).resolves.toBe('https://link.إختبار/')
         ]);
 
         expect(recover).not.toHaveBeenCalled();
@@ -641,9 +644,10 @@ describe('act', () => {
       { status: { uri: { uri: 'https://ReMoTe.إختبار/' } } });
 
     const status = unwrap(await announce.select('status'));
+    const actor = unwrap(await status.select('actor'));
     const recover = jest.fn();
 
-    await expect(activity.act(unwrap(await status.select('actor')), recover))
+    await expect(activity.act(actor, signal, recover))
       .resolves
       .toBe('https://ReMoTe.إختبار/');
 
@@ -671,7 +675,7 @@ describe('act', () => {
       id: 'https://ReMoTe.إختبار/',
       to: 'https://www.w3.org/ns/activitystreams#Public',
       object: 'https://NoTe.إختبار/'
-    }, () => expect(activity.act(actor, recover))
+    }, () => expect(activity.act(actor, signal, recover))
       .resolves
       .toBe('https://ReMoTe.إختبار/'));
 
@@ -697,7 +701,7 @@ describe('act', () => {
         attachment: [],
         tag: []
       }
-    }, () => expect(activity.act(actor, recover))
+    }, () => expect(activity.act(actor, signal, recover))
       .resolves
       .toBe('https://ReMoTe.إختبار/NoTe'));
 
@@ -720,7 +724,7 @@ describe('act', () => {
       object: 'https://NoTe.إختبار/'
     }, async () => {
       const recover = jest.fn();
-      await expect(activity.act(actor, recover)).resolves.toBe(null);
+      await expect(activity.act(actor, signal, recover)).resolves.toBe(null);
       expect(recover).not.toHaveBeenCalled();
 
       await expect(repository.selectRecentStatusesIncludingExtensionsByActorId(status.actorId))
@@ -746,7 +750,7 @@ describe('act', () => {
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'Follow',
       object: 'https://xn--kgbechtv/@%E8%A2%AB%E8%A1%8C%E5%8B%95%E8%80%85'
-    }, () => expect(activity.act(actor, recover)).resolves.toBe(null));
+    }, () => expect(activity.act(actor, signal, recover)).resolves.toBe(null));
 
     expect(recover).not.toHaveBeenCalled();
   });
@@ -768,7 +772,7 @@ describe('act', () => {
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'Like',
       object: 'https://NoTe.إختبار/'
-    }, () => expect(activity.act(actor, recover)).resolves.toBe(null));
+    }, () => expect(activity.act(actor, signal, recover)).resolves.toBe(null));
 
     expect(recover).not.toHaveBeenCalled();
   });
@@ -798,7 +802,7 @@ describe('act', () => {
     }, async () => {
       const recover = jest.fn();
 
-      await expect(activity.act(actor, recover)).resolves.toBe(null);
+      await expect(activity.act(actor, signal, recover)).resolves.toBe(null);
       expect(recover).not.toHaveBeenCalled();
 
       await expect(repository.selectActorsByFolloweeId(unwrap(object.id)))
@@ -826,7 +830,7 @@ describe('act', () => {
         type: 'Follow',
         actor: 'https://xn--kgbechtv/@%E8%A1%8C%E5%8B%95%E8%80%85',
         object: 'https://xn--kgbechtv/@%E8%A2%AB%E8%A1%8C%E5%8B%95%E8%80%85'
-      }, () => expect(activity.act(actor, recover)).resolves.toBe(null));
+      }, () => expect(activity.act(actor, signal, recover)).resolves.toBe(null));
 
       expect(recover).not.toHaveBeenCalled();
     });
@@ -850,7 +854,7 @@ describe('act', () => {
         type: 'Follow',
         actor: 'https://xn--kgbechtv/@%E8%A1%8C%E5%8B%95%E8%80%85',
         object: 'https://xn--kgbechtv/@%E8%A2%AB%E8%A1%8C%E5%8B%95%E8%80%85'
-      }, () => expect(activity.act(expectedActor, () => recovery))
+      }, () => expect(activity.act(expectedActor, signal, () => recovery))
         .rejects
         .toBe(recovery));
     });

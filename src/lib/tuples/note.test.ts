@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
 import {
   fabricateFollow,
@@ -24,6 +25,8 @@ import {
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
 import Note, { unexpectedType } from './note';
+
+const { signal } = new AbortController;
 
 describe('toActivityStreams', () => {
   test('resolves with ActivityStreams representation of local Note', async () => {
@@ -217,6 +220,7 @@ describe('createFromParsedActivityStreams', () => {
         ]
       }, AnyHost),
       unwrappedObject,
+      signal,
       recover));
 
     const objectId = unwrap(unwrappedObject.id);
@@ -255,6 +259,7 @@ describe('createFromParsedActivityStreams', () => {
         tag: []
       }, AnyHost),
       null,
+      signal,
       recover)).resolves.toHaveProperty(['status', 'actorId'], account.id);
 
     expect(recover).not.toHaveBeenCalled();
@@ -275,6 +280,7 @@ describe('createFromParsedActivityStreams', () => {
         tag: []
       }, AnyHost),
       unwrap(await account.select('actor')),
+      signal,
       recover)).resolves.toBe(null);
 
     expect(recover).not.toHaveBeenCalled();
@@ -298,6 +304,7 @@ describe('createFromParsedActivityStreams', () => {
         tag: []
       }, AnyHost),
       null,
+      signal,
       error => {
         expect(error[unexpectedType]).toBe(true);
         return recovery;
@@ -329,6 +336,7 @@ describe('createFromParsedActivityStreams', () => {
         tag: []
       }, AnyHost),
       null,
+      signal,
       recover)).resolves.toHaveProperty('inReplyToId', inReplyToId);
 
     expect(recover).not.toHaveBeenCalled();
@@ -353,6 +361,7 @@ describe('createFromParsedActivityStreams', () => {
         tag: []
       }, AnyHost),
       null,
+      signal,
       recover));
 
     expect(recover).not.toHaveBeenCalled();
@@ -377,6 +386,7 @@ describe('fromParsedActivityStreams', () => {
         'https://xn--kgbechtv/@/' + id,
         AnyHost),
       null,
+      signal,
       recover)).resolves.toHaveProperty('content', '内容');
 
     expect(recover).not.toHaveBeenCalled();
@@ -395,6 +405,7 @@ describe('fromParsedActivityStreams', () => {
         'https://xn--kgbechtv/@incorrect/' + note.id,
         AnyHost),
       null,
+      signal,
       () => recovery)).rejects.toBe(recovery);
   });
 
@@ -413,6 +424,7 @@ describe('fromParsedActivityStreams', () => {
         'https://NoTe.xn--kgbechtv/',
         AnyHost),
       null,
+      signal,
       recover)).resolves.toHaveProperty('content', '内容');
 
     expect(recover).not.toHaveBeenCalled();
@@ -434,6 +446,7 @@ describe('fromParsedActivityStreams', () => {
         tag: []
       }, AnyHost),
       actor,
+      signal,
       recover);
 
     expect(recover).not.toHaveBeenCalled();

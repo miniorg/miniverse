@@ -14,9 +14,12 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import repository from '../test/repository';
 import Resolver from './resolver';
 import nock = require('nock');
+
+const { signal } = new AbortController;
 
 function testLoading(body: unknown, callback: () => Promise<unknown>) {
   return async () => {
@@ -49,7 +52,7 @@ describe('resolve', () => {
     const recover = jest.fn();
 
     const { resolver, context, body } =
-      await origin.resolve(repository, 'https://ReMoTe.إختبار/', recover);
+      await origin.resolve(repository, 'https://ReMoTe.إختبار/', signal, recover);
 
     expect(recover).not.toHaveBeenCalled();
     expect(context).toBe('https://www.w3.org/ns/activitystreams');
@@ -60,7 +63,7 @@ describe('resolve', () => {
 
     const recovery = {};
 
-    await expect(resolver.resolve(repository, 'https://ReMoTe.إختبار/', () => recovery))
+    await expect(resolver.resolve(repository, 'https://ReMoTe.إختبار/', signal, () => recovery))
       .rejects
       .toBe(recovery);
   }));
@@ -72,7 +75,7 @@ describe('resolve', () => {
     const origin = new Resolver;
     const recovery = {};
 
-    return expect(origin.resolve(repository, 'https://ReMoTe.إختبار/', () => recovery))
+    return expect(origin.resolve(repository, 'https://ReMoTe.إختبار/', signal, () => recovery))
       .rejects
       .toBe(recovery);
   }));
@@ -85,7 +88,7 @@ describe('resolve', () => {
     const origin = new Resolver;
     const recovery = {};
 
-    return expect(origin.resolve(repository, 'https://ReMoTe.إختبار/#key', () => recovery))
+    return expect(origin.resolve(repository, 'https://ReMoTe.إختبار/#key', signal, () => recovery))
       .rejects
       .toBe(recovery);
   }));
@@ -103,7 +106,7 @@ describe('resolve', () => {
     const recover = jest.fn();
 
     const { resolver, context, body } =
-      await origin.resolve(repository, 'https://ReMoTe.إختبار/#key', recover);
+      await origin.resolve(repository, 'https://ReMoTe.إختبار/#key', signal, recover);
 
     expect(recover).not.toHaveBeenCalled();
     expect(context).toBe('https://www.w3.org/ns/activitystreams');
@@ -111,7 +114,7 @@ describe('resolve', () => {
 
     const recovery = {};
 
-    await expect(resolver.resolve(repository, 'https://ReMoTe.إختبار/#key', () => recovery))
+    await expect(resolver.resolve(repository, 'https://ReMoTe.إختبار/#key', signal, () => recovery))
       .rejects
       .toBe(recovery);
   }));
@@ -124,7 +127,7 @@ describe('resolve', () => {
     const recover = jest.fn();
 
     const { resolver, context, body } =
-      await origin.resolve(repository, 'https://ReMoTe.إختبار/#key', recover);
+      await origin.resolve(repository, 'https://ReMoTe.إختبار/#key', signal, recover);
 
     expect(recover).not.toHaveBeenCalled();
     expect(context).toBe('https://www.w3.org/ns/activitystreams');
@@ -132,7 +135,7 @@ describe('resolve', () => {
 
     const recovery = {};
 
-    await expect(resolver.resolve(repository, 'https://ReMoTe.إختبار/#key', () => recovery))
+    await expect(resolver.resolve(repository, 'https://ReMoTe.إختبار/#key', signal, () => recovery))
       .rejects
       .toBe(recovery);
   }));
@@ -144,7 +147,7 @@ describe('resolve', () => {
     const origin = new Resolver;
     const recover = jest.fn();
 
-    return expect(origin.resolve(repository, 'https://ReMoTe.إختبار/#key', recover))
+    return expect(origin.resolve(repository, 'https://ReMoTe.إختبار/#key', signal, recover))
       .resolves
       .toHaveProperty('context', 'https://w3id.org/security/v1');
   }));
@@ -158,7 +161,7 @@ describe('resolve', () => {
     const origin = new Resolver;
     const recovery = {};
 
-    return expect(origin.resolve(repository, 'https://ReMoTe.إختبار/#key', () => recovery))
+    return expect(origin.resolve(repository, 'https://ReMoTe.إختبار/#key', signal, () => recovery))
       .rejects
       .toBe(recovery);
   }));
@@ -168,7 +171,7 @@ test('rejects consumed URIs given to the constructor', () => {
   const recovery = {};
   const resolver = new Resolver([['https://ReMoTe.إختبار/', null]]);
 
-  return expect(resolver.resolve(repository, 'https://ReMoTe.إختبار/', () => recovery))
+  return expect(resolver.resolve(repository, 'https://ReMoTe.إختبار/', signal, () => recovery))
     .rejects
     .toBe(recovery);
 });

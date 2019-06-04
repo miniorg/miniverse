@@ -54,7 +54,7 @@ export const post = secure(async (request, response) => {
     type: 'processInbox',
     signature,
     body: request.body
-  });
+  }, { timeout: 16384 });
 
   response.sendStatus(202);
 });

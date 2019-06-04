@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import {
   fabricateLocalAccount,
   fabricateRemoteAccount
@@ -23,6 +24,8 @@ import { unwrap } from '../../test/types';
 import Actor from './index';
 import { lookup } from './resolver';
 import nock = require('nock');
+
+const { signal } = new AbortController;
 
 describe('lookup', () => {
   test('looks up acct scheme URI', async () => {
@@ -42,7 +45,7 @@ describe('lookup', () => {
       .reply(200, webfinger);
 
     try {
-      await expect(lookup(repository, 'acct:preferred%20username@FiNgEr.ReMoTe.xn--kgbechtv', recover))
+      await expect(lookup(repository, 'acct:preferred%20username@FiNgEr.ReMoTe.xn--kgbechtv', signal, recover))
         .resolves
         .toEqual(webfinger);
     } finally {
@@ -69,7 +72,7 @@ describe('lookup', () => {
       .reply(200, webfinger);
 
     try {
-      await expect(lookup(repository, 'https://remote.xn--kgbechtv/@preferred%20username', recover))
+      await expect(lookup(repository, 'https://remote.xn--kgbechtv/@preferred%20username', signal, recover))
         .resolves
         .toEqual(webfinger);
     } finally {
@@ -86,7 +89,7 @@ describe('fromUsernameAndNormalizedHost', () => {
     const account =
       await fabricateLocalAccount({ actor: { username: 'username' } });
 
-    await expect(Actor.fromUsernameAndNormalizedHost(repository, 'username', null, recover))
+    await expect(Actor.fromUsernameAndNormalizedHost(repository, 'username', null, signal, recover))
       .resolves
       .toHaveProperty('id', account.id);
 
@@ -98,7 +101,7 @@ describe('fromUsernameAndNormalizedHost', () => {
     const account = await fabricateRemoteAccount(
       { actor: { username: 'username', host: 'FiNgEr.ReMoTe.xn--kgbechtv' } });
 
-    await expect(Actor.fromUsernameAndNormalizedHost(repository, 'username', 'finger.remote.xn--kgbechtv', recover))
+    await expect(Actor.fromUsernameAndNormalizedHost(repository, 'username', 'finger.remote.xn--kgbechtv', signal, recover))
       .resolves
       .toHaveProperty('id', account.id);
 
@@ -158,6 +161,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
         repository,
         'preferred username',
         'finger.remote.xn--kgbechtv',
+        signal,
         recover);
 
       expect(actor).toHaveProperty('username', 'preferred username');
@@ -231,6 +235,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
         repository,
         'preferred username',
         'finger.remote.xn--kgbechtv',
+        signal,
         () => recovery)).rejects.toBe(recovery);
     } finally {
       nock.cleanAll();
@@ -250,6 +255,7 @@ describe('fromKeyUri', () => {
     await expect(Actor.fromKeyUri(
       repository,
       'https://remote.xn--kgbechtv/@preferred%20username#key',
+      signal,
       recover)).resolves.toHaveProperty('id', unwrap(id));
 
     expect(recover).not.toHaveBeenCalled();
@@ -308,6 +314,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
       const actor = await Actor.fromKeyUri(
         repository,
         'https://remote.xn--kgbechtv/@preferred%20username#key',
+        signal,
         recover);
 
       expect(actor).toHaveProperty('username', 'preferred username');
@@ -373,6 +380,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
       await expect(Actor.fromKeyUri(
         repository,
         'https://remote.xn--kgbechtv/@preferred%20username#key',
+        signal,
         () => recovery)).rejects.toBe(recovery);
     } finally {
       nock.cleanAll();

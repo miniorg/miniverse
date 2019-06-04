@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController, AbortSignal } from 'abort-controller';
 import {
   fabricateFollow,
   fabricateLocalAccount,
@@ -27,6 +28,7 @@ import nock = require('nock');
 
 describe('fetch', () => {
   test('assigns User-Agent header if the second argument is null', async () => {
+    const { signal } = new AbortController;
     const recover = jest.fn();
 
     nock('https://ReMoTe.إختبار')
@@ -35,7 +37,7 @@ describe('fetch', () => {
       .reply(200);
 
     try {
-      await fetch(repository, 'https://ReMoTe.إختبار/', null, recover);
+      await fetch(repository, 'https://ReMoTe.إختبار/', { signal }, recover);
       expect(nock.isDone()).toBe(true);
     } finally {
       nock.cleanAll();
@@ -45,6 +47,7 @@ describe('fetch', () => {
   });
 
   test('assigns User-Agent header and given headers if the second argument is not null', async () => {
+    const { signal } = new AbortController;
     const recover = jest.fn();
 
     nock('https://ReMoTe.إختبار')
@@ -55,7 +58,8 @@ describe('fetch', () => {
 
     try {
       await fetch(repository, 'https://ReMoTe.إختبار/', {
-        headers: { Accept: 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' }
+        headers: { Accept: 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' },
+        signal
       }, recover);
 
       expect(nock.isDone()).toBe(true);
@@ -68,11 +72,12 @@ describe('fetch', () => {
 
   for (const code of [429, 500, 502, 503, 504]) {
     test(`rejects with [temporaryError] if status code is ${code}`, async () => {
+      const { signal } = new AbortController;
       const recovery = {};
       nock('https://ReMoTe.إختبار').get('/').reply(code);
 
       try {
-        await expect(fetch(repository, 'https://ReMoTe.إختبار/', null, error => {
+        await expect(fetch(repository, 'https://ReMoTe.إختبار/', { signal }, error => {
           expect(error[temporaryError]).toBe(true);
           return recovery;
         })).rejects.toBe(recovery);
@@ -83,11 +88,12 @@ describe('fetch', () => {
   }
 
   test('rejects with non-temporary error if status code is 400', async () => {
+    const { signal } = new AbortController;
     const recovery = {};
     nock('https://ReMoTe.إختبار').get('/').reply(400);
 
     try {
-      await expect(fetch(repository, 'https://ReMoTe.إختبار/', null, error => {
+      await expect(fetch(repository, 'https://ReMoTe.إختبار/', { signal }, error => {
         expect(error[temporaryError]).toBe(false);
         return recovery;
       })).rejects.toBe(recovery);
@@ -97,12 +103,30 @@ describe('fetch', () => {
   });
 
   test('rejects with [temporaryError] in case of network error', async () => {
+    const { signal } = new AbortController;
     const recovery = {};
     nock('https://ReMoTe.إختبار').get('/').replyWithError('');
 
     try {
-      await expect(fetch(repository, 'https://ReMoTe.إختبار/', null, error => {
+      await expect(fetch(repository, 'https://ReMoTe.إختبار/', { signal }, error => {
         expect(error[temporaryError]).toBe(true);
+        return recovery;
+      })).rejects.toBe(recovery);
+    } finally {
+      nock.cleanAll();
+    }
+  });
+
+  test('rejects without [temporaryError] if aborted', async () => {
+    const controller = new AbortController;
+    const recovery = {};
+
+    nock('https://ReMoTe.إختبار').get('/').delay(9e9);
+
+    try {
+      controller.abort();
+      await expect(fetch(repository, 'https://ReMoTe.إختبار/', { signal: controller.signal }, error => {
+        expect(error[temporaryError]).toBe(false);
         return recovery;
       })).rejects.toBe(recovery);
     } finally {
@@ -210,7 +234,7 @@ describe('postStatus', () => {
 });
 
 describe('postToInbox', () => {
-  async function post(recover: (error: Error) => unknown) {
+  async function post(signal: AbortSignal, recover: (error: Error) => unknown) {
     const [sender, inboxURI] = await Promise.all([
       fabricateLocalAccount({ actor: { username: 'SeNdEr' } }),
       fabricateRemoteAccount({ inboxURI: { uri: 'https://ReCiPiEnT.إختبار/?inbox' } })
@@ -226,7 +250,7 @@ describe('postToInbox', () => {
           object: 'https://ObJeCt.إختبار/'
         };
       },
-    }, recover);
+    }, signal, recover);
   }
 
   test('delivers to remote account', async () => {
@@ -259,7 +283,7 @@ describe('postToInbox', () => {
       .reply(200);
 
     try {
-      await post(recover);
+      await post((new AbortController).signal, recover);
       expect(nockPost.isDone()).toBe(true);
     } finally {
       nock.cleanAll();
@@ -269,13 +293,14 @@ describe('postToInbox', () => {
   });
 
   test('rejects if failed to deliver to remote object', async () => {
+    const { signal } = new AbortController;
     const recovery = {};
     const nockPost = nock('https://ReCiPiEnT.إختبار')
       .post('/?inbox')
       .replyWithError('');
 
     try {
-      await expect(post(() => recovery)).rejects.toBe(recovery);
+      await expect(post(signal, () => recovery)).rejects.toBe(recovery);
       expect(nockPost.isDone());
     } finally {
       nock.cleanAll();
@@ -289,7 +314,7 @@ describe('postToInbox', () => {
       .reply(200, 'body');
 
     try {
-      await post(recover);
+      await post((new AbortController).signal, recover);
       expect(nockPost.isDone()).toBe(true);
     } finally {
       nock.cleanAll();

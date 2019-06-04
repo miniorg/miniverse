@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
 import {
   fabricateLocalAccount,
@@ -24,6 +25,8 @@ import repository from '../test/repository';
 import { unwrap } from '../test/types';
 import Create, { create, unexpectedType } from './create';
 import Note from './note';
+
+const { signal } = new AbortController;
 
 describe('Create', () => {
   describe('toActivityStreams', () => {
@@ -85,7 +88,7 @@ describe('Create', () => {
       const actor = unwrap(await account.select('actor'));
       const recover = jest.fn();
       const create = unwrap(await Create.createFromParsedActivityStreams(
-        repository, activity, actor, recover));
+        repository, activity, actor, signal, recover));
 
       const object = unwrap(await create.select('object'));
 
@@ -115,7 +118,7 @@ describe('Create', () => {
       const recovery = {};
 
       await expect(Create.createFromParsedActivityStreams(
-        repository, activity, actor, error => {
+        repository, activity, actor, signal, error => {
           expect(error[unexpectedType]).toBe(true);
           return recovery;
         })).rejects.toBe(recovery);
@@ -138,7 +141,7 @@ describe('create', () => {
     const account = await fabricateLocalAccount();
     const actor = unwrap(await account.select('actor'));
     const recover = jest.fn();
-    const note = unwrap(await create(repository, actor, object, recover));
+    const note = unwrap(await create(repository, actor, object, signal, recover));
     const status = unwrap(await note.select('status'));
 
     expect(recover).not.toHaveBeenCalled();
@@ -163,7 +166,7 @@ describe('create', () => {
       const account = await fabricateLocalAccount({ actor: { username: '' } });
       const actor = unwrap(await account.select('actor'));
       const recover = jest.fn();
-      const note = unwrap(await create(repository, actor, object, recover));
+      const note = unwrap(await create(repository, actor, object, signal, recover));
       const status = unwrap(await note.select('status'));
 
       expect(recover).not.toHaveBeenCalled();
@@ -196,6 +199,7 @@ describe('create', () => {
         repository,
         expectedAttributedTo,
         object,
+        signal,
         () => recovery)).rejects.toBe(recovery);
     });
   });

@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { domainToASCII } from 'url';
 import ParsedActivityStreams from '../../parsed_activitystreams';
 import Repository from '../../repository';
@@ -27,11 +28,11 @@ const actorTypes =
   ['Application', 'Group', 'Organization', 'Person', 'Service'];
 
 export default class extends Base {
-  static async createFromHostAndParsedActivityStreams(repository: Repository, host: string, object: ParsedActivityStreams, recover: (error: Error & {
+  static async createFromHostAndParsedActivityStreams(repository: Repository, host: string, object: ParsedActivityStreams, signal: AbortSignal, recover: (error: Error & {
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) {
-    const type = await object.getType(recover);
+    const type = await object.getType(signal, recover);
     if (!actorTypes.some(type.has, type)) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Application, Group, Organization, Person or Service.'), { [unexpectedType]: true }));
     }
@@ -45,17 +46,17 @@ export default class extends Base {
       [publicKeyId, publicKeyPem]
     ] = await Promise.all([
       object.getId(recover),
-      object.getInbox(recover).then(inbox => {
+      object.getInbox(signal, recover).then(inbox => {
         if (!inbox) {
           throw recover(new Error('inbox unspecified.'));
         }
 
         return inbox.getId(recover);
       }),
-      object.getPreferredUsername(recover),
-      object.getName(recover),
-      object.getSummary(recover),
-      object.getPublicKey(recover).then(key => {
+      object.getPreferredUsername(signal, recover),
+      object.getName(signal, recover),
+      object.getSummary(signal, recover),
+      object.getPublicKey(signal, recover).then(key => {
         if (!key) {
           throw recover(new Error('key unspecified.'));
         }
@@ -64,9 +65,12 @@ export default class extends Base {
           throw recover(new Error('Key host mismatches.'));
         }
 
-        return Promise.all([key.getId(recover), key.getPublicKeyPem(recover)]);
+        return Promise.all([
+          key.getId(recover),
+          key.getPublicKeyPem(signal, recover)
+        ]);
       }),
-      object.getContext(recover).then(context => {
+      object.getContext(signal, recover).then(context => {
         if (!context.has('https://w3id.org/security/v1')) {
           throw recover(new Error('Security context unspecified.'));
         }
@@ -118,7 +122,7 @@ export default class extends Base {
     return account.select('actor');
   }
 
-  static async fromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, recover: (error: Error & {
+  static async fromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, signal: AbortSignal, recover: (error: Error & {
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) {
@@ -149,12 +153,12 @@ export default class extends Base {
       return account.select('actor');
     }
 
-    const { subject } = await lookup(repository, uri, recover);
+    const { subject } = await lookup(repository, uri, signal, recover);
     if (typeof subject != 'string') {
       throw recover(new Error('Unsupported WebFinger subject type.'));
     }
 
-    const { links } = await lookup(repository, subject, recover);
+    const { links } = await lookup(repository, subject, signal, recover);
     if (!Array.isArray(links)) {
       throw recover(new Error('Unsupported WebFinger links type.'));
     }
@@ -166,6 +170,6 @@ export default class extends Base {
     const host = subject.split('@', 2)[1];
 
     return this.createFromHostAndParsedActivityStreams(
-      repository, host, object, recover);
+      repository, host, object, signal, recover);
   }
 }

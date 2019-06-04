@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { domainToASCII, domainToUnicode } from 'url';
 import {
   Note as ActivityStreams,
@@ -97,7 +98,7 @@ function isString(string: unknown): string is string {
   return typeof string == 'string';
 }
 
-function attachmentFromActivityStreams(repository: Repository, attachment: (ParsedActivityStreams | null)[] | null) {
+function attachmentFromActivityStreams(repository: Repository, attachment: (ParsedActivityStreams | null)[] | null, signal: AbortSignal) {
   return attachment ? Promise.all(attachment.map(async element => {
     if (!element) {
       return null;
@@ -105,7 +106,7 @@ function attachmentFromActivityStreams(repository: Repository, attachment: (Pars
 
     let type;
     try {
-      type = await element.getType(() => attachmentError);
+      type = await element.getType(signal, () => attachmentError);
     } catch (error) {
       if (error == attachmentError) {
         return null;
@@ -115,7 +116,7 @@ function attachmentFromActivityStreams(repository: Repository, attachment: (Pars
     }
 
     if (type.has('Document')) {
-      return Document.fromParsedActivityStreams(repository, element, () => attachmentError).catch(error => {
+      return Document.fromParsedActivityStreams(repository, element, signal, () => attachmentError).catch(error => {
         if (error == attachmentError) {
           return null;
         }
@@ -128,13 +129,13 @@ function attachmentFromActivityStreams(repository: Repository, attachment: (Pars
   })) : [];
 }
 
-function tagFromActivityStreams(repository: Repository, nullableTag: (ParsedActivityStreams | null)[] | null) {
+function tagFromActivityStreams(repository: Repository, nullableTag: (ParsedActivityStreams | null)[] | null, signal: AbortSignal) {
   if (!nullableTag) {
     return [[], []] as [unknown[], (Actor | null)[]];
   }
 
   const tag = nullableTag.filter(isNotNull);
-  const asyncTypes = tag.map(element => element.getType(() => tagError));
+  const asyncTypes = tag.map(element => element.getType(signal, () => tagError));
 
   return Promise.all([
     Promise.all(asyncTypes.map(async (asyncType, index) => {
@@ -144,7 +145,7 @@ function tagFromActivityStreams(repository: Repository, nullableTag: (ParsedActi
           return null;
         }
 
-        return tag[index].getName(() => tagError);
+        return tag[index].getName(signal, () => tagError);
       } catch (error) {
         if (error == tagError) {
           return null;
@@ -162,7 +163,7 @@ function tagFromActivityStreams(repository: Repository, nullableTag: (ParsedActi
           return null;
         }
 
-        href = await element.getHref(() => tagError);
+        href = await element.getHref(signal, () => tagError);
       } catch (error) {
         if (error == tagError) {
           return null;
@@ -175,7 +176,7 @@ function tagFromActivityStreams(repository: Repository, nullableTag: (ParsedActi
       }
 
       const parsed = new ParsedActivityStreams(repository, href, NoHost);
-      return Actor.fromParsedActivityStreams(repository, parsed, () => tagError).catch(error => {
+      return Actor.fromParsedActivityStreams(repository, parsed, signal, () => tagError).catch(error => {
         if (error != tagError) {
           throw error;
         }
@@ -330,11 +331,11 @@ export default class Note extends Relation<Properties, References> {
     return note;
   }
 
-  static async createFromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, givenAttributedTo: Actor | null, recover: (error: Error & {
+  static async createFromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, givenAttributedTo: Actor | null, signal: AbortSignal, recover: (error: Error & {
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) {
-    const type = await object.getType(recover);
+    const type = await object.getType(signal, recover);
     if (!type.has('Note')) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Note.'), { [unexpectedType]: true }));
     }
@@ -345,15 +346,15 @@ export default class Note extends Relation<Properties, References> {
       [hashtags, mentions]
     ] = await Promise.all([
       object.getId(recover),
-      object.getPublished(recover),
-      givenAttributedTo || object.getAttributedTo(recover).then(attributedTo => {
+      object.getPublished(signal, recover),
+      givenAttributedTo || object.getAttributedTo(signal, recover).then(attributedTo => {
         if (!attributedTo) {
           throw recover(new Error('attributedTo unspecified.'));
         }
 
-        return Actor.fromParsedActivityStreams(repository, attributedTo, recover);
+        return Actor.fromParsedActivityStreams(repository, attributedTo, signal, recover);
       }),
-      object.getTo(recover).then(elements => elements ? Promise.all(elements.map(element => {
+      object.getTo(signal, recover).then(elements => elements ? Promise.all(elements.map(element => {
         if (!element) {
           return null;
         }
@@ -369,7 +370,7 @@ export default class Note extends Relation<Properties, References> {
           throw error;
         }
       })) : []),
-      object.getInReplyTo(() => inReplyToError).then(async parsed => {
+      object.getInReplyTo(signal, () => inReplyToError).then(async parsed => {
         if (!parsed) {
           return [null, null];
         }
@@ -389,16 +390,16 @@ export default class Note extends Relation<Properties, References> {
 
         throw error;
       }),
-      object.getSummary(recover),
-      object.getContent(recover),
-      object.getAttachment(() => attachmentError).then(attachment => attachmentFromActivityStreams(repository, attachment), error => {
+      object.getSummary(signal, recover),
+      object.getContent(signal, recover),
+      object.getAttachment(signal, () => attachmentError).then(attachment => attachmentFromActivityStreams(repository, attachment, signal), error => {
         if (error == attachmentError) {
           return [] as (Document | null)[];
         }
 
         throw error;
       }),
-      object.getTag(() => tagError).then(tag => tagFromActivityStreams(repository, tag), error => {
+      object.getTag(signal, () => tagError).then(tag => tagFromActivityStreams(repository, tag, signal), error => {
         if (error == tagError) {
           return [[], []] as [unknown[], (Actor | null)[]];
         }
@@ -429,7 +430,7 @@ export default class Note extends Relation<Properties, References> {
     }, recover);
   }
 
-  static async fromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, givenAttributedTo: Actor | null, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+  static async fromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, givenAttributedTo: Actor | null, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
     const uri = await object.getId(recover);
     if (typeof uri == 'string') {
       const localNote = await tryToResolveLocalNoteByURI(repository, uri);
@@ -454,7 +455,7 @@ export default class Note extends Relation<Properties, References> {
     }
 
     return this.createFromParsedActivityStreams(
-      repository, object, givenAttributedTo, recover);
+      repository, object, givenAttributedTo, signal, recover);
   }
 }
 

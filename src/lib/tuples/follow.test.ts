@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
 import {
   fabricateFollow,
@@ -101,6 +102,8 @@ describe('create', () => {
 });
 
 describe('createFromParsedActivityStreams', () => {
+  const { signal } = new AbortController;
+
   test('creates follow from ActivityStreams representation', async () => {
     const [actor, object] = await Promise.all([
       fabricateRemoteAccount()
@@ -120,7 +123,7 @@ describe('createFromParsedActivityStreams', () => {
 
     const recover = jest.fn();
     const follow = await Follow.createFromParsedActivityStreams(
-      repository, activity, actor, recover);
+      repository, activity, actor, signal, recover);
 
     expect(recover).not.toHaveBeenCalled();
     expect(follow).toHaveProperty('actor', actor);
@@ -147,7 +150,7 @@ describe('createFromParsedActivityStreams', () => {
 
     const recover = jest.fn();
     const follow = await Follow.createFromParsedActivityStreams(
-      repository, activity, actor, recover);
+      repository, activity, actor, signal, recover);
 
     expect(recover).not.toHaveBeenCalled();
     expect(follow).toHaveProperty('actor', actor);
@@ -167,10 +170,11 @@ describe('createFromParsedActivityStreams', () => {
       object: 'https://xn--kgbechtv/@OBJECT'
     }, AnyHost);
 
+    const actorActor = unwrap(await actor.select('actor'));
     const recovery = {};
 
     await expect(Follow.createFromParsedActivityStreams(
-      repository, activity, unwrap(await actor.select('actor')), error => {
+      repository, activity, actorActor, signal, error => {
         expect(error[unexpectedType]).toBe(true);
         return recovery;
       })).rejects.toBe(recovery);
@@ -193,7 +197,7 @@ describe('createFromParsedActivityStreams', () => {
     const recover = jest.fn();
 
     await expect(Follow.createFromParsedActivityStreams(
-      repository, activity, actor, recover)).resolves.toBeInstanceOf(Follow);
+      repository, activity, actor, signal, recover)).resolves.toBeInstanceOf(Follow);
 
     expect(recover).not.toHaveBeenCalled();
     await expect((await repository.queue.getWaiting())[0])

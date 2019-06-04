@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { Job } from 'bull';
 import { URL } from 'url';
 import ParsedActivityStreams from '../../../lib/parsed_activitystreams';
@@ -32,9 +33,9 @@ interface Data {
 
 export type OwnerNotFound = typeof ownerNotFound;
 
-export default async function(repository: Repository, { data }: Job<Data>, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+export default async function(repository: Repository, { data }: Job<Data>, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
   const { body, signature } = data;
-  const owner = await Actor.fromKeyUri(repository, signature.keyId, recover);
+  const owner = await Actor.fromKeyUri(repository, signature.keyId, signal, recover);
 
   if (!owner) {
     throw recover(new Error('Key owner not found.'));
@@ -49,13 +50,13 @@ export default async function(repository: Repository, { data }: Job<Data>, recov
     const collection =
       new ParsedActivityStreams(repository, parsed, normalizedHost);
 
-    const items = await collection.getItems(recover);
+    const items = await collection.getItems(signal, recover);
     const errors = [] as (Error & { [temporaryError]?: boolean })[];
     const recovery = {};
 
     await Promise.all(items.map(item => {
       if (item) {
-        return item.act(owner, error => {
+        return item.act(owner, signal, error => {
           errors.push(error);
           return recovery;
         }).catch(error => {

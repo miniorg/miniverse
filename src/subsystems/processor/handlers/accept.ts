@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { Job } from 'bull';
 import Repository from '../../../lib/repository';
 import { postToInbox, temporaryError } from '../../../lib/transfer';
@@ -25,7 +26,7 @@ interface Data {
   readonly objectId: string;
 }
 
-export default async function(repository: Repository, { data }: Job<Data>, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+export default async function(repository: Repository, { data }: Job<Data>, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
   const accept = new Accept({ objectId: data.objectId, repository });
 
   const object = await accept.select('object');
@@ -63,5 +64,5 @@ export default async function(repository: Repository, { data }: Job<Data>, recov
     throw recover(new Error('object\'s actor\'s inboxURI not found.'));
   }
 
-  await postToInbox(repository, sender, inboxURI, accept, recover);
+  await postToInbox(repository, sender, inboxURI, accept, signal, recover);
 }

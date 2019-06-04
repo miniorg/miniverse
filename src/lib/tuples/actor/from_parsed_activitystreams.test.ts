@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import { createPublicKey } from 'crypto';
 import ParsedActivityStreams, { AnyHost } from '../../parsed_activitystreams';
 import {
@@ -25,6 +26,8 @@ import { unwrap } from '../../test/types';
 import Actor from './index';
 import { unexpectedType } from './base';
 import nock = require('nock');
+
+const { signal } = new AbortController;
 
 describe('createFromHostAndParsedActivityStreams', () => {
   test('creates and resolves with an actor', async () => {
@@ -52,7 +55,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `
         }
-      }, AnyHost), recover);
+      }, AnyHost), signal, recover);
 
     expect(recover).not.toHaveBeenCalled();
     expect(actor).toBeInstanceOf(Actor);
@@ -119,7 +122,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `
         }
-      }, AnyHost), error => {
+      }, AnyHost), signal, error => {
         expect(error[unexpectedType]).toBe(true);
         return recovery;
       })).rejects.toBe(recovery);
@@ -151,7 +154,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `
         }
-      }, AnyHost), () => recovery)).rejects.toBe(recovery);
+      }, AnyHost), signal, () => recovery)).rejects.toBe(recovery);
   });
 
   test('rejects if its context does not include https://w3id.org/security/v1', () => {
@@ -179,7 +182,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `
         }
-      }, AnyHost), () => recovery)).rejects.toBe(recovery);
+      }, AnyHost), signal, () => recovery)).rejects.toBe(recovery);
   });
 });
 
@@ -195,7 +198,7 @@ describe('fromParsedActivityStreams', () => {
       new ParsedActivityStreams(
         repository,
         'https://xn--kgbechtv/@UsErNaMe',
-        AnyHost), recover))
+        AnyHost), signal, recover))
       .resolves.toHaveProperty('id', unwrap(await account.select('actor')).id);
 
     expect(recover).not.toHaveBeenCalled();
@@ -207,6 +210,7 @@ describe('fromParsedActivityStreams', () => {
     await expect(Actor.fromParsedActivityStreams(
       repository,
       new ParsedActivityStreams(repository, 'https://xn--kgbechtv/@UsErNaMe', AnyHost),
+      signal,
       recover))
       .resolves
       .toBe(null);
@@ -222,6 +226,7 @@ describe('fromParsedActivityStreams', () => {
     await expect(Actor.fromParsedActivityStreams(
       repository,
       new ParsedActivityStreams(repository, 'https://ReMoTe.إختبار/', AnyHost),
+      signal,
       recover))
       .resolves
       .toHaveProperty('id', id);
@@ -271,7 +276,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `
         }
-      }, AnyHost), recover)).resolves.toHaveProperty(
+      }, AnyHost), signal, recover)).resolves.toHaveProperty(
         ['account', 'uri', 'uri'],
         'https://remote.xn--kgbechtv/@preferred%20username');
     } finally {
@@ -342,7 +347,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
         .get('/@preferred%20username')
         .reply(200, activitystreams);
 
-      await expect(Actor.fromKeyUri(repository, 'https://remote.xn--kgbechtv/@preferred%20username#key', () => recovery))
+      await expect(Actor.fromKeyUri(repository, 'https://remote.xn--kgbechtv/@preferred%20username#key', signal, () => recovery))
         .rejects
         .toBe(recovery);
     } finally {

@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import {
   fabricateFollow,
   fabricateLocalAccount,
@@ -73,7 +74,7 @@ ewIDAQAB
   await processInbox(repository, await repository.queue.add({
     signature,
     body: `{ "type": "Follow", "object": "https://ObJeCt.إختبار/" }`
-  }), recover);
+  }), (new AbortController).signal, recover);
   expect(recover).not.toHaveBeenCalled();
 
   const actors = await repository.selectActorsByFolloweeId(unwrap(object.id));
@@ -101,7 +102,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
   await processInbox(repository, await repository.queue.add({
     signature,
     body: '{ "type": "Follow", "object": "https://ObJeCt.إختبار/" }',
-  }), recover);
+  }), (new AbortController).signal, recover);
 
   expect(recover).not.toHaveBeenCalled();
   await expect(repository.selectActorsByFolloweeId(unwrap(object.id)))
@@ -138,7 +139,7 @@ ewIDAQAB
   { "type": "Follow", "object": "https://xn--kgbechtv/@oBjEcT" },
   { "type": "Follow", "object": "https://xn--kgbechtv/@oBjEcT" }
 ]`
-  }), error => {
+  }), (new AbortController).signal, error => {
     expect(error[temporaryError]).toBe(false);
     return recovery;
   })).rejects.toBe(recovery);
@@ -167,7 +168,7 @@ ewIDAQAB
     await expect(processInbox(repository, await repository.queue.add({
       signature,
       body: `["https://uNrEaChAbLe.إختبار/", "https://uNrEaChAbLe.إختبار/"]`,
-    }), error => {
+    }), (new AbortController).signal, error => {
       expect(error[temporaryError]).toBe(true);
       return recovery;
     })).rejects.toBe(recovery);

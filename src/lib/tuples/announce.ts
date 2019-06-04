@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { Announce as ActivityStreams } from '../generated_activitystreams';
 import ParsedActivityStreams from '../parsed_activitystreams';
 import Repository from '../repository';
@@ -100,27 +101,27 @@ export default class Announce extends Relation<Properties, References> {
     return announce;
   }
 
-  static async createFromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, actor: Actor, recover: (error: Error & {
+  static async createFromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, actor: Actor, signal: AbortSignal, recover: (error: Error & {
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) {
-    const type = await object.getType(recover);
+    const type = await object.getType(signal, recover);
 
     if (!type.has('Announce')) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Announce.'), { [unexpectedType]: true }));
     }
 
     const [published, uri, objectObject, objectTo] = await Promise.all([
-      object.getPublished(recover),
+      object.getPublished(signal, recover),
       object.getId(recover),
-      object.getObject(recover).then(async parsed => {
+      object.getObject(signal, recover).then(async parsed => {
         if (!parsed) {
           throw recover(new Error('object unspecified.'));
         }
 
-        return Note.fromParsedActivityStreams(repository, parsed, null, recover);
+        return Note.fromParsedActivityStreams(repository, parsed, null, signal, recover);
       }),
-      object.getTo(recover).then(elements => {
+      object.getTo(signal, recover).then(elements => {
         if (!elements) {
           throw recover(new Error('to unspecified.'));
         }

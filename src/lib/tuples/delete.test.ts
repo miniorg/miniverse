@@ -14,11 +14,14 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
 import { fabricateDocument, fabricateNote } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
 import Delete, { unexpectedType } from './delete';
+
+const { signal } = new AbortController;
 
 describe('createFromParsedActivityStreams', () => {
   test('deletes note', async () => {
@@ -35,7 +38,7 @@ describe('createFromParsedActivityStreams', () => {
     }, AnyHost);
 
     await expect(Delete.createFromParsedActivityStreams(
-      repository, activityStreams, actor, recover)).resolves.toBeInstanceOf(Delete);
+      repository, activityStreams, actor, signal, recover)).resolves.toBeInstanceOf(Delete);
 
     expect(recover).not.toHaveBeenCalled();
     await expect(repository.selectRecentStatusesIncludingExtensionsByActorId(status.actorId))
@@ -64,7 +67,7 @@ describe('createFromParsedActivityStreams', () => {
     }, AnyHost);
 
     await expect(Delete.createFromParsedActivityStreams(
-      repository, activityStreams, actor, recover)).resolves.toBeInstanceOf(Delete);
+      repository, activityStreams, actor, signal, recover)).resolves.toBeInstanceOf(Delete);
 
     expect(recover).not.toHaveBeenCalled();
     await expect(repository.selectDocumentById(documentId)).resolves.toBe(null);
@@ -90,6 +93,7 @@ describe('createFromParsedActivityStreams', () => {
       repository,
       activityStreams,
       unwrap(await status.select('actor')),
+      signal,
       error => {
         expect(error[unexpectedType]).toBe(true);
         return recovery;

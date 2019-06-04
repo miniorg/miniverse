@@ -56,7 +56,7 @@ export default class Accept extends Relation<Properties, References> {
     }
 
     if (!objectObject.host && objectActor.host) {
-      await repository.queue.add({ type: 'accept', objectId: object.id });
+      await repository.queue.add({ type: 'accept', objectId: object.id }, { timeout: 16384 });
     }
 
     return accept;

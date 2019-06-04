@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import repository from '../../../lib/test/repository';
 import { unwrap } from '../../../lib/test/types';
 import Document from '../../../lib/tuples/document';
@@ -37,7 +38,7 @@ test('uploads', async () => {
   nock('https://إختبار').get('/').reply(200, svg);
 
   try {
-    await upload(repository, job, recover);
+    await upload(repository, job, (new AbortController).signal, recover);
   } finally {
     nock.cleanAll();
   }

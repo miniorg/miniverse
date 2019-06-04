@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { Follow as ActivityStreams } from '../generated_activitystreams';
 import ParsedActivityStreams from '../parsed_activitystreams';
 import Repository from '../repository';
@@ -79,28 +80,28 @@ export default class Follow extends Relation<Properties, References> {
       !actor.host && object.host && repository.queue.add({
         type: 'postFollow',
         id: follow.id
-      })
+      }, { timeout: 16384 })
     ] as unknown[]);
 
     return follow;
   }
 
-  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor, recover: (error: Error & {
+  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor, signal: AbortSignal, recover: (error: Error & {
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) {
-    const type = await activity.getType(recover);
+    const type = await activity.getType(signal, recover);
     if (!type.has('Follow')) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Follow.'), { [unexpectedType]: true }));
     }
 
-    const object = await activity.getObject(recover);
+    const object = await activity.getObject(signal, recover);
     if (!object) {
       throw recover(new Error('object unspecified.'));
     }
 
     const objectActor =
-      await Actor.fromParsedActivityStreams(repository, object, recover);
+      await Actor.fromParsedActivityStreams(repository, object, signal, recover);
     if (!objectActor) {
       throw recover(new Error('object\'s actor unfetched.'));
     }

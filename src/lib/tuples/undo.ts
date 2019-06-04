@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import ParsedActivityStreams from '../parsed_activitystreams';
 import Repository from '../repository';
 import Actor from './actor';
@@ -23,22 +24,22 @@ import { temporaryError } from '../transfer';
 export const unexpectedType = Symbol();
 
 export default class Undo {
-  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor, recover: (error: Error & {
+  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor, signal: AbortSignal, recover: (error: Error & {
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) {
-    const type = await activity.getType(recover);
+    const type = await activity.getType(signal, recover);
 
     if (!type.has('Undo')) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Undo.'), { [unexpectedType]: true }));
     }
 
-    const object = await activity.getObject(recover);
+    const object = await activity.getObject(signal, recover);
     if (!object) {
       throw recover(new Error('object unspecified.'));
     }
 
-    const objectType = await object.getType(recover);
+    const objectType = await object.getType(signal, recover);
 
     if (objectType.has('Announce')) {
       const id = await object.getId(recover);
@@ -53,26 +54,26 @@ export default class Undo {
 
       await repository.deleteStatusByUriAndAttributedTo(uriEntity, actor);
     } else if (objectType.has('Follow')) {
-      const objectActorActivityStreams = await object.getObject(recover);
+      const objectActorActivityStreams = await object.getObject(signal, recover);
       if (!objectActorActivityStreams) {
         throw recover(new Error('object\'s object unspecified.'));
       }
 
       const objectActor = await Actor.fromParsedActivityStreams(
-        repository, objectActorActivityStreams, recover);
+        repository, objectActorActivityStreams, signal, recover);
       if (!objectActor) {
         throw recover(new Error('object\'s actor not found.'));
       }
 
       await repository.deleteFollowByActorAndObject(actor, objectActor);
     } else if (objectType.has('Like')) {
-      const noteActivityStreams = await object.getObject(recover);
+      const noteActivityStreams = await object.getObject(signal, recover);
       if (!noteActivityStreams) {
         throw recover(new Error('object\'s object unspecified.'));
       }
 
       const note = await Note.fromParsedActivityStreams(
-        repository, noteActivityStreams, null, recover);
+        repository, noteActivityStreams, null, signal, recover);
       if (!note) {
         throw recover(new Error('object\'s object not found.'));
       }

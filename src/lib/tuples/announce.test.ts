@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
 import {
   fabricateAnnounce,
@@ -25,6 +26,8 @@ import {
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
 import Announce, { unexpectedType } from './announce';
+
+const { signal } = new AbortController;
 
 describe('toActivityStreams', () => {
   test('resolves with its ActivityStreams representation', async () => {
@@ -131,6 +134,7 @@ describe('createFromParsedActivityStreams', () => {
         object: 'https://ReMoTe.xn--kgbechtv/oBjEcT'
       }, AnyHost),
       actor,
+      signal,
       recover));
 
     expect(recover).not.toHaveBeenCalled();
@@ -171,6 +175,7 @@ describe('createFromParsedActivityStreams', () => {
         object: 'https://ReMoTe.xn--kgbechtv/oBjEcT'
       }, AnyHost),
       actor,
+      signal,
       error => {
         expect(error[unexpectedType]).toBe(true);
         return recovery;
@@ -197,6 +202,7 @@ describe('createFromParsedActivityStreams', () => {
         object: 'https://ReMoTe.xn--kgbechtv/oBjEcT'
       }, AnyHost),
       actor,
+      signal,
       recover)).resolves.toBe(null);
 
     expect(recover).not.toHaveBeenCalled();

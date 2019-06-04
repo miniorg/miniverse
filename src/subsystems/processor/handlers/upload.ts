@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { Job } from 'bull';
 import Repository from '../../../lib/repository';
 import { fetch, temporaryError } from '../../../lib/transfer';
@@ -23,7 +24,7 @@ interface Data {
   readonly id: string;
 }
 
-export default async function (repository: Repository, { data }: Job<Data>, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+export default async function (repository: Repository, { data }: Job<Data>, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
   const document = await repository.selectDocumentById(data.id);
   if (!document) {
     throw recover(new Error('Document not found.'));
@@ -34,7 +35,7 @@ export default async function (repository: Repository, { data }: Job<Data>, reco
     throw recover(new Error('Document url not found.'));
   }
 
-  const { body } = await fetch(repository, url.uri, null, recover);
+  const { body } = await fetch(repository, url.uri, { signal }, recover);
 
   await document.upload(body.pipe(sharp().toFormat(document.format)));
 }

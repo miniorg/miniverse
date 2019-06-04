@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { URL } from 'url';
 import ParsedActivityStreams, { AnyHost } from '../../parsed_activitystreams';
 import Repository from '../../repository';
@@ -21,7 +22,7 @@ import { fetch, temporaryError } from '../../transfer';
 import { encodeAcctUserpart } from '../uri';
 import Base, { unexpectedType } from './base';
 
-export async function lookup(repository: Repository, resource: string, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+export async function lookup(repository: Repository, resource: string, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
   const { pathname, protocol, origin } = new URL(resource);
 
   const webFingerOrigin = protocol == 'acct:' ?
@@ -32,14 +33,14 @@ export async function lookup(repository: Repository, resource: string, recover: 
   const response = await fetch(
     repository,
     `${webFingerOrigin}/.well-known/webfinger?resource=${webFingerResource}`,
-    null,
+    { signal },
     recover);
 
   return response.json() as { [key: string]: unknown };
 }
 
 export default class extends Base {
-  static async fromUsernameAndNormalizedHost(repository: Repository, username: string, normalizedHost: null | string, recover: (error: Error & {
+  static async fromUsernameAndNormalizedHost(repository: Repository, username: string, normalizedHost: null | string, signal: AbortSignal, recover: (error: Error & {
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) {
@@ -53,7 +54,7 @@ export default class extends Base {
 
       const encodedUsername = encodeAcctUserpart(username);
       const firstFinger =
-        await lookup(repository, `acct:${encodedUsername}@${normalizedHost}`, recover);
+        await lookup(repository, `acct:${encodedUsername}@${normalizedHost}`, signal, recover);
 
       if (typeof firstFinger.subject != 'string') {
         throw recover(new Error('Unsupported WebFinger subject type.'));
@@ -68,20 +69,20 @@ export default class extends Base {
       const activityStreams =
         new ParsedActivityStreams(repository, href, AnyHost);
 
-      await lookup(repository, href, recover).then(secondFinger => {
+      await lookup(repository, href, signal, recover).then(secondFinger => {
         if (firstFinger.subject != secondFinger.subject) {
           throw recover(new Error('WebFinger subject verification failed.'));
         }
       });
 
       return this.createFromHostAndParsedActivityStreams(
-        repository, host, activityStreams, recover);
+        repository, host, activityStreams, signal, recover);
     }
 
     return actor;
   }
 
-  static async fromKeyUri(repository: Repository, keyUri: string, recover: (error: Error & {
+  static async fromKeyUri(repository: Repository, keyUri: string, signal: AbortSignal, recover: (error: Error & {
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) {
@@ -99,12 +100,12 @@ export default class extends Base {
     }
 
     const key = new ParsedActivityStreams(repository, keyUri, AnyHost);
-    const owner = await key.getOwner(recover);
+    const owner = await key.getOwner(signal, recover);
     if (!owner) {
       throw recover(new Error('Key owner unspecified.'));
     }
 
-    const ownedKey = await owner.getPublicKey(recover);
+    const ownedKey = await owner.getPublicKey(signal, recover);
     if (!ownedKey) {
       throw recover(new Error('Key owner\'s key unspecified.'));
     }
@@ -115,6 +116,6 @@ export default class extends Base {
       throw recover(new Error('Key id verification failed.'));
     }
 
-    return this.fromParsedActivityStreams(repository, owner, recover);
+    return this.fromParsedActivityStreams(repository, owner, signal, recover);
   }
 }

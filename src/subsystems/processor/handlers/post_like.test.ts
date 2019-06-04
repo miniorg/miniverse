@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import {
   fabricateLike,
   fabricateLocalAccount,
@@ -45,7 +46,7 @@ test('delivers to remote account', async () => {
   const post = nock('https://ObJeCt.إختبار').post('/?inbox').reply(200);
 
   try {
-    await postLike(repository, job, recover);
+    await postLike(repository, job, (new AbortController).signal, recover);
     expect(post.isDone()).toBe(true);
   } finally {
     nock.cleanAll();

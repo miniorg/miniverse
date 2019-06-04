@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { Job } from 'bull';
 import Repository from '../../../lib/repository';
 import { postToInbox, temporaryError } from '../../../lib/transfer';
@@ -24,7 +25,7 @@ interface Data {
   readonly id: string;
 }
 
-export default async function (repository: Repository, { data }: Job<Data>, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+export default async function (repository: Repository, { data }: Job<Data>, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
   const follow = await repository.selectFollowIncludingActorAndObjectById(data.id);
 
   if (!follow) {
@@ -61,5 +62,5 @@ export default async function (repository: Repository, { data }: Job<Data>, reco
     throw recover(new Error('object\'s inbox not found.'));
   }
 
-  await postToInbox(repository, sender, inboxURI, follow, recover);
+  await postToInbox(repository, sender, inboxURI, follow, signal, recover);
 }

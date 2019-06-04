@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { Body } from 'aws-sdk/clients/s3';
 import { Document as ActivityStreams } from '../generated_activitystreams';
 import generateUuid from '../generate_uuid';
@@ -59,10 +60,10 @@ export default class Document extends Relation<Properties, References> {
     }).promise();
   }
 
-  static async create(repository: Repository, url: string, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+  static async create(repository: Repository, url: string, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
     const [uuid, { data, info }] = await Promise.all([
       generateUuid(),
-      fetch(repository, url, null, recover).then(({ body }) =>
+      fetch(repository, url, { signal }, recover).then(({ body }) =>
         body.pipe(sharp()).toBuffer({ resolveWithObject: true }))
     ]);
 
@@ -78,33 +79,33 @@ export default class Document extends Relation<Properties, References> {
     try {
       await document.upload(data);
     } catch (error) {
-      await repository.queue.add({ type: 'upload', id: document.id });
+      await repository.queue.add({ type: 'upload', id: document.id }, { timeout: 16384 });
       throw error;
     }
 
     return document;
   }
 
-  static async fromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, recover: (error: Error & {
+  static async fromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, signal: AbortSignal, recover: (error: Error & {
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) {
-    const type = await object.getType(recover);
+    const type = await object.getType(signal, recover);
     if (!type.has('Document')) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Document.'), { [unexpectedType]: true }));
     }
 
-    const url = await object.getUrl(recover);
+    const url = await object.getUrl(signal, recover);
     if (!url) {
       throw recover(new Error('url unspecified.'));
     }
 
-    const urlType = await url.getType(recover);
+    const urlType = await url.getType(signal, recover);
     if (!urlType.has('Link')) {
       throw recover(new Error('Unsupported url type. Expected Link.'));
     }
 
-    const href = await url.getHref(recover);
+    const href = await url.getHref(signal, recover);
     if (typeof href != 'string') {
       throw recover(new Error('Unsupported url\'s href type. Expected string.'));
     }
@@ -119,7 +120,7 @@ export default class Document extends Relation<Properties, References> {
       return repository.selectDocumentById(urlEntity.id);
     }
 
-    return this.create(repository, href, recover);
+    return this.create(repository, href, signal, recover);
   }
 }
 
