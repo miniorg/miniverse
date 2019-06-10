@@ -30,18 +30,18 @@ describe('selectAllocatedURI', () => {
 
 test('inserts remote account and allows to query the URI of its inbox by ID', async () => {
   const account = await fabricateRemoteAccount(
-    { inboxURI: { uri: 'https://ReMoTe.إختبار/inbox' } });
+    { inbox: { uri: 'https://ReMoTe.إختبار/inbox' } });
 
   const { id } = unwrap(await account.select('inboxURI'));
 
-  await expect(repository.selectURIById(unwrap(id)))
+  await expect(repository.selectURIById(id))
     .resolves
     .toHaveProperty('uri', 'https://ReMoTe.إختبار/inbox');
 });
 
 test('inserts remote account and allows to query the URI of its inbox', async () => {
   const account = await fabricateRemoteAccount(
-    { inboxURI: { uri: 'https://ReMoTe.إختبار/inbox' } });
+    { inbox: { uri: 'https://ReMoTe.إختبار/inbox' } });
 
   const { id } = unwrap(await account.select('inboxURI'));
 

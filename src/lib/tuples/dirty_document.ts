@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2018  Miniverse authors
+  Copyright (C) 2019  Miniverse authors
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU Affero General Public License as published by
@@ -14,17 +14,25 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { fabricateLocalAccount, fabricateNote } from '../test/fabricator';
-import repository from '../test/repository';
-import { unwrap } from '../test/types';
+import Repository from '../repository';
 
-test('inserts note and allows to query its mentions', async () => {
-  const account = await fabricateLocalAccount();
-  const actor = unwrap(await account.select('actor'));
-  const note = await fabricateNote({ mentions: [actor] });
+interface Properties {
+  readonly repository: Repository;
+  readonly id: number;
+  readonly uuid: string;
+  readonly format: string;
+}
 
-  const mentions =
-    await repository.selectMentionsIncludingActorsByNoteId(note.id);
+export default class DirtyDocument {
+  readonly repository: Repository;
+  readonly id: number;
+  readonly uuid: string;
+  readonly format: string;
 
-  expect(mentions[0]).toHaveProperty('hrefId', actor.id);
-});
+  constructor({ repository, id, uuid, format }: Properties) {
+    this.repository = repository;
+    this.id = id;
+    this.uuid = uuid;
+    this.format = format;
+  }
+}

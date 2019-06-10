@@ -23,7 +23,7 @@ import Accept from './accept';
 import Actor from './actor';
 import Relation, { Reference } from './relation';
 
-type Properties = { id?: string } &
+type Properties = { id: string } &
 ({ actorId: string } | { actorId?: string; actor: Actor }) &
 ({ objectId: string } | { objectId?: string; object: Actor });
 
@@ -34,8 +34,13 @@ interface References {
 
 export const unexpectedType = Symbol();
 
+export interface Seed {
+  readonly actor: Actor;
+  readonly object: Actor;
+}
+
 export default class Follow extends Relation<Properties, References> {
-  id?: string;
+  readonly id!: string;
   readonly actor?: Reference<Actor | null>;
   readonly actorId!: string;
   readonly object?: Reference<Actor | null>;
@@ -70,14 +75,12 @@ export default class Follow extends Relation<Properties, References> {
     return { type: 'Follow', actor, object };
   }
 
-  static async create(repository: Repository, actor: Actor, object: Actor, recover: (error: Error) => unknown) {
-    const follow = new this({ actor, object, repository });
-
-    await repository.insertFollow(follow, recover);
+  static async create(repository: Repository, seed: Seed, recover: (error: Error) => unknown) {
+    const follow = await repository.insertFollow(seed, recover);
 
     await Promise.all([
       Accept.create(repository, follow, recover),
-      !actor.host && object.host && repository.queue.add({
+      !seed.actor.host && seed.object.host && repository.queue.add({
         type: 'postFollow',
         id: follow.id
       }, { timeout: 16384 })
@@ -106,7 +109,10 @@ export default class Follow extends Relation<Properties, References> {
       throw recover(new Error('object\'s actor unfetched.'));
     }
 
-    return this.create(repository, actor, objectActor, recover);
+    return this.create(repository, {
+      actor,
+      object: objectActor
+    }, recover);
   }
 }
 

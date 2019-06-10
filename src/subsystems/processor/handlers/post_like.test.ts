@@ -31,16 +31,14 @@ test('delivers to remote account', async () => {
     fabricateLocalAccount()
       .then(account => account.select('actor'))
       .then(unwrap),
-    fabricateRemoteAccount({
-      inboxURI: { uri: 'https://ObJeCt.إختبار/?inbox' }
-    })
+    fabricateRemoteAccount({ inbox: { uri: 'https://ObJeCt.إختبار/?inbox' } })
       .then(account => account.select('actor'))
       .then(unwrap)
       .then(actor => fabricateNote({ status: { actor } }))
   ]);
 
   const { id } = await fabricateLike({ actor, object });
-  const job = await repository.queue.add({ id: unwrap(id) });
+  const job = await repository.queue.add({ id });
   const recover = jest.fn();
 
   const post = nock('https://ObJeCt.إختبار').post('/?inbox').reply(200);

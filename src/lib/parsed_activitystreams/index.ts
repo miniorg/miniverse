@@ -269,16 +269,13 @@ export default class ParsedActivityStreams {
       }
     }
 
-    await Promise.all([
-      Promise.all([
-        this.getActor(signal, recover).then(actual => actual && actual.getId(recover)),
-        actor.getUri(recover)
-      ]).then(([actual, expected]) => {
-        if (actual && actual != expected) {
-          throw recover(new Error('Unexpected actor.'));
-        }
-      })
+    const [actualActor, expectedActor] = await Promise.all([
+      this.getActor(signal, recover).then(actual => actual && actual.getId(recover)),
+      actor.getUri(recover)
     ]);
+    if (actualActor && actualActor != expectedActor) {
+      throw recover(new Error('Unexpected actor.'));
+    }
 
     for (const create of [
       () => Delete.createFromParsedActivityStreams(

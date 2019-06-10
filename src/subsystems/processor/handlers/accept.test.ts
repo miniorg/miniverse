@@ -27,7 +27,7 @@ import nock = require('nock');
 
 test('delivers to remote account', async () => {
   const [actor, object] = await Promise.all([
-    fabricateRemoteAccount({ inboxURI: { uri: 'https://AcToR.إختبار/?inbox' } })
+    fabricateRemoteAccount({ inbox: { uri: 'https://AcToR.إختبار/?inbox' } })
       .then(account => account.select('actor'))
       .then(unwrap),
     fabricateLocalAccount()
@@ -36,7 +36,7 @@ test('delivers to remote account', async () => {
   ]);
 
   const { id } = await fabricateFollow({ actor, object });
-  const job = await repository.queue.add({ objectId: unwrap(id) });
+  const job = await repository.queue.add({ objectId: id });
   const recover = jest.fn();
 
   const post = nock('https://AcToR.إختبار').post('/?inbox').reply(200);

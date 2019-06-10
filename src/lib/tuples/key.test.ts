@@ -21,7 +21,6 @@ import {
   fabricateRemoteAccount
 } from '../test/fabricator';
 import repository from '../test/repository';
-import { unwrap } from '../test/types';
 import Key from './key';
 
 const keyPairPromise = promisify(generateKeyPair)('rsa', {
@@ -31,7 +30,7 @@ const keyPairPromise = promisify(generateKeyPair)('rsa', {
 describe('getUri', () => {
   test('loads and returns URI of local key', async () => {
     const owner = await fabricateLocalAccount({ actor: { username: '所有者' } });
-    const key = new Key({ ownerId: unwrap(owner.id), repository });
+    const key = new Key({ ownerId: owner.id, repository });
     const recover = jest.fn();
 
     /*
@@ -51,9 +50,9 @@ describe('getUri', () => {
 
   test('loads and returns URI of remote key', async () => {
     const owner = await fabricateRemoteAccount(
-      { publicKeyURI: { uri: 'https://OwNeR.xn--kgbechtv/' } });
+      { publicKey: { uri: 'https://OwNeR.xn--kgbechtv/' } });
 
-    const key = new Key({ ownerId: unwrap(owner.id), repository });
+    const key = new Key({ ownerId: owner.id, repository });
     const recover = jest.fn();
 
     await expect(key.getUri(recover))
@@ -92,7 +91,8 @@ content-type: application/activity+json`,
 
   test('loads account and returns true if signature is valid', async () => {
     const owner = await fabricateRemoteAccount({
-      publicKeyDer: createPublicKey(`-----BEGIN PUBLIC KEY-----
+      publicKey: {
+        publicKeyDer: createPublicKey(`-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
 1Iu2LbvQ6iE19RM01An3kBA/MPelQATPv832/pWxdCjWPP8i2snPbzPZ5gSJP55v
@@ -102,9 +102,10 @@ AOc6sswdQZB3Q0FHFgaM5FkAeB07OSK+ndZffVfqfe5YM39470E9uGqC3NQYVkGH
 ewIDAQAB
 -----END PUBLIC KEY-----
 `).export({ format: 'der', type: 'pkcs1' })
+      }
     });
 
-    const key = new Key({ ownerId: unwrap(owner.id), repository });
+    const key = new Key({ ownerId: owner.id, repository });
     const recover = jest.fn();
 
     await expect(key.verifySignature(signature, recover)).resolves.toBe(true);
@@ -113,7 +114,8 @@ ewIDAQAB
 
   test('loads account and returns false if signature is invalid', async () => {
     const owner = await fabricateRemoteAccount({
-      publicKeyDer: createPublicKey(`-----BEGIN RSA PUBLIC KEY-----
+      publicKey: {
+        publicKeyDer: createPublicKey(`-----BEGIN RSA PUBLIC KEY-----
 MIIBCgKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGTrcO6
 S16XQ3tffCo0QA7G1MOzTeOEJHMiNM4jQQuY0NgDGMs3KEgo0J4ik75VnlyOiSyF
 ZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2/POH
@@ -122,9 +124,10 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 +DHYFaVXQy60WzCEFjiQPZ8XdNQKvDyjKwIDAQAB
 -----END RSA PUBLIC KEY-----
 `).export({ format: 'der', type: 'pkcs1' })
+      }
     });
 
-    const key = new Key({ ownerId: unwrap(owner.id), repository });
+    const key = new Key({ ownerId: owner.id, repository });
     const recover = jest.fn();
 
     await expect(key.verifySignature(signature, recover))
@@ -140,7 +143,7 @@ describe('selectPrivateKeyDer', () => {
     const { privateKey } = await keyPairPromise;
     const privateKeyDer = privateKey.export({ format: 'der', type: 'pkcs1' });
     const owner = await fabricateLocalAccount({ privateKeyDer });
-    const key = new Key({ ownerId: unwrap(owner.id), repository });
+    const key = new Key({ ownerId: owner.id, repository });
     const recover = jest.fn();
     const selectedPrivateKeyDer = await key.selectPrivateKeyDer(recover);
 
@@ -158,7 +161,7 @@ describe('toActivityStreams', () => {
       privateKeyDer: privateKey.export({ format: 'der', type: 'pkcs1' })
     });
 
-    const key = new Key({ ownerId: unwrap(owner.id), repository });
+    const key = new Key({ ownerId: owner.id, repository });
     const recover = jest.fn();
 
     await expect(key.toActivityStreams(recover)).resolves.toEqual({

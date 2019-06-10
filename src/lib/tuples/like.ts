@@ -28,14 +28,19 @@ interface References {
   object: Note | null;
 }
 
-type Properties = { id?: string } &
+type Properties = { id: string } &
 ({ actorId: string } | { actorId?: string; actor: Actor }) &
 ({ objectId: string } | { objectId?: string; object: Note });
 
 export const unexpectedType = Symbol();
 
+export interface Seed {
+  readonly actor: Actor;
+  readonly object: Note;
+}
+
 export default class Like extends Relation<Properties, References> {
-  id?: string;
+  readonly id!: string;
   readonly actor?: Reference<Actor | null>;
   readonly actorId!: string;
   readonly object?: Reference<Note | null>;
@@ -55,25 +60,23 @@ export default class Like extends Relation<Properties, References> {
     return { type: 'Like', object: await status.getUri(recover) };
   }
 
-  static async create(repository: Repository, actor: Actor, object: Note, recover: (error: Error) => unknown) {
-    const like = new this({ actor, object, repository });
-
-    const [recipient] = await Promise.all([
-      object.select('status').then(status => {
+  static async create(repository: Repository, seed: Seed, recover: (error: Error) => unknown) {
+    const [recipient, like] = await Promise.all([
+      seed.object.select('status').then(status => {
         if (!status) {
           throw recover(new Error('object\'s status not found.'));
         }
 
         return status.select('actor');
       }),
-      repository.insertLike(like, recover)
+      repository.insertLike(seed, recover)
     ]);
 
     if (!recipient) {
       throw recover(new Error('object\'s actor not found.'));
     }
 
-    if (!actor.host && recipient.host) {
+    if (!seed.actor.host && recipient.host) {
       await repository.queue.add({ type: 'postLike', id: like.id }, { timeout: 16384 });
     }
 
@@ -99,7 +102,7 @@ export default class Like extends Relation<Properties, References> {
       throw recover(new Error('object not found.'));
     }
 
-    return this.create(repository, actor, note, recover);
+    return this.create(repository, { actor, object: note }, recover);
   }
 }
 

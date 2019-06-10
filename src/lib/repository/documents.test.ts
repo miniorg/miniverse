@@ -14,23 +14,19 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { fabricateNote } from '../test/fabricator';
+import { fabricateDirtyDocument, fabricateNote } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
-import Document from '../tuples/document';
-import URI from '../tuples/uri';
 
 test('inserts and allows to query documents by id', async () => {
   const recover = jest.fn();
-  const inserted = new Document({
-    repository,
-    uuid: '00000000-0000-1000-8000-010000000000',
-    format: 'png',
-    url: new URI({ repository, uri: 'https://إختبار/', allocated: true })
-  });
-  await repository.insertDocument(inserted as any, recover);
+  const inserted = await repository.insertDocument(
+    await repository.insertDirtyDocument(
+      '00000000-0000-1000-8000-010000000000', 'png'),
+    'https://إختبار/',
+    recover);
 
-  const queried = await repository.selectDocumentById(unwrap(inserted.id));
+  const queried = await repository.selectDocumentById(inserted.id);
 
   expect(recover).not.toHaveBeenCalled();
   expect(queried).toHaveProperty('repository', repository);
@@ -40,35 +36,32 @@ test('inserts and allows to query documents by id', async () => {
 });
 
 test('inserts document with URL and allows to query the URL', async () => {
-  const inserted = new Document({
-    repository,
-    uuid: '00000000-0000-1000-8000-010000000000',
-    format: 'png',
-    url: new URI({ repository, uri: 'https://إختبار/', allocated: true })
-  });
   const recover = jest.fn();
-  const url = unwrap(await inserted.select('url'));
-  await repository.insertDocument(inserted as any, recover);
+  const inserted = await repository.insertDocument(
+    await fabricateDirtyDocument(),
+    'https://إختبار/',
+    recover);
 
   expect(recover).not.toHaveBeenCalled();
-  await expect(repository.selectAllocatedURI('https://إختبار/'))
-    .resolves
-    .toHaveProperty('id', url.id);
+
+  const [insertedUrl, queriedUrl] = await Promise.all([
+    inserted.select('url'),
+    repository.selectAllocatedURI('https://إختبار/')
+  ]);
+
+  expect(queriedUrl).toHaveProperty('id', unwrap(insertedUrl).id);
 });
 
 test('inserts and allows to query documents by attached note id', async () => {
   const recover = jest.fn();
-  const inserted = new Document({
-    repository,
-    uuid: '00000000-0000-1000-8000-010000000000',
-    format: 'png',
-    url: new URI({ repository, uri: 'https://إختبار/', allocated: true })
-  });
-  await repository.insertDocument(inserted as any, recover);
-  const note = await fabricateNote({ attachments: [inserted] });
-  const noteId = unwrap(note.id);
+  const inserted = await repository.insertDocument(
+    await repository.insertDirtyDocument(
+      '00000000-0000-1000-8000-010000000000', 'png'),
+    'https://إختبار/',
+    recover);
 
-  const [queried] = await repository.selectDocumentsByAttachedNoteId(noteId);
+  const { id } = await fabricateNote({ attachments: [inserted] });
+  const [queried] = await repository.selectDocumentsByAttachedNoteId(id);
 
   expect(recover).not.toHaveBeenCalled();
   expect(queried).toHaveProperty('repository', repository);
@@ -81,19 +74,16 @@ test('rejects when inserting document with conflicting URI', async () => {
   const recover = jest.fn();
   const recovery = {};
 
-  await repository.insertDocument(new Document({
-    repository,
-    uuid: '00000000-0000-1000-8000-010000000000',
-    format: 'png',
-    url: new URI({ repository, uri: 'https://إختبار/', allocated: true })
-  }) as any, recover);
+  await repository.insertDocument(
+    await fabricateDirtyDocument(),
+    'https://إختبار/',
+    recover);
 
   expect(recover).not.toHaveBeenCalled();
 
-  await expect(repository.insertDocument(new Document({
-    repository,
-    uuid: '00000000-0000-1000-8000-010000000000',
-    format: 'png',
-    url: new URI({ repository, uri: 'https://إختبار/', allocated: true })
-  }) as any, () => recovery)).rejects.toBe(recovery);
+  await expect(repository.insertDocument(
+    await fabricateDirtyDocument(),
+    'https://إختبار/',
+    () => recovery
+  )).rejects.toBe(recovery);
 });

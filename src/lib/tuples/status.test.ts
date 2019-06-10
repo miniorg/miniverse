@@ -33,7 +33,7 @@ describe('getUri', () => {
 
   test('resolves with remote URI when it is resolved remote status', async () => {
     const note = await fabricateNote(
-      { status: { uri: { uri: 'https://NoTe.xn--kgbechtv/' } } });
+      { status: { uri: 'https://NoTe.xn--kgbechtv/' } });
 
     const status = unwrap(await note.select('status'));
     const recover = jest.fn();

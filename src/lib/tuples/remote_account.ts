@@ -37,17 +37,30 @@ interface References {
   publicKeyURI: URI | null;
 }
 
-type Properties = { id?: string; publicKeyDer: Buffer } &
+type Properties = { publicKeyDer: Buffer } &
+({ id: string } | { id?: string; actor: Actor }) &
 ({ inboxURIId: string } | { inboxURIId?: string; inboxURI: URI }) &
 ({ publicKeyURIId: string } | { publicKeyURIId?: string; publicKeyURI: URI });
 
+export interface Seed {
+  readonly actor: {
+    readonly username: string;
+    readonly host: string;
+    readonly name: string;
+    readonly summary: string;
+  };
+  readonly uri: string;
+  readonly inbox: Inbox;
+  readonly publicKey: PublicKey;
+}
+
 export default class RemoteAccount extends Relation<Properties, References> {
-  id?: string;
-  uri?: Reference<URI | null>;
-  inboxURI?: Reference<URI | null>;
-  inboxURIId?: string;
-  publicKeyURI?: Reference<URI | null>;
-  publicKeyURIId?: string;
+  readonly id!: string;
+  readonly uri?: Reference<URI | null>;
+  readonly inboxURI?: Reference<URI | null>;
+  readonly inboxURIId!: string;
+  readonly publicKeyURI?: Reference<URI | null>;
+  readonly publicKeyURIId!: string;
   readonly publicKeyDer!: Buffer;
 
   async toWebFinger(recover: (error: Error) => unknown): Promise<WebFinger> {
@@ -73,35 +86,24 @@ export default class RemoteAccount extends Relation<Properties, References> {
     };
   }
 
-  static async create(repository: Repository, username: string, host: string, name: string, summary: string, uri: string, inbox: Inbox, publicKey: PublicKey, recover: (error: Error) => unknown) {
-    const account = new this({
-      repository,
-      actor: new Actor({
-        repository,
-        username,
-        host,
-        name,
-        summary: sanitizeHtml(summary)
-      }),
-      uri: new URI({ repository, uri, allocated: true }),
-      inboxURI: new URI({ repository, uri: inbox.uri, allocated: true }),
-      publicKeyURI: new URI({
-        repository,
-        uri: publicKey.uri,
-        allocated: true
-      }),
-      publicKeyDer: publicKey.publicKeyDer
+  static async create(
+    repository: Repository,
+    { actor, uri, inbox, publicKey }: Seed,
+    recover: (error: Error) => unknown
+  ) {
+    Actor.validateUsername(actor.username, recover);
+
+    return repository.insertRemoteAccount({
+      actor: {
+        username: actor.username,
+        host: actor.host,
+        name: actor.name,
+        summary: sanitizeHtml(actor.summary)
+      },
+      uri,
+      inbox,
+      publicKey
     });
-
-    const actor = await account.select('actor');
-    if (!actor) {
-      throw new Error('Actor not found.');
-    }
-
-    actor.validate(recover);
-    await repository.insertRemoteAccount(account);
-
-    return account;
   }
 }
 

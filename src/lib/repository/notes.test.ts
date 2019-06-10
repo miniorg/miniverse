@@ -21,13 +21,10 @@ import {
 } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
-import Note from '../tuples/note';
-import Status from '../tuples/status';
-import URI from '../tuples/uri';
 
 test('inserts and deletes note and prevent from querying its properties', async () => {
   const note = await fabricateNote(
-    { status: { uri: { uri: 'https://ReMoTe.إختبار/' } } });
+    { status: { uri: 'https://ReMoTe.إختبار/' } });
 
   const [actor, uri] = await Promise.all([
     note.select('status')
@@ -38,7 +35,7 @@ test('inserts and deletes note and prevent from querying its properties', async 
 
   await repository.deleteStatusByUriAndAttributedTo(uri, actor);
 
-  await expect(repository.selectRecentStatusesIncludingExtensionsByActorId(unwrap(actor.id)))
+  await expect(repository.selectRecentStatusesIncludingExtensionsByActorId(actor.id))
     .resolves
     .toEqual([]);
 });
@@ -46,7 +43,7 @@ test('inserts and deletes note and prevent from querying its properties', async 
 test('inserts note and allows to query by its id', async () => {
   const note = await fabricateNote({ summary: null, content: '内容' });
 
-  const queried = await repository.selectNoteById(unwrap(note.id));
+  const queried = await repository.selectNoteById(note.id);
 
   expect(queried).toHaveProperty('repository', repository);
   expect(queried).toHaveProperty('id', note.id);
@@ -56,26 +53,26 @@ test('inserts note and allows to query by its id', async () => {
 
 test('inserts note with URI and allows to query it', async () => {
   const note =
-    await fabricateNote({ status: { uri: { uri: 'https://ReMoTe.إختبار/' } } });
+    await fabricateNote({ status: { uri: 'https://ReMoTe.إختبار/' } });
 
-  await expect(repository.selectURIById(unwrap(note.id)))
+  await expect(repository.selectURIById(note.id))
     .resolves
     .toHaveProperty('uri', 'https://ReMoTe.إختبار/');
 });
 
 test('inserts note without URI', async () => {
   const note = await fabricateNote({ status: { uri: null } });
-  await expect(repository.selectURIById(unwrap(note.id))).resolves.toBe(null);
+  await expect(repository.selectURIById(note.id)).resolves.toBe(null);
 });
 
 test('inserts note with inReplyToId', async () => {
   const inReplyTo = await fabricateNote();
   const status = unwrap(await inReplyTo.select('status'));
-  const note = await fabricateNote({ inReplyToId: status.id });
+  const note = await fabricateNote({ inReplyTo: { id: status.id, uri: null } });
 
-  await expect(repository.selectNoteById(unwrap(note.id)))
+  await expect(repository.selectNoteById(note.id))
     .resolves
-    .toHaveProperty('inReplyToId', unwrap(status.id));
+    .toHaveProperty('inReplyToId', status.id);
 });
 
 test('inserts note with inReplyTo URI which is already resolved', async () => {
@@ -83,29 +80,27 @@ test('inserts note with inReplyTo URI which is already resolved', async () => {
     fabricateLocalAccount()
       .then(account => account.select('actor'))
       .then(unwrap),
-    fabricateNote({ status: { uri: { uri: 'https://ReMoTe.إختبار/' } } })
+    fabricateNote({ status: { uri: 'https://ReMoTe.إختبار/' } })
       .then(note => note.select('status'))
       .then(unwrap)
   ]);
 
-  const note = new Note({
-    repository,
-    status: new Status({ repository, published: new Date, actor }),
+  const recover = jest.fn();
+
+  const note = await repository.insertNote({
+    status: { published: new Date, actor, uri: null },
     summary: null,
     content: '',
+    inReplyTo: { id: null, uri: 'https://ReMoTe.إختبار/' },
     attachments: [],
     hashtags: [],
     mentions: []
-  });
-
-  const recover = jest.fn();
-
-  await repository.insertNote(note, 'https://ReMoTe.إختبار/', recover);
+  }, recover);
 
   expect(recover).not.toHaveBeenCalled();
   expect(note).toHaveProperty('inReplyToId', status.id);
 
-  await expect(repository.selectNoteById(unwrap(note.id)))
+  await expect(repository.selectNoteById(note.id))
     .resolves
     .toHaveProperty('inReplyToId', status.id);
 });
@@ -115,19 +110,17 @@ test('inserts notes with inReplyTo URI which is not resolved yet', async () => {
   const actor = unwrap(await account.select('actor'));
 
   for (let count = 0; count < 2; count++) {
-    const note = new Note({
-      repository,
-      status: new Status({ repository, published: new Date, actor }),
+    const recover = jest.fn();
+
+    const note = await repository.insertNote({
+      status: { published: new Date, actor, uri: null },
       summary: null,
       content: '',
+      inReplyTo: { id: null, uri: 'https://ReMoTe.إختبار/' },
       attachments: [],
       hashtags: [],
       mentions: []
-    });
-
-    const recover = jest.fn();
-
-    await repository.insertNote(note, 'https://ReMoTe.إختبار/', recover);
+    }, recover);
 
     expect(recover).not.toHaveBeenCalled();
 
@@ -141,21 +134,20 @@ test('inserts notes with inReplyTo URI and allows to resolve later', async () =>
   const [note, actor] = await Promise.all([
     fabricateLocalAccount().then(async account => {
       const recover = jest.fn();
-      const note = new Note({
-        repository,
-        status: new Status({
-          repository,
+
+      const note = await repository.insertNote({
+        status: {
           published: new Date,
-          actor: unwrap(await account.select('actor'))
-        }),
+          actor: unwrap(await account.select('actor')),
+          uri: null
+        },
         summary: null,
         content: '内容',
+        inReplyTo: { id: null, uri: 'https://ReMoTe.إختبار/' },
         attachments: [],
         hashtags: [],
         mentions: []
-      });
-
-      await repository.insertNote(note, 'https://ReMoTe.إختبار/', recover);
+      }, recover);
 
       expect(recover).not.toHaveBeenCalled();
 
@@ -170,28 +162,22 @@ test('inserts notes with inReplyTo URI and allows to resolve later', async () =>
       .then(unwrap)
   ]);
 
-  const inReplyTo = new Note({
-    repository,
-    status: new Status({
-      repository,
+  const recover = jest.fn();
+
+  const inReplyTo = await repository.insertNote({
+    status: {
       published: new Date,
       actor,
-      uri: new URI({
-        repository,
-        uri: 'https://ReMoTe.إختبار/',
-        allocated: true
-      })
-    }),
+      uri: 'https://ReMoTe.إختبار/'
+    },
     summary: null,
     content: '',
+    inReplyTo: { id: null, uri: null },
     attachments: [],
     hashtags: [],
     mentions: []
-  });
+  }, recover);
 
-  const recover = jest.fn();
-
-  await repository.insertNote(inReplyTo, null, recover);
   expect(recover).not.toHaveBeenCalled();
   expect(inReplyTo).toHaveProperty('id', note.inReplyToId);
 
@@ -206,8 +192,8 @@ test('inserts notes with inReplyTo URI and allows to resolve later', async () =>
 
 test('inserts notes with a hashtag', async () => {
   for (let count = 0; count < 2; count++) {
-    const { id } = await fabricateNote({ hashtags: [{ name: '名前' }] });
-    const hashtags = await repository.selectHashtagsByNoteId(unwrap(id));
+    const { id } = await fabricateNote({ hashtags: ['名前'] });
+    const hashtags = await repository.selectHashtagsByNoteId(id);
     await expect(hashtags[0]).toHaveProperty('name', '名前');
   }
 });

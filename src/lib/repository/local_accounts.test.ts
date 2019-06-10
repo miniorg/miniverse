@@ -87,7 +87,7 @@ test('delivers objects to inboxses', async () => {
     expect(asyncMessage).resolves.toHaveProperty('type', 'Note'),
     expect(asyncMessage).resolves.toHaveProperty('content', ''),
     expect(asyncMessage).resolves.toHaveProperty('tag', []),
-    repository.selectRecentStatusesIncludingExtensionsAndActorsFromInbox(unwrap(account.id))
+    repository.selectRecentStatusesIncludingExtensionsAndActorsFromInbox(account.id)
       .then(statuses => expect(statuses[0]).toHaveProperty('id', note.id))
   ]);
 });
@@ -125,7 +125,7 @@ test('inserts account allows to query one by its id', async () => {
     storedKey: Buffer.from('storedKey')
   });
 
-  const queried = unwrap(await repository.selectLocalAccountById(unwrap(id)));
+  const queried = unwrap(await repository.selectLocalAccountById(id));
 
   expect(queried).toHaveProperty('admin', true);
   expect(queried).toHaveProperty('id', id);

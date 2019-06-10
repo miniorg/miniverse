@@ -641,7 +641,7 @@ describe('act', () => {
       repository, 'https://ReMoTe.إختبار/', AnyHost);
 
     const announce = await fabricateAnnounce(
-      { status: { uri: { uri: 'https://ReMoTe.إختبار/' } } });
+      { status: { uri: 'https://ReMoTe.إختبار/' } });
 
     const status = unwrap(await announce.select('status'));
     const actor = unwrap(await status.select('actor'));
@@ -663,7 +663,7 @@ describe('act', () => {
         .then(account => account.select('actor'))
         .then(unwrap),
       fabricateNote(
-        { status: { uri: { uri: 'https://NoTe.إختبار/' } } })
+        { status: { uri: 'https://NoTe.إختبار/' } })
     ]);
 
     const recover = jest.fn();
@@ -713,7 +713,7 @@ describe('act', () => {
       repository, 'https://ReMoTe.إختبار/', AnyHost);
 
     const note = await fabricateNote(
-      { status: { uri: { uri: 'https://NoTe.إختبار/' } } });
+      { status: { uri: 'https://NoTe.إختبار/' } });
 
     const status = unwrap(await note.select('status'));
     const actor = unwrap(await status.select('actor'));
@@ -763,7 +763,7 @@ describe('act', () => {
       fabricateLocalAccount()
         .then(account => account.select('actor'))
         .then(unwrap),
-      fabricateNote({ status: { uri: { uri: 'https://NoTe.إختبار/' } } })
+      fabricateNote({ status: { uri: 'https://NoTe.إختبار/' } })
     ]);
 
     const recover = jest.fn();
@@ -805,7 +805,7 @@ describe('act', () => {
       await expect(activity.act(actor, signal, recover)).resolves.toBe(null);
       expect(recover).not.toHaveBeenCalled();
 
-      await expect(repository.selectActorsByFolloweeId(unwrap(object.id)))
+      await expect(repository.selectActorsByFolloweeId(object.id))
         .resolves
         .toEqual([]);
     });

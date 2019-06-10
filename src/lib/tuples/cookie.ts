@@ -57,11 +57,8 @@ export default class Cookie extends Relation<Properties, References> {
   readonly accountId!: string;
   readonly digest!: Buffer;
 
-  static async create(repository: Repository, account: LocalAccount, secret: Buffer) {
-    const cookie = new this({ repository, account, digest: digest(secret) });
-
-    await repository.insertCookie(cookie);
-    return cookie;
+  static create(repository: Repository, account: LocalAccount, secret: Buffer) {
+    return repository.insertCookie({ account, digest: digest(secret) });
   }
 }
 

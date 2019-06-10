@@ -221,7 +221,7 @@ describe('fromParsedActivityStreams', () => {
   test('resolves remote actor already fetched', async () => {
     const recover = jest.fn();
     const { id } = await fabricateRemoteAccount(
-      { uri: { uri: 'https://ReMoTe.إختبار/' } });
+      { uri: 'https://ReMoTe.إختبار/' });
 
     await expect(Actor.fromParsedActivityStreams(
       repository,

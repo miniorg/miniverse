@@ -20,7 +20,6 @@ import {
   fabricateRemoteAccount
 } from '../../test/fabricator';
 import repository from '../../test/repository';
-import { unwrap } from '../../test/types';
 import Actor from './index';
 import { lookup } from './resolver';
 import nock = require('nock');
@@ -247,7 +246,7 @@ describe('fromKeyUri', () => {
   test('resolves remote account already fetched', async () => {
     const recover = jest.fn();
     const { id } = await fabricateRemoteAccount({
-      publicKeyURI: {
+      publicKey: {
         uri: 'https://remote.xn--kgbechtv/@preferred%20username#key'
       }
     });
@@ -256,7 +255,7 @@ describe('fromKeyUri', () => {
       repository,
       'https://remote.xn--kgbechtv/@preferred%20username#key',
       signal,
-      recover)).resolves.toHaveProperty('id', unwrap(id));
+      recover)).resolves.toHaveProperty('id', id);
 
     expect(recover).not.toHaveBeenCalled();
   });

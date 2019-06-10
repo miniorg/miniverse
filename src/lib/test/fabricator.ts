@@ -20,19 +20,11 @@ import { promisify } from 'util';
 import Repository from '../repository';
 import Accept from '../tuples/accept';
 import Actor from '../tuples/actor';
-import Announce from '../tuples/announce';
-import Challenge from '../tuples/challenge';
-import Cookie from '../tuples/cookie';
+import DirtyDocument from '../tuples/dirty_document';
 import Document from '../tuples/document';
 import Follow from '../tuples/follow';
-import Hashtag from '../tuples/hashtag';
-import Like from '../tuples/like';
 import LocalAccount from '../tuples/local_account';
 import Note from '../tuples/note';
-import Mention from '../tuples/mention';
-import RemoteAccount from '../tuples/remote_account';
-import Status from '../tuples/status';
-import URI from '../tuples/uri';
 import repository from './repository';
 import { unwrap } from './types';
 
@@ -74,20 +66,13 @@ function generateId() {
   return id;
 }
 
-interface URIProperties {
-  readonly id?: string;
-  readonly uri?: string;
-  readonly allocated?: true;
-}
-
 interface StatusProperties {
-  readonly uri?: URIProperties | null;
+  readonly uri?: null | string;
   readonly actor?: Actor;
   readonly published?: Date;
 }
 
 export async function fabricateLocalAccount(properties?: {
-  readonly repository?: Repository;
   readonly actor?: {
     readonly username?: string;
     readonly host?: null;
@@ -101,80 +86,63 @@ export async function fabricateLocalAccount(properties?: {
   readonly storedKey?: Buffer;
 }) {
   const recover = jest.fn();
-  const account = new LocalAccount(Object.assign({
-    repository,
+  const account = await repository.insertLocalAccount(Object.assign({
     admin: true,
     privateKeyDer,
     salt: '',
     serverKey: '',
     storedKey: ''
   }, properties, {
-    actor: new Actor(Object.assign({
-      repository,
+    actor: Object.assign({
       username: generateId().toString(),
-      host: null,
       name: '',
       summary: ''
-    }, properties && properties.actor))
-  }));
+    }, properties && properties.actor)
+  }), recover);
 
-  await repository.insertLocalAccount(account, recover);
   expect(recover).not.toHaveBeenCalled();
 
   return account;
 }
 
 export async function fabricateRemoteAccount(properties?: {
-  readonly repository?: Repository;
   readonly actor?: {
     readonly username?: string;
     readonly host?: string;
     readonly name?: string;
     readonly summary?: string;
   };
-  readonly uri?: URIProperties;
-  readonly inboxURI?: URIProperties;
-  readonly publicKeyURI?: URIProperties;
-  readonly publicKeyDer?: Buffer;
+  readonly uri?: string;
+  readonly inbox?: { readonly uri?: string };
+  readonly publicKey?: {
+    readonly uri?: string;
+    readonly publicKeyDer?: Buffer;
+  };
 }) {
-  const account = new RemoteAccount(Object.assign({
-    repository,
-    publicKeyDer: (await promisifiedGenerateKeyPair('rsa', {
-      modulusLength: 2048,
-      publicKeyEncoding: { format: 'der', type: 'pkcs1' }
-    })).publicKey,
+  return repository.insertRemoteAccount(Object.assign({
+    uri: `https://ReMoTe.إختبار/AcCoUnT/${generateId()}`,
   }, properties, {
-    actor: new Actor(Object.assign({
+    actor: Object.assign({
       repository,
       username: generateId().toString(),
       host: 'FiNgEr.ReMoTe.إختبار',
       name: '',
       summary: ''
-    }, properties && properties.actor)),
-    inboxURI: new URI(Object.assign({
-      repository,
+    }, properties && properties.actor),
+    inbox: Object.assign({
       uri: `https://ReMoTe.إختبار/InBoX/${generateId()}`,
-      allocated: true
-    }, properties && properties.inboxURI)),
-    publicKeyURI: new URI(Object.assign({
-      repository,
+    }, properties && properties.inbox),
+    publicKey: Object.assign({
       uri: `https://ReMoTe.إختبار/KeY/${generateId()}`,
-      allocated: true
-    }, properties && properties.publicKeyURI)),
-    uri: new URI(Object.assign({
-      repository,
-      uri: `https://ReMoTe.إختبار/AcCoUnT/${generateId()}`,
-      allocated: true
-    }, properties && properties.uri))
+      publicKeyDer: (await promisifiedGenerateKeyPair('rsa', {
+        modulusLength: 2048,
+        publicKeyEncoding: { format: 'der', type: 'pkcs1' }
+      })).publicKey,
+    }, properties && properties.publicKey),
   }));
-
-  await repository.insertRemoteAccount(account);
-
-  return account;
 }
 
 export async function fabricateFollow(properties?: {
-  readonly repository?: Repository;
   readonly actor?: Actor;
   readonly object?: Actor;
 }) {
@@ -187,26 +155,23 @@ export async function fabricateFollow(properties?: {
       .then(unwrap)
   ]);
 
-  const follow = new Follow(Object.assign(
-    { repository, actor, object }, properties));
-
   const recover = jest.fn();
+  const follow = await repository.insertFollow(Object.assign(
+    { actor, object }, properties), recover);
 
-  await repository.insertFollow(follow, recover);
   expect(recover).not.toHaveBeenCalled();
 
   return follow;
 }
 
 export async function fabricateNote(properties?: {
-  readonly repository?: Repository;
   readonly status?: StatusProperties;
-  readonly inReplyToId?: string;
+  readonly inReplyTo?: { id?: string | null; uri?: string | null };
   readonly summary?: string | null;
   readonly content?: string;
   readonly attachments?: Document[];
-  readonly hashtags?: { readonly name: string }[];
-  readonly mentions?: { readonly href: Actor }[];
+  readonly hashtags?: string[];
+  readonly mentions?: Actor[];
 }) {
   const remote = properties && properties.status && (
     (properties.status.actor && properties.status.actor.host) ||
@@ -214,35 +179,24 @@ export async function fabricateNote(properties?: {
 
   const account = await (remote ? fabricateRemoteAccount : fabricateLocalAccount)();
 
-  const note = new Note(Object.assign({
-    repository,
+  const recover = jest.fn();
+  const note = await repository.insertNote(Object.assign({
     summary: null,
-    content: ''
+    content: '',
+    attachments: [],
+    hashtags: [],
+    mentions: []
   }, properties, {
-    status: new Status(Object.assign({
-      repository,
+    status: Object.assign({
       published: new Date,
       actor: await account.select('actor'),
-      uri: remote ? new URI(Object.assign({
-        repository,
-        uri: `https://ReMoTe.إختبار/NoTe/${generateId()}`,
-        allocated: true
-      }, properties && properties.status && properties.status.uri)) : null
-    }, properties && properties.status)),
-    attachments: (properties && properties.attachments) || [],
-    hashtags: properties && properties.hashtags ?
-      properties.hashtags.map(
-        hashtag => new Hashtag(Object.assign({ repository }, hashtag))) :
-      [],
-    mentions: properties && properties.mentions ?
-      properties.mentions.map(
-        mention => new Mention(Object.assign({ repository }, mention))) :
-      []
-  }));
+      uri: remote ? `https://ReMoTe.إختبار/NoTe/${generateId()}` : null
+    }, properties && properties.status),
+    inReplyTo: Object.assign(
+      { id: null, uri: null },
+      properties && properties.inReplyTo)
+  }), recover);
 
-  const recover = jest.fn();
-
-  await repository.insertNote(note, null, recover);
   expect(recover).not.toHaveBeenCalled();
 
   return note;
@@ -257,7 +211,6 @@ export async function fabricateAccept(properties?: {
 }
 
 export async function fabricateAnnounce(properties?: {
-  readonly repository?: Repository;
   readonly status?: StatusProperties;
   readonly object?: Note;
 }) {
@@ -266,76 +219,60 @@ export async function fabricateAnnounce(properties?: {
     fabricateNote()
   ]);
 
-  const announce = new Announce(Object.assign({
-    repository,
+  const recover = jest.fn();
+  const announce = await repository.insertAnnounce(Object.assign({
     object
   }, properties, {
-    status: new Status(Object.assign(
-      { repository, published: new Date, actor },
-      properties && properties.status))
-  }));
+    status: Object.assign(
+      { published: new Date, actor, uri: null },
+      properties && properties.status)
+  }), recover);
 
-  const recover = jest.fn();
-
-  await repository.insertAnnounce(announce as any, recover);
   expect(recover).not.toHaveBeenCalled();
 
   return announce;
 }
 
-export async function fabricateChallenge(properties?: {
-  readonly repository?: Repository;
-  readonly digest?: Buffer;
-}) {
-  const challenge = new Challenge(Object.assign(
-    { digest: Buffer.from(generateId().toString()) }, properties));
-
-  await repository.insertChallenge(challenge);
-
-  return challenge;
+export function fabricateChallenge() {
+  return repository.insertChallenge(Buffer.from(generateId().toString()));
 }
 
 export async function fabricateCookie(properties?: {
-  readonly repository?: Repository;
   readonly account?: LocalAccount;
   readonly digest?: Buffer;
 }) {
-  const cookie = new Cookie(Object.assign({
+  return repository.insertCookie(Object.assign({
     repository,
     account: await fabricateLocalAccount(),
     digest: Buffer.from('digest')
   }, properties));
-
-  await repository.insertCookie(cookie);
-
-  return cookie;
 }
 
-export async function fabricateDocument(properties?: {
-  readonly repository?: Repository;
-  readonly uuid?: string;
-  readonly format?: string;
-  readonly url?: URIProperties;
-}) {
-  const recover = jest.fn();
-  const document = new Document(Object.assign({
-    repository,
-    uuid: '00000000-0000-1000-8000-010000000000',
-    format: 'js'
-  }, properties, {
-    url: new URI(Object.assign({
-      repository,
-      uri: `https://ReMoTe.إختبار/DoCuMeNt/${generateId()}`,
-      allocated: true
-    }, properties && properties.url))
-  }));
+export async function fabricateDirtyDocument(
+  uuid = '00000000-0000-1000-8000-010000000000',
+  format = 'js'
+) {
+  return repository.insertDirtyDocument(uuid, format);
+}
 
-  await Promise.all([
-    repository.insertDocument(document as any, recover),
+export async function fabricateDocument(dirty?: DirtyDocument, url?: string) {
+  if (!dirty) {
+    dirty = await repository.insertDirtyDocument(
+      '00000000-0000-1000-8000-010000000000', 'js');
+  }
+
+  if (!url) {
+    url = `https://ReMoTe.إختبار/DoCuMeNt/${generateId()}`;
+  }
+
+  const recover = jest.fn();
+
+  const [document] = await Promise.all([
+    repository.insertDocument(dirty, url, recover),
     repository.s3.service.upload({
       Bucket: repository.s3.bucket,
       Body: join(__dirname, __filename),
-      Key: `${repository.s3.keyPrefix}${document.uuid}.${document.format}`
+      Key: `${repository.s3.keyPrefix}${dirty.uuid}.${dirty.format}`
     }).promise()
   ]);
 
@@ -345,7 +282,6 @@ export async function fabricateDocument(properties?: {
 }
 
 export async function fabricateLike(properties?: {
-  readonly repository?: Repository;
   readonly actor?: Actor;
   readonly object?: Note;
 }) {
@@ -356,12 +292,10 @@ export async function fabricateLike(properties?: {
     fabricateNote()
   ]);
 
-  const like = new Like(Object.assign(
-    { repository, actor, object }, properties));
-
   const recover = jest.fn();
+  const like = await repository.insertLike(Object.assign(
+    { actor, object }, properties), recover);
 
-  await repository.insertLike(like, recover);
   expect(recover).not.toHaveBeenCalled();
 
   return like;

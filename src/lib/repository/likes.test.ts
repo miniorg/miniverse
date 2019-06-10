@@ -21,7 +21,6 @@ import {
 } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
-import Like from '../tuples/like';
 
 describe('deleteLikeByActorAndObject', () => {
   test('deletes like by actor and object', async () => {
@@ -32,9 +31,7 @@ describe('deleteLikeByActorAndObject', () => {
     ]);
 
     await repository.deleteLikeByActorAndObject(actor, object);
-
-    const id = unwrap(like.id);
-    await expect(repository.selectLikeById(id)).resolves.toBe(null);
+    await expect(repository.selectLikeById(like.id)).resolves.toBe(null);
   });
 });
 
@@ -51,11 +48,10 @@ test('inserts like and allows to query it by id', async () => {
     fabricateNote()
   ]);
 
-  const inserted = new Like({ repository, actor, object });
   const recover = jest.fn();
-  await repository.insertLike(inserted, recover);
+  const inserted = await repository.insertLike({ actor, object }, recover);
 
-  const queried = await repository.selectLikeById(unwrap(inserted.id));
+  const queried = await repository.selectLikeById(inserted.id);
   expect(recover).not.toHaveBeenCalled();
   expect(queried).toHaveProperty('repository', repository);
   expect(queried).toHaveProperty('id', inserted.id);
@@ -73,9 +69,9 @@ test('rejects when inserting a duplicate like', async () => {
 
   const recover = jest.fn();
   const recovery = {};
-  await repository.insertLike(new Like({ repository, actor, object }), recover);
+  await repository.insertLike({ actor, object }, recover);
 
   await expect(repository.insertLike(
-    new Like({ repository, actor, object }),
+    { actor, object },
     () => recovery)).rejects.toBe(recovery);
 });

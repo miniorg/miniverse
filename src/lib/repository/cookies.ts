@@ -15,14 +15,20 @@
 */
 
 import Cookie from '../tuples/cookie';
+import LocalAccount from '../tuples/local_account';
 import Repository from '.';
 
 export default class {
-  async insertCookie(this: Repository, cookie: Cookie) {
+  async insertCookie(this: Repository, { account, digest }: {
+    readonly account: LocalAccount;
+    readonly digest: Buffer;
+  }) {
     await this.pg.query({
       name: 'insertCookie',
       text: 'INSERT INTO cookies (digest, account_id) VALUES ($1, $2)',
-      values: [cookie.digest, cookie.accountId]
+      values: [digest, account.id]
     });
+
+    return new Cookie({ repository: this, account, digest });
   }
 }

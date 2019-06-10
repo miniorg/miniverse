@@ -31,9 +31,10 @@ function createKey(this: Repository, digest: Buffer) {
 }
 
 export default class {
-  async insertChallenge(this: Repository, { digest }: Challenge) {
+  async insertChallenge(this: Repository, digest: Buffer) {
     const key = createKey.call(this, digest);
     await this.redis.client.setex(key, 1048576, '');
+    return new Challenge({ digest });
   }
 
   async selectChallengeByDigest(this: Repository, digest: Buffer) {

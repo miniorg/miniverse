@@ -15,7 +15,7 @@
 */
 
 import Actor from '../tuples/actor';
-import LocalAccount from '../tuples/local_account';
+import LocalAccount, { Seed } from '../tuples/local_account';
 import Status from '../tuples/status';
 import Repository from '.';
 
@@ -47,11 +47,16 @@ export default class {
     throw recover(new Error('Unpersisted Account or Actor.'));
   }
 
-  async insertLocalAccount(this: Repository, account: LocalAccount, recover: (error: Error) => unknown) {
-    if (!(account.actor instanceof Actor)) {
-      throw recover(new Error('Invalid Actor.'));
-    }
-
+  async insertLocalAccount(this: Repository, {
+    actor,
+    admin,
+    privateKeyDer,
+    salt,
+    serverKey,
+    storedKey
+  }: Seed & {
+    readonly privateKeyDer: Buffer;
+  }, recover: (error: Error) => unknown) {
     let result;
 
     try {
@@ -59,14 +64,14 @@ export default class {
         name: 'insertLocalAccount',
         text: 'SELECT insert_local_account($1, $2, $3, $4, $5, $6, $7, $8)',
         values: [
-          account.actor.username,
-          account.actor.name,
-          account.actor.summary,
-          account.admin,
-          account.privateKeyDer,
-          account.salt,
-          account.serverKey,
-          account.storedKey
+          actor.username,
+          actor.name,
+          actor.summary,
+          admin,
+          privateKeyDer,
+          salt,
+          serverKey,
+          storedKey
         ]
       });
     } catch (error) {
@@ -77,8 +82,22 @@ export default class {
       throw error;
     }
 
-    account.id = result.rows[0].insert_local_account;
-    account.actor.id = account.id;
+    return new LocalAccount({
+      repository: this,
+      actor: new Actor({
+        repository: this,
+        id: result.rows[0].insert_local_account,
+        username: actor.username,
+        host: null,
+        name: actor.name,
+        summary: actor.summary
+      }),
+      admin,
+      privateKeyDer,
+      salt,
+      serverKey,
+      storedKey
+    });
   }
 
   async insertIntoInboxes(this: Repository, accountOrActors: (LocalAccount | Actor)[], item: Status, recover: (error: Error) => unknown) {

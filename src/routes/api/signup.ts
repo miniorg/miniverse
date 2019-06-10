@@ -38,8 +38,17 @@ export const post = secure(async (request, response) => {
   let account;
 
   try {
-    account = await LocalAccount.create(
-      repository, username, '', '', false, salt, serverKey, storedKey, () => recovery);
+    account = await LocalAccount.create(repository, {
+      actor: {
+        username,
+        name: '',
+        summary: ''
+      },
+      admin: false,
+      salt,
+      serverKey,
+      storedKey
+    }, () => recovery);
   } catch (error) {
     if (error == recovery) {
       response.sendStatus(422);

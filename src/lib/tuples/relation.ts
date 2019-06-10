@@ -73,7 +73,7 @@ export default class Relation<Properties, References> {
       const keyOfReferences = key as keyof References;
       const referenced = getReferencedBy(this, keyOfReferences);
 
-      if (referenced) {
+      if (referenced && !Array.isArray(referenced)) {
         const reference = getReferenceOf(this, keyOfReferences);
 
         if (!reference) {

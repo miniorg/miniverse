@@ -22,7 +22,7 @@ import Relation, { Reference } from './relation';
 import URI, { encodeSegment } from './uri';
 
 interface BaseProperties {
-  id?: string;
+  id: string;
   published: Date;
 }
 
@@ -44,8 +44,8 @@ interface References {
 type Properties = BaseProperties & (ActorIdProperties | ActorProperties);
 
 export default class Status extends Relation<Properties, References> {
-  id?: string;
-  uri?: Reference<URI | null>;
+  readonly id!: string;
+  readonly uri?: Reference<URI | null>;
   readonly actorId!: string;
   readonly actor?: Reference<Actor | null>;
   readonly extension?: Reference<Announce | Note | null>;

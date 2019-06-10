@@ -57,34 +57,18 @@ OyJRYe+sFKZ6lXqnwdWuTrxTNucFuhw+6BVyzNn6lI5cNXLr1reH
   7. IANA Considerations
   https://tools.ietf.org/html/rfc7565#section-7
 */
-describe('validate', () => {
+describe('validateUsername', () => {
   for (const username of 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~!$&\'()*+,;=') {
     test(`accepts if username which starts with ${username}`, () => {
       const recover = jest.fn();
-      const actor = new Actor({
-        repository,
-        username,
-        host: null,
-        name: '',
-        summary: ''
-      });
-
-      actor.validate(recover);
+      Actor.validateUsername(username, recover);
       expect(recover).not.toHaveBeenCalled();
     });
   }
 
   test('throws an error if username has invalid first character', () => {
     const recovery = new Error;
-    const actor = new Actor({
-      repository,
-      username: '無効',
-      host: null,
-      name: '',
-      summary: ''
-    });
-
-    expect(() => actor.validate(() => recovery)).toThrow(recovery);
+    expect(() => Actor.validateUsername('無効', () => recovery)).toThrow(recovery);
   });
 });
 
@@ -103,8 +87,8 @@ describe('getUri', () => {
   });
 
   test('loads and returns URI of remote account', async () => {
-    const { id } = await fabricateRemoteAccount({ uri: { uri: 'https://ReMoTe.إختبار/' } });
-    const actor = unwrap(await repository.selectActorById(unwrap(id)));
+    const { id } = await fabricateRemoteAccount({ uri: 'https://ReMoTe.إختبار/' });
+    const actor = unwrap(await repository.selectActorById(id));
     const recover = jest.fn();
 
     await expect(actor.getUri(recover))
@@ -165,7 +149,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
         name: '',
         summary: ''
       },
-      uri: { uri: 'https://ReMoTe.xn--kgbechtv/' }
+      uri: 'https://ReMoTe.xn--kgbechtv/'
     });
 
     const actor = unwrap(await account.select('actor'));

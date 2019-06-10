@@ -167,7 +167,7 @@ describe('postStatus', () => {
     await postStatus(repository, unwrap(await note.select('status')), recover);
 
     expect(recover).not.toHaveBeenCalled();
-    await expect(repository.selectRecentStatusesIncludingExtensionsAndActorsFromInbox(unwrap(actorAccount.id)))
+    await expect(repository.selectRecentStatusesIncludingExtensionsAndActorsFromInbox(actorAccount.id))
       .resolves
       .toHaveProperty('length', 0);
   });
@@ -191,7 +191,7 @@ describe('postStatus', () => {
     const actors = [];
 
     for (let index = 0; index < 2; index++) {
-      const account = await fabricateRemoteAccount({ inboxURI: { uri: '' } });
+      const account = await fabricateRemoteAccount({ inbox: { uri: '' } });
       actors[index] = unwrap(await account.select('actor'));
     }
 
@@ -237,7 +237,7 @@ describe('postToInbox', () => {
   async function post(signal: AbortSignal, recover: (error: Error) => unknown) {
     const [sender, inboxURI] = await Promise.all([
       fabricateLocalAccount({ actor: { username: 'SeNdEr' } }),
-      fabricateRemoteAccount({ inboxURI: { uri: 'https://ReCiPiEnT.إختبار/?inbox' } })
+      fabricateRemoteAccount({ inbox: { uri: 'https://ReCiPiEnT.إختبار/?inbox' } })
         .then(recipient => recipient.select('inboxURI')).then(unwrap)
     ]);
 

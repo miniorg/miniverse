@@ -56,8 +56,9 @@ test('performs activities', async () => {
   const recover = jest.fn();
   const [actor, object] = await Promise.all([
     fabricateRemoteAccount({
-      publicKeyURI: { uri: 'https://AcToR.إختبار/users/admin#main-key' },
-      publicKeyDer: createPublicKey(`-----BEGIN PUBLIC KEY-----
+      publicKey: {
+        uri: 'https://AcToR.إختبار/users/admin#main-key',
+        publicKeyDer: createPublicKey(`-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
 1Iu2LbvQ6iE19RM01An3kBA/MPelQATPv832/pWxdCjWPP8i2snPbzPZ5gSJP55v
@@ -67,8 +68,9 @@ AOc6sswdQZB3Q0FHFgaM5FkAeB07OSK+ndZffVfqfe5YM39470E9uGqC3NQYVkGH
 ewIDAQAB
 -----END PUBLIC KEY-----
 `).export({ format: 'der', type: 'pkcs1' })
+      }
     }),
-    fabricateRemoteAccount({ uri: { uri: 'https://ObJeCt.إختبار/' } })
+    fabricateRemoteAccount({ uri: 'https://ObJeCt.إختبار/' })
   ]);
 
   await processInbox(repository, await repository.queue.add({
@@ -77,17 +79,18 @@ ewIDAQAB
   }), (new AbortController).signal, recover);
   expect(recover).not.toHaveBeenCalled();
 
-  const actors = await repository.selectActorsByFolloweeId(unwrap(object.id));
+  const actors = await repository.selectActorsByFolloweeId(object.id);
   expect(actors[0]).toHaveProperty('id', actor.id);
 });
 
 test('does not perform activities if signature verification failed', async () => {
   const recover = jest.fn();
   const [object] = await Promise.all([
-    fabricateRemoteAccount({ uri: { uri: 'https://ObJeCt.إختبار/' } }),
+    fabricateRemoteAccount({ uri: 'https://ObJeCt.إختبار/' }),
     fabricateRemoteAccount({
-      publicKeyURI: { uri: 'https://AcToR.إختبار/users/admin#main-key' },
-      publicKeyDer: createPublicKey(`-----BEGIN RSA PUBLIC KEY-----
+      publicKey: {
+        uri: 'https://AcToR.إختبار/users/admin#main-key',
+        publicKeyDer: createPublicKey(`-----BEGIN RSA PUBLIC KEY-----
 MIIBCgKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGTrcO6
 S16XQ3tffCo0QA7G1MOzTeOEJHMiNM4jQQuY0NgDGMs3KEgo0J4ik75VnlyOiSyF
 ZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2/POH
@@ -96,6 +99,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 +DHYFaVXQy60WzCEFjiQPZ8XdNQKvDyjKwIDAQAB
 -----END RSA PUBLIC KEY-----
 `).export({ format: 'der', type: 'pkcs1' })
+      }
     }),
   ]);
 
@@ -105,7 +109,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
   }), (new AbortController).signal, recover);
 
   expect(recover).not.toHaveBeenCalled();
-  await expect(repository.selectActorsByFolloweeId(unwrap(object.id)))
+  await expect(repository.selectActorsByFolloweeId(object.id))
     .resolves
     .toEqual([]);
 });
@@ -114,8 +118,9 @@ test('rejects without [temporaryError] if all rejections are not temporary', asy
   const recovery = {};
   const [actor, object] = await Promise.all([
     fabricateRemoteAccount({
-      publicKeyURI: { uri: 'https://AcToR.إختبار/users/admin#main-key' },
-      publicKeyDer: createPublicKey(`-----BEGIN PUBLIC KEY-----
+      publicKey: {
+        uri: 'https://AcToR.إختبار/users/admin#main-key',
+        publicKeyDer: createPublicKey(`-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
 1Iu2LbvQ6iE19RM01An3kBA/MPelQATPv832/pWxdCjWPP8i2snPbzPZ5gSJP55v
@@ -125,6 +130,7 @@ AOc6sswdQZB3Q0FHFgaM5FkAeB07OSK+ndZffVfqfe5YM39470E9uGqC3NQYVkGH
 ewIDAQAB
 -----END PUBLIC KEY-----
 `).export({ format: 'der', type: 'pkcs1' }),
+      }
     }).then(account => account.select('actor')).then(unwrap),
     fabricateLocalAccount({ actor: { username: 'oBjEcT' } })
       .then(account => account.select('actor'))
@@ -149,8 +155,9 @@ test('rejects with [temporaryError] if some rejection is temporary', async () =>
   const recovery = {};
 
   await fabricateRemoteAccount({
-    publicKeyURI: { uri: 'https://AcToR.إختبار/users/admin#main-key' },
-    publicKeyDer: createPublicKey(`-----BEGIN PUBLIC KEY-----
+    publicKey: {
+      uri: 'https://AcToR.إختبار/users/admin#main-key',
+      publicKeyDer: createPublicKey(`-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2NWebZ1RV7DEvjfJNnTH
 BofamHENMJd3+aWIXtccUyyPBzfvzyfTXqYfDZUmjei0D5JCJ/ww9Y6ulgBA9Pdx
 1Iu2LbvQ6iE19RM01An3kBA/MPelQATPv832/pWxdCjWPP8i2snPbzPZ5gSJP55v
@@ -160,6 +167,7 @@ AOc6sswdQZB3Q0FHFgaM5FkAeB07OSK+ndZffVfqfe5YM39470E9uGqC3NQYVkGH
 ewIDAQAB
 -----END PUBLIC KEY-----
 `).export({ format: 'der', type: 'pkcs1' })
+    }
   });
 
   nock('https://uNrEaChAbLe.إختبار').get('/').replyWithError('');

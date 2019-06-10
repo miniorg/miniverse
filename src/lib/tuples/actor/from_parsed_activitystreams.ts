@@ -108,16 +108,17 @@ export default class extends Base {
     const publicKeyDer = createPublicKey(publicKeyPem)
       .export({ format: 'der', type: 'pkcs1' });
 
-    const account = await RemoteAccount.create(
-      repository,
-      username,
-      host,
-      name,
-      summary,
-      id,
-      { uri: inboxId },
-      { uri: publicKeyId, publicKeyDer },
-      recover);
+    const account = await RemoteAccount.create(repository, {
+      actor: {
+        username,
+        host,
+        name,
+        summary
+      },
+      uri: id,
+      inbox: { uri: inboxId },
+      publicKey: { uri: publicKeyId, publicKeyDer }
+    }, recover);
 
     return account.select('actor');
   }
@@ -141,10 +142,6 @@ export default class extends Base {
     const uriEntity = await repository.selectAllocatedURI(uri);
 
     if (uriEntity) {
-      if (!uriEntity.id) {
-        throw new Error('The internal id cannot be resolved.');
-      }
-
       const account = await repository.selectRemoteAccountById(uriEntity.id);
       if (!account) {
         throw recover(new Error('Account not found.'));

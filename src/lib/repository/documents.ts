@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import DirtyDocument from '../tuples/dirty_document';
 import Document from '../tuples/document';
 import URI from '../tuples/uri';
 import Repository from '.';
@@ -27,7 +28,12 @@ function parse(this: Repository, { id, uuid, format }: {
 }
 
 export default class {
-  async insertDocument(this: Repository, document: Document & { readonly url: URI }, dirtyId: number, recover: (error: Error) => unknown) {
+  async insertDocument(
+    this: Repository,
+    dirty: DirtyDocument,
+    url: string,
+    recover: (error: Error) => unknown
+  ) {
     let result;
 
     try {
@@ -44,8 +50,18 @@ export default class {
       throw error;
     }
 
-    document.id = result.rows[0].insert_document_with_url;
-    document.url.id = result.rows[0].insert_document_with_url;
+    return new Document({
+      repository: this,
+      id: result.rows[0].insert_document_with_url,
+      uuid: dirty.uuid,
+      format: dirty.format,
+      url: new URI({
+        repository: this,
+        id: result.rows[0].insert_document_with_url,
+        uri: url,
+        allocated: true
+      }),
+    });
   }
 
   async selectDocumentById(this: Repository, id: string): Promise<Document | null> {

@@ -29,7 +29,7 @@ import nock = require('nock');
 test('delivers announce to remote account', async () => {
   const [recipient, actor] = await Promise.all([
     fabricateRemoteAccount(
-      { inboxURI: { uri: 'https://ReCiPiEnT.إختبار/?inbox' } }),
+      { inbox: { uri: 'https://ReCiPiEnT.إختبار/?inbox' } }),
     fabricateLocalAccount()
       .then(account => account.select('actor'))
       .then(unwrap)
@@ -38,7 +38,7 @@ test('delivers announce to remote account', async () => {
   const announce = await fabricateAnnounce({ status: { actor } });
 
   const job = await repository.queue.add({
-    statusId: unwrap(announce.id),
+    statusId: announce.id,
     inboxURIId: recipient.inboxURIId
   });
 
@@ -58,7 +58,7 @@ test('delivers announce to remote account', async () => {
 test('delivers note to remote account', async () => {
   const [recipient, actor] = await Promise.all([
     fabricateRemoteAccount(
-      { inboxURI: { uri: 'https://ReCiPiEnT.إختبار/?inbox' } }),
+      { inbox: { uri: 'https://ReCiPiEnT.إختبار/?inbox' } }),
     fabricateLocalAccount()
       .then(account => account.select('actor'))
       .then(unwrap)
@@ -67,7 +67,7 @@ test('delivers note to remote account', async () => {
   const note = await fabricateNote({ status: { actor } });
 
   const job = await repository.queue.add({
-    statusId: unwrap(note.id),
+    statusId: note.id,
     inboxURIId: recipient.inboxURIId
   });
 

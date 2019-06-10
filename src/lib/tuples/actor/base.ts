@@ -50,7 +50,7 @@ interface References {
 
 export default class Base extends Relation<Properties, References>
   implements FromParsedActivityStreams, Resolver {
-  id?: string;
+  readonly id!: string;
   readonly username!: string;
   readonly host!: string | null;
   readonly name!: string;
@@ -59,8 +59,8 @@ export default class Base extends Relation<Properties, References>
   readonly followers?: Reference<this[]>;
   readonly statuses?: Reference<Status[]>;
 
-  validate(recover: (error: Error) => unknown) {
-    if (!/^[\w-.~!$&'()*+,;=].*$/.test(this.username)) {
+  static validateUsername(username: string, recover: (error: Error) => unknown) {
+    if (!/^[\w-.~!$&'()*+,;=].*$/.test(username)) {
       throw recover(new Error('Invalid username.'));
     }
   }
@@ -166,10 +166,6 @@ export default class Base extends Relation<Properties, References>
   static references = {
     account: {
       query({ repository, id, host }: Base) {
-        if (id == null) {
-          throw new Error('Invalid id.');
-        }
-  
         return host ?
           repository.selectRemoteAccountById(id) :
           repository.selectLocalAccountById(id);

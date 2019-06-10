@@ -28,7 +28,7 @@ describe('selectActorById', () => {
     const account = await fabricateLocalAccount(
       { actor: { username: 'username', name: '', summary: '' } });
 
-    const selected = await repository.selectActorById(unwrap(account.id));
+    const selected = await repository.selectActorById(account.id);
 
     expect(selected).toHaveProperty('username', 'username');
     expect(selected).toHaveProperty('host', null);
@@ -98,10 +98,10 @@ test('inserts note and allow to query actors mentioned by the note', async () =>
   const actor = unwrap(await account.select('actor'));
   const { id } = await fabricateNote({
     status: { actor },
-    mentions: [{ href: actor }]
+    mentions: [actor]
   });
 
-  const [queried] = await repository.selectActorsMentionedByNoteId(unwrap(id));
+  const [queried] = await repository.selectActorsMentionedByNoteId(id);
   expect(queried).toHaveProperty('repository', repository);
   expect(queried).toHaveProperty('id', actor.id);
   expect(queried).toHaveProperty('username', 'AtTrIbUtEdTo');

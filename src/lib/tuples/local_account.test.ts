@@ -55,16 +55,17 @@ describe('create', () => {
     const storedKey = Buffer.from('storedKey');
     const recover = jest.fn();
 
-    const account = await LocalAccount.create(
-      repository,
-      username,
-      name,
-      summary,
+    const account = await LocalAccount.create(repository, {
+      actor: {
+        username,
+        name,
+        summary
+      },
       admin,
       salt,
       serverKey,
-      storedKey,
-      recover);
+      storedKey
+    }, recover);
 
     const privateKey = createPrivateKey({
       format: 'der',
@@ -89,24 +90,18 @@ describe('create', () => {
   });
 
   test('will rejects with an error if username is invalid', async () => {
-    const username = '@';
-    const name = '';
-    const summary = '';
-    const admin = true;
-    const salt = Buffer.from('salt');
-    const serverKey = Buffer.from('serverKey');
-    const storedKey = Buffer.from('storedKey');
     const recovery = {};
 
-    await expect(LocalAccount.create(
-      repository,
-      username,
-      name,
-      summary,
-      admin,
-      salt,
-      serverKey,
-      storedKey,
-      () => recovery)).rejects.toBe(recovery);
+    await expect(LocalAccount.create(repository, {
+      actor: {
+        username: '@',
+        name: '',
+        summary: ''
+      },
+      admin: true,
+      salt: Buffer.from('salt'),
+      serverKey: Buffer.from('serverKey'),
+      storedKey: Buffer.from('storedKey'),
+    }, () => recovery)).rejects.toBe(recovery);
   });
 });

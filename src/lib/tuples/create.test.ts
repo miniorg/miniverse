@@ -32,7 +32,8 @@ describe('Create', () => {
   describe('toActivityStreams', () => {
     test('resolves with ActivityStreams representation', async () => {
       const account = await fabricateRemoteAccount({
-        uri: { uri: 'https://ReMoTe.xn--kgbechtv/' }
+        actor: { username: 'username' },
+        uri: 'https://ReMoTe.xn--kgbechtv/'
       });
 
       const object = await fabricateNote({
@@ -55,7 +56,7 @@ describe('Create', () => {
           type: 'Note',
           published: new Date('2000-01-01T00:00:00.000Z'),
           attributedTo: 'https://ReMoTe.xn--kgbechtv/',
-          id: 'https://xn--kgbechtv/@1@finger.remote.%D8%A5%D8%AE%D8%AA%D8%A8%D8%A7%D8%B1/' + object.id,
+          id: 'https://xn--kgbechtv/@username@finger.remote.%D8%A5%D8%AE%D8%AA%D8%A8%D8%A7%D8%B1/' + object.id,
           to: 'https://www.w3.org/ns/activitystreams#Public',
           inReplyTo: null,
           summary: null,

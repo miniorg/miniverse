@@ -42,8 +42,8 @@ describe('toActivityStreams', () => {
       summary: '要約',
       content: '内容',
       attachments: [],
-      hashtags: [{ name: '名前' }],
-      mentions: [{ href: actor }]
+      hashtags: ['名前'],
+      mentions: [actor]
     });
 
     const recover = jest.fn();
@@ -73,7 +73,7 @@ describe('toActivityStreams', () => {
         username: 'AtTrIbUTeDtO',
         host: 'AtTrIbUTeDtO.FiNgEr.xn--kgbechtv'
       },
-      uri: { uri: 'https://AtTrIbUTeDtO.xn--kgbechtv/' }
+      uri: 'https://AtTrIbUTeDtO.xn--kgbechtv/'
     });
 
     const actor = unwrap(await account.select('actor'));
@@ -84,8 +84,8 @@ describe('toActivityStreams', () => {
       },
       content: '内容',
       attachments: [],
-      hashtags: [{ name: '名前' }],
-      mentions: [{ href: actor }]
+      hashtags: ['名前'],
+      mentions: [actor]
     });
 
     const recover = jest.fn();
@@ -117,13 +117,15 @@ describe('create', () => {
     const published = new Date;
     const recover = jest.fn();
 
-    const note = await Note.create(
-      repository,
-      published,
-      attributedToActor,
-      '内容',
-      { hashtags: ['名前'], mentions: [attributedToActor] },
-      recover);
+    const note = await Note.create(repository, {
+      status: { published, actor: attributedToActor, uri: null },
+      summary: null,
+      content: '内容',
+      inReplyTo: { id: null, uri: null },
+      attachments: [],
+      hashtags: ['名前'],
+      mentions: [attributedToActor]
+    }, recover);
 
     const [
       status, hashtags, mentions, ownedStatuses,
@@ -133,7 +135,7 @@ describe('create', () => {
       note.select('hashtags'),
       note.select('mentions'),
       repository.selectRecentStatusesIncludingExtensionsByActorId(
-        unwrap(attributedToActor.id)),
+        attributedToActor.id),
       attributedTo.select('inbox')
     ]);
 
@@ -153,13 +155,19 @@ describe('create', () => {
     const attributedTo = await fabricateLocalAccount();
     const recover = jest.fn();
 
-    const note = await Note.create(
-      repository,
-      new Date,
-      unwrap(await attributedTo.select('actor')),
-      '内容<script>alert("XSS");</script>',
-      { summary: '要約<script>alert("XSS");</script>' },
-      recover);
+    const note = await Note.create(repository, {
+      status: {
+        published: new Date,
+        actor: unwrap(await attributedTo.select('actor')),
+        uri: null
+      },
+      summary: '要約<script>alert("XSS");</script>',
+      content: '内容<script>alert("XSS");</script>',
+      inReplyTo: { id: null, uri: null },
+      attachments: [],
+      hashtags: [],
+      mentions: []
+    }, recover);
 
     expect(recover).not.toHaveBeenCalled();
     expect(note).toHaveProperty('content', '内容');
@@ -173,7 +181,19 @@ describe('create', () => {
     const object = unwrap(await follow.select('object'));
     const recover = jest.fn();
 
-    await Note.create(repository, new Date, object, '内容', {}, recover);
+    await Note.create(repository, {
+      status: {
+        published: new Date,
+        actor: object,
+        uri: null
+      },
+      summary: null,
+      content: '内容',
+      inReplyTo: { id: null, uri: null },
+      attachments: [],
+      hashtags: [],
+      mentions: []
+    }, recover);
 
     expect(recover).not.toHaveBeenCalled();
     expect((await actorAccount.select('inbox'))[0])
@@ -183,7 +203,7 @@ describe('create', () => {
 
 describe('createFromParsedActivityStreams', () => {
   test('creates and returns note from ActivityStreams representation', async () => {
-    const [[actor, object], mentioned] = await Promise.all([
+    const [[actor, wrappedObject], mentioned] = await Promise.all([
       fabricateFollow().then(follow => Promise.all(
         [follow.select('actor'), follow.select('object')])),
       fabricateLocalAccount({ actor: { username: 'MeNtIoNeD' } })
@@ -203,7 +223,7 @@ describe('createFromParsedActivityStreams', () => {
       resolveStream();
     });
 
-    const unwrappedObject = unwrap(object);
+    const object = unwrap(wrappedObject);
     const recover = jest.fn();
 
     const note = unwrap(await Note.createFromParsedActivityStreams(
@@ -219,15 +239,14 @@ describe('createFromParsedActivityStreams', () => {
           { type: 'Mention', href: 'https://xn--kgbechtv/@MeNtIoNeD' }
         ]
       }, AnyHost),
-      unwrappedObject,
+      object,
       signal,
       recover));
 
-    const objectId = unwrap(unwrappedObject.id);
     const [hashtags, mentions, ownedStatuses] = await Promise.all([
       note.select('hashtags'),
       note.select('mentions'),
-      repository.selectRecentStatusesIncludingExtensionsByActorId(objectId)
+      repository.selectRecentStatusesIncludingExtensionsByActorId(object.id)
     ]);
 
     expect(recover).not.toHaveBeenCalled();
@@ -235,7 +254,7 @@ describe('createFromParsedActivityStreams', () => {
     expect(note).toHaveProperty(['status', 'actor'], object);
     expect(note).toHaveProperty('content', '内容');
     expect(hashtags[0]).toHaveProperty('name', '名前');
-    expect(mentions[0]).toHaveProperty(['href', 'id'], unwrap(mentioned.id));
+    expect(mentions[0]).toHaveProperty(['href', 'id'], mentioned.id);
     expect(ownedStatuses[0]).toHaveProperty('id', note.id);
 
     await asyncStream;
@@ -244,7 +263,7 @@ describe('createFromParsedActivityStreams', () => {
   test('infers attribution if attributedTo argument is not given', async () => {
     const recover = jest.fn();
     const account = await fabricateRemoteAccount(
-      { uri: { uri: 'https://AtTrIbUTeDtO.xn--kgbechtv/' } });
+      { uri: 'https://AtTrIbUTeDtO.xn--kgbechtv/' });
 
     await expect(Note.createFromParsedActivityStreams(
       repository,
@@ -290,7 +309,7 @@ describe('createFromParsedActivityStreams', () => {
     const recovery = {};
 
     await fabricateRemoteAccount(
-      { uri: { uri: 'https://AtTrIbUTeDtO.xn--kgbechtv/' } });
+      { uri: 'https://AtTrIbUTeDtO.xn--kgbechtv/' });
 
     await expect(Note.createFromParsedActivityStreams(
       repository,
@@ -319,7 +338,7 @@ describe('createFromParsedActivityStreams', () => {
         .then(unwrap)
         .then(status => Promise.all([status.id, status.getUri(recover)])),
       fabricateRemoteAccount(
-        { uri: { uri: 'https://AtTrIbUTeDtO.xn--kgbechtv/' } })
+        { uri: 'https://AtTrIbUTeDtO.xn--kgbechtv/' })
     ]);
 
     await expect(Note.createFromParsedActivityStreams(
@@ -344,7 +363,7 @@ describe('createFromParsedActivityStreams', () => {
 
   test('resolves inReplyTo with a remote note', async () => {
     await fabricateRemoteAccount(
-      { uri: { uri: 'https://AtTrIbUTeDtO.xn--kgbechtv/' } });
+      { uri: 'https://AtTrIbUTeDtO.xn--kgbechtv/' });
 
     const recover = jest.fn();
     const { inReplyToId } = unwrap(await Note.createFromParsedActivityStreams(
@@ -413,7 +432,7 @@ describe('fromParsedActivityStreams', () => {
     const recover = jest.fn();
 
     await fabricateNote({
-      status: { uri: { uri: 'https://NoTe.xn--kgbechtv/' } },
+      status: { uri: 'https://NoTe.xn--kgbechtv/' },
       content: '内容'
     });
 

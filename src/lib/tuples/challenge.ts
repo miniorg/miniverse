@@ -30,10 +30,7 @@ export default class Challenge {
     this.digest = digest;
   }
 
-  static async create(repository: Repository, secret: Buffer) {
-    const challenge = new this({ digest: digest(secret) });
-
-    await repository.insertChallenge(challenge);
-    return challenge;
+  static create(repository: Repository, secret: Buffer) {
+    return repository.insertChallenge(digest(secret));
   }
 }

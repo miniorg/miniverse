@@ -23,7 +23,6 @@ import Actor from './actor';
 import Note from './note';
 import Relation, { Reference } from './relation';
 import Status from './status';
-import URI from './uri';
 
 const idMissing = {};
 
@@ -41,12 +40,22 @@ interface References {
   object: Note | null;
 }
 
-type Properties = { id?: string } & (ObjectIdProperyties | ObjectProperties);
+type Properties = ({ id: string } | { id?: string; status: Status }) &
+(ObjectIdProperyties | ObjectProperties);
 
 export const unexpectedType = Symbol();
 
+export interface Seed {
+  readonly status: {
+    readonly published: Date;
+    readonly actor: Actor;
+    readonly uri: null | string;
+  };
+  readonly object: Note;
+}
+
 export default class Announce extends Relation<Properties, References> {
-  id?: string;
+  readonly id!: string;
   readonly object?: Reference<Note | null>;
   readonly objectId!: string;
   readonly status?: Reference<Status | null>;
@@ -77,20 +86,12 @@ export default class Announce extends Relation<Properties, References> {
     return { type: 'Announce', id, published, object };
   }
 
-  static async create(repository: Repository, published: Date, actor: Actor, object: Note, uri: null | string, recover: (error: Error) => unknown) {
-    const announce = new this({
-      repository,
-      status: new Status({
-        repository,
-        published,
-        actor,
-        uri: uri == null ? null : new URI({ repository, uri, allocated: true })
-      }),
-      object
-    });
-
-    await repository.insertAnnounce(announce as any, recover);
-
+  static async create(
+    repository: Repository,
+    seed: Seed,
+    recover: (error: Error) => unknown
+  ) {
+    const announce = await repository.insertAnnounce(seed, recover);
     const status = await announce.select('status');
     if (!status) {
       throw new Error('status propagation failed.');
@@ -101,10 +102,16 @@ export default class Announce extends Relation<Properties, References> {
     return announce;
   }
 
-  static async createFromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, actor: Actor, signal: AbortSignal, recover: (error: Error & {
-    [temporaryError]?: boolean;
-    [unexpectedType]?: boolean;
-  }) => unknown) {
+  static async createFromParsedActivityStreams(
+    repository: Repository,
+    object: ParsedActivityStreams,
+    actor: Actor,
+    signal: AbortSignal,
+    recover: (error: Error & {
+      [temporaryError]?: boolean;
+      [unexpectedType]?: boolean;
+    }) => unknown
+  ) {
     const type = await object.getType(signal, recover);
 
     if (!type.has('Announce')) {
@@ -146,13 +153,14 @@ export default class Announce extends Relation<Properties, References> {
       return null;
     }
 
-    return this.create(
-      repository,
-      published,
-      actor,
-      objectObject,
-      typeof uri == 'string' ? uri : null,
-      recover);
+    return this.create(repository, {
+      status: {
+        published,
+        actor,
+        uri: typeof uri == 'string' ? uri : null
+      },
+      object: objectObject
+    }, recover);
   }
 }
 

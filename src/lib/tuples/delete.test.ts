@@ -16,7 +16,11 @@
 
 import { AbortController } from 'abort-controller';
 import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
-import { fabricateDocument, fabricateNote } from '../test/fabricator';
+import {
+  fabricateDirtyDocument,
+  fabricateDocument,
+  fabricateNote
+} from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
 import Delete, { unexpectedType } from './delete';
@@ -26,7 +30,7 @@ const { signal } = new AbortController;
 describe('createFromParsedActivityStreams', () => {
   test('deletes note', async () => {
     const note = await fabricateNote(
-      { status: { uri: {  uri: 'https://ReMoTe.إختبار/' } } });
+      { status: { uri: 'https://ReMoTe.إختبار/' } });
 
     const status = unwrap(await note.select('status'));
     const actor = unwrap(await status.select('actor'));
@@ -47,14 +51,12 @@ describe('createFromParsedActivityStreams', () => {
   });
 
   test('deletes attachments', async () => {
-    const document = await fabricateDocument({
-      uuid: '00000000-0000-1000-8000-010000000000',
-      format: 'png'
-    });
-    const documentId = unwrap(document.id);
+    const document = await fabricateDocument(
+      await fabricateDirtyDocument(
+        '00000000-0000-1000-8000-010000000000', 'png'));
     const note = await fabricateNote({
       attachments: [document],
-      status: { uri: {  uri: 'https://ReMoTe.إختبار/' } }
+      status: { uri: 'https://ReMoTe.إختبار/' }
     });
 
     const status = unwrap(await note.select('status'));
@@ -70,7 +72,7 @@ describe('createFromParsedActivityStreams', () => {
       repository, activityStreams, actor, signal, recover)).resolves.toBeInstanceOf(Delete);
 
     expect(recover).not.toHaveBeenCalled();
-    await expect(repository.selectDocumentById(documentId)).resolves.toBe(null);
+    await expect(repository.selectDocumentById(document.id)).resolves.toBe(null);
     await expect(repository.selectUnlinkedDocuments()).resolves.toEqual([]);
     await expect(repository.s3.service.headObject({
       Bucket: repository.s3.bucket,
@@ -80,7 +82,7 @@ describe('createFromParsedActivityStreams', () => {
 
   test('rejects if type is not Delete', async () => {
     const note = await fabricateNote(
-      { status: { uri: {  uri: 'https://ReMoTe.إختبار/' } } });
+      { status: {  uri: 'https://ReMoTe.إختبار/' } });
 
     const recovery = {};
     const status = unwrap(await note.select('status'));

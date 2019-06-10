@@ -31,7 +31,7 @@ describe('toActivityStreams', () => {
     const recover = jest.fn();
     const like = await fabricateLike({
       object: await fabricateNote(
-        { status: { uri: { uri: 'https://ReMoTe.xn--kgbechtv/' } } })
+        { status: { uri: 'https://ReMoTe.xn--kgbechtv/' } })
     });
 
     await expect(like.toActivityStreams(recover)).resolves.toEqual({
@@ -53,13 +53,13 @@ describe('create', () => {
       fabricateNote()
     ]);
 
-    const like = await Like.create(repository, actor, object, recover);
+    const like = await Like.create(repository, { actor, object }, recover);
 
     expect(recover).not.toHaveBeenCalled();
     expect(like.actorId).toBe(actor.id);
     expect(like.objectId).toBe(object.id);
 
-    await expect(repository.selectLikeById(unwrap(like.id)))
+    await expect(repository.selectLikeById(like.id))
       .resolves
       .toHaveProperty('actorId', actor.id);
   });
@@ -75,7 +75,7 @@ describe('create', () => {
         .then(actor => fabricateNote({ status: { actor: unwrap(actor) } }))
     ]);
 
-    await Like.create(repository, actor, object, recover);
+    await Like.create(repository, { actor, object }, recover);
 
     await expect((await repository.queue.getWaiting())[0])
       .toHaveProperty(['data', 'type'], 'postLike');
@@ -107,7 +107,7 @@ describe('createFromParsedActivityStreams', () => {
     expect(like.actorId).toBe(actor.id);
     expect(like.objectId).toBe(object.id);
 
-    await expect(repository.selectLikeById(unwrap(like.id)))
+    await expect(repository.selectLikeById(like.id))
       .resolves
       .toHaveProperty('actorId', actor.id);
   });

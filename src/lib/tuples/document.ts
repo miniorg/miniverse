@@ -15,7 +15,6 @@
 */
 
 import { AbortSignal } from 'abort-controller';
-import { Body } from 'aws-sdk/clients/s3';
 import { Document as ActivityStreams } from '../generated_activitystreams';
 import generateUuid from '../generate_uuid';
 import ParsedActivityStreams from '../parsed_activitystreams';
@@ -30,7 +29,7 @@ interface References {
 }
 
 interface Properties {
-  id?: string;
+  id: string;
   uuid: string;
   format: string;
 }
@@ -38,8 +37,8 @@ interface Properties {
 export const unexpectedType = Symbol();
 
 export default class Document extends Relation<Properties, References> {
-  id?: string;
-  url?: Reference<URI | null>;
+  readonly id!: string;
+  readonly url?: Reference<URI | null>;
   readonly uuid!: string;
   readonly format!: string;
 
@@ -51,45 +50,33 @@ export default class Document extends Relation<Properties, References> {
     };
   }
 
-  upload(data: Body) {
-    return this.repository.s3.service.upload({
-      Bucket: this.repository.s3.bucket,
-      Body: data,
-      ContentType: `image/${this.format}`,
-      Key: `${this.repository.s3.keyPrefix}${this.uuid}.${this.format}`
-    }).promise();
-  }
-
   static async create(repository: Repository, url: string, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-    const [uuid, { data, info }] = await Promise.all([
+    const [uuid, { data, info: { format } }] = await Promise.all([
       generateUuid(),
       fetch(repository, url, { signal }, recover).then(({ body }) =>
         body.pipe(sharp()).toBuffer({ resolveWithObject: true }))
     ]);
 
-    const document = new this({
-      repository,
-      uuid,
-      format: info.format,
-      url: new URI({ repository, uri: url, allocated: true })
-    });
-
-    const dirty = await repository.insertDirtyDocument(document);
+    const dirty = await repository.insertDirtyDocument(uuid, format);
 
     try {
-      await document.upload(data);
-      await repository.insertDocument(document as any, dirty, recover);
+      await repository.s3.service.upload({
+        Bucket: repository.s3.bucket,
+        Body: data,
+        ContentType: `image/${format}`,
+        Key: `${repository.s3.keyPrefix}${uuid}.${format}`
+      }).promise();
+
+      return await repository.insertDocument(dirty, url, recover);
     } catch (error) {
       await repository.s3.service.deleteObject({
         Bucket: repository.s3.bucket,
-        Key: `${repository.s3.keyPrefix}${uuid}.${info.format}`
+        Key: `${repository.s3.keyPrefix}${uuid}.${format}`
       }).promise();
 
       await repository.deleteDirtyDocument(dirty);
       throw error;
     }
-
-    return document;
   }
 
   static async fromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, signal: AbortSignal, recover: (error: Error & {
@@ -119,10 +106,6 @@ export default class Document extends Relation<Properties, References> {
     const urlEntity = await repository.selectAllocatedURI(href);
 
     if (urlEntity) {
-      if (!urlEntity.id) {
-        throw new Error('URI\'s id cannot be fetched.');
-      }
-
       return repository.selectDocumentById(urlEntity.id);
     }
 

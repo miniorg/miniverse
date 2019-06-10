@@ -15,7 +15,7 @@
 */
 
 import Actor from '../tuples/actor';
-import Follow from '../tuples/follow';
+import Follow, { Seed } from '../tuples/follow';
 import Repository from '.';
 
 export default class {
@@ -27,14 +27,18 @@ export default class {
     });
   }
 
-  async insertFollow(this: Repository, follow: Follow, recover: (error: Error) => unknown) {
+  async insertFollow(
+    this: Repository,
+    { actor, object }: Seed,
+    recover: (error: Error) => unknown
+  ) {
     let result;
 
     try {
       result = await this.pg.query({
         name: 'insertFollow',
         text: 'INSERT INTO follows (actor_id, object_id) VALUES ($1, $2) RETURNING id',
-        values: [follow.actorId, follow.objectId]
+        values: [actor.id, object.id]
       });
     } catch (error) {
       if (error.code == '23505') {
@@ -44,7 +48,12 @@ export default class {
       throw error;
     }
 
-    follow.id = result.rows[0].id;
+    return new Follow({
+      repository: this,
+      id: result.rows[0].id,
+      actor,
+      object
+    });
   }
 
   async selectFollowIncludingActorAndObjectById(this: Repository, id: string): Promise<Follow | null> {

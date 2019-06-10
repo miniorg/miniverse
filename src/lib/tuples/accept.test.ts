@@ -27,7 +27,7 @@ import Accept from './accept';
 describe('toActivityStreams', () => {
   test('returns ActivityStreams representation', async () => {
     const [actor, object] = await Promise.all([
-      fabricateRemoteAccount({ uri: { uri: 'https://ReMoTe.xn--kgbechtv/' } })
+      fabricateRemoteAccount({ uri: 'https://ReMoTe.xn--kgbechtv/' })
         .then(account => account.select('actor'))
         .then(unwrap),
       fabricateLocalAccount({ actor: { username: '被行動者' } })

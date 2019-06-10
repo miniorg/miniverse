@@ -19,7 +19,7 @@ import Repository from '../repository';
 
 interface Properties {
   readonly repository: Repository;
-  readonly id?: string;
+  readonly id: string;
   readonly uri: string;
   readonly allocated: boolean;
 }
@@ -40,7 +40,7 @@ export function normalizeHost(host: string) {
 }
 
 export default class {
-  id?: string;
+  readonly id!: string;
   readonly uri!: string;
   readonly allocated!: boolean;
 

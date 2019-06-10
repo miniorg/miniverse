@@ -15,7 +15,7 @@
 */
 
 import Actor from '../tuples/actor';
-import RemoteAccount from '../tuples/remote_account';
+import RemoteAccount, { Seed } from '../tuples/remote_account';
 import URI from '../tuples/uri';
 import Repository from '.';
 
@@ -25,44 +25,62 @@ function parse(this: Repository, { id, inbox_uri_id, key_uri_id, public_key_der 
   readonly key_uri_id: string;
   readonly public_key_der: Buffer;
 }) {
-  return new RemoteAccount({
+  return {
     repository: this,
     id,
     inboxURIId: inbox_uri_id,
     publicKeyURIId: key_uri_id,
     publicKeyDer: public_key_der
-  });
+  };
 }
 
 export default class {
-  async insertRemoteAccount(this: Repository, account: RemoteAccount & {
-    actor: Actor;
-    uri: URI;
-    inboxURI: URI;
-    publicKeyURI: URI;
-  }) {
+  async insertRemoteAccount(this: Repository, { actor, uri, inbox, publicKey }: Seed) {
     const { rows } = await this.pg.query({
       name: 'insertRemoteAccount',
       text: 'SELECT * FROM insert_remote_account($1, $2, $3, $4, $5, $6, $7, $8) AS (id BIGINT, inbox_uri_id BIGINT, key_uri_id BIGINT)',
       values: [
-        account.actor.username,
-        account.actor.host,
-        account.actor.name,
-        account.actor.summary,
-        account.uri.uri,
-        account.inboxURI.uri,
-        account.publicKeyURI.uri,
-        account.publicKeyDer
+        actor.username,
+        actor.host,
+        actor.name,
+        actor.summary,
+        uri,
+        inbox.uri,
+        publicKey.uri,
+        publicKey.publicKeyDer
       ]
     });
 
-    account.id = rows[0].id;
-    account.actor.id = rows[0].id;
-    account.uri.id = rows[0].id;
-    account.inboxURIId = rows[0].inbox_uri_id;
-    account.inboxURI.id = rows[0].inbox_uri_id;
-    account.publicKeyURIId = rows[0].key_uri_id;
-    account.publicKeyURI.id = rows[0].key_uri_id;
+    return new RemoteAccount({
+      repository: this,
+      actor: new Actor({
+        repository: this,
+        id: rows[0].id,
+        username: actor.username,
+        host: actor.host,
+        name: actor.name,
+        summary: actor.summary
+      }),
+      uri: new URI({
+        repository: this,
+        id: rows[0].id,
+        uri,
+        allocated: true
+      }),
+      inboxURI: new URI({
+        repository: this,
+        id: rows[0].inbox_uri_id,
+        uri: inbox.uri,
+        allocated: true
+      }),
+      publicKeyURI: new URI({
+        repository: this,
+        id: rows[0].key_uri_id,
+        uri: publicKey.uri,
+        allocated: true
+      }),
+      publicKeyDer: publicKey.publicKeyDer
+    });
   }
 
   async selectRemoteAccountById(this: Repository, id: string): Promise<RemoteAccount | null> {
@@ -72,7 +90,7 @@ export default class {
       values: [id]
     });
 
-    return rows[0] ? parse.call(this, rows[0]) : null;
+    return rows[0] ? new RemoteAccount(parse.call(this, rows[0])) : null;
   }
 
   async selectRemoteAccountByKeyUri(this: Repository, uri: URI): Promise<RemoteAccount | null> {
@@ -83,9 +101,9 @@ export default class {
     });
 
     if (rows[0]) {
-      const account = parse.call(this, rows[0]);
-      account.publicKeyURI = uri;
-      return account;
+      return new RemoteAccount(Object.assign(parse.call(this, rows[0]), {
+        publicKeyURI: uri
+      }));
     }
 
     return null;

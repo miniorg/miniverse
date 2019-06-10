@@ -25,14 +25,13 @@ import Status from './status';
 import Repository from '../repository';
 import sanitizeHtml = require('sanitize-html');
 
-interface Properties {
-  id?: string;
+type Properties = ({ id: string } | { id?: string; actor: Actor }) & {
   admin: boolean;
   privateKeyDer: Buffer;
   salt: Buffer;
   serverKey: Buffer;
   storedKey: Buffer;
-}
+};
 
 interface References {
   inbox: Status[];
@@ -41,8 +40,20 @@ interface References {
 
 const generateKeyPairAsync = promisify(generateKeyPair);
 
+export interface Seed {
+  readonly actor: {
+    readonly username: string;
+    readonly name: string;
+    readonly summary: string;
+  };
+  readonly admin: boolean;
+  readonly salt: Buffer;
+  readonly serverKey: Buffer;
+  readonly storedKey: Buffer;
+}
+
 export default class LocalAccount extends Relation<Properties, References> {
-  id?: string;
+  readonly id!: string;
   readonly actor?: Reference<Actor | null>;
   readonly admin!: boolean;
   readonly inbox?: Reference<Status[]>;
@@ -77,16 +88,22 @@ export default class LocalAccount extends Relation<Properties, References> {
     };
   }
 
-  static async create(repository: Repository, username: string, name: string, summary: string, admin: boolean, salt: Buffer, serverKey: Buffer, storedKey: Buffer, recover: (error: Error) => unknown) {
-    const account = new this({
-      repository,
-      actor: new Actor({
-        repository,
-        username,
-        host: null,
-        name,
-        summary: sanitizeHtml(summary)
-      }),
+  static async create(repository: Repository, {
+    actor,
+    admin,
+    salt,
+    serverKey,
+    storedKey,
+  }: Seed, recover: (error: Error) => unknown
+  ) {
+    Actor.validateUsername(actor.username, recover);
+
+    return repository.insertLocalAccount({
+      actor: {
+        username: actor.username,
+        name: actor.name,
+        summary: sanitizeHtml(actor.summary),
+      },
       admin,
       privateKeyDer: (await generateKeyPairAsync('rsa', {
         modulusLength: 2048,
@@ -95,17 +112,7 @@ export default class LocalAccount extends Relation<Properties, References> {
       salt,
       serverKey,
       storedKey
-    });
-
-    const actor = await account.select('actor');
-    if (!actor) {
-      throw new Error('actor not found.');
-    }
-    
-    actor.validate(recover);
-    await repository.insertLocalAccount(account, recover);
-
-    return account;
+    }, recover);
   }
 }
 

@@ -17,7 +17,6 @@
 import { fabricateFollow, fabricateLocalAccount } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
-import Follow from '../tuples/follow';
 
 test('inserts and allows to query follow by its id', async () => {
   const [actor, object] = await Promise.all([
@@ -32,7 +31,7 @@ test('inserts and allows to query follow by its id', async () => {
   const { id } = await fabricateFollow({ actor, object });
 
   const queriedFollow =
-    await repository.selectFollowIncludingActorAndObjectById(unwrap(id));
+    await repository.selectFollowIncludingActorAndObjectById(id);
 
   expect(queriedFollow).toHaveProperty(['actor', 'repository'], repository);
   expect(queriedFollow).toHaveProperty(['actor', 'username'], '行動者');
@@ -65,9 +64,7 @@ test('rejects when inserting a duplicate follow', async () => {
     insertedFollow.select('object').then(unwrap)
   ]);
 
-  await expect(repository.insertFollow(new Follow({
-    actor,
-    object,
-    repository
-  }), () => recovery)).rejects.toBe(recovery);
+  await expect(repository.insertFollow(
+    { actor, object },
+    () => recovery)).rejects.toBe(recovery);
 })

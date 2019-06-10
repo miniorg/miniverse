@@ -30,7 +30,7 @@ import Hashtag from './hashtag';
 import Mention from './mention';
 import Relation, { Reference } from './relation';
 import Status from './status';
-import URI, { encodeSegment } from './uri';
+import { encodeSegment } from './uri';
 import sanitizeHtml = require('sanitize-html');
 
 async function tryToResolveLocalNoteByURI(repository: Repository, uri: string) {
@@ -59,28 +59,17 @@ async function tryToResolveLocalNoteByURI(repository: Repository, uri: string) {
   return null;
 }
 
-interface Properties {
-  id?: string;
-  inReplyToId?: string | null;
+type Properties = ({ id: string } | { id?: string; status: Status }) & {
+  inReplyToId: string | null;
   summary: string | null;
   content: string;
-}
+};
 
 interface References {
   status: Status | null;
   attachments?: Document[];
   hashtags: Hashtag[];
   mentions: Mention[];
-}
-
-interface Options {
-  readonly uri?: string | null;
-  readonly inReplyToId?: string | null;
-  readonly inReplyToUri?: string | null;
-  readonly summary?: string | null;
-  readonly attachments?: Document[];
-  readonly hashtags?: string[];
-  readonly mentions?: Actor[];
 }
 
 type ActivityStreamsTag = ActivityStreamsHashtag | ActivityStreamsMention;
@@ -187,11 +176,37 @@ function tagFromActivityStreams(repository: Repository, nullableTag: (ParsedActi
   ]);
 }
 
+function validate({ summary }: Seed, recover: (error: Error) => unknown) {
+  if (summary == '') {
+    throw recover(new Error('summary empty.'));
+  }
+}
+
 export const unexpectedType = Symbol();
 
+export interface Seed {
+  readonly status: {
+    readonly actor: Actor;
+    readonly published: Date;
+    readonly uri: string | null;
+  };
+  readonly inReplyTo: {
+    readonly id: string;
+    readonly uri: any;
+  } | {
+    readonly id: null;
+    readonly uri: null | string;
+  };
+  readonly summary: string | null;
+  readonly content: string;
+  readonly attachments: Document[];
+  readonly hashtags: string[];
+  readonly mentions: Actor[];
+}
+
 export default class Note extends Relation<Properties, References> {
-  id?: string;
-  inReplyToId?: string;
+  readonly id!: string;
+  readonly inReplyToId!: string | null;
   readonly status?: Reference<Status>;
   readonly summary!: string | null;
   readonly content!: string;
@@ -287,46 +302,34 @@ export default class Note extends Relation<Properties, References> {
     };
   }
 
-  validate(recover: (error: Error) => unknown) {
-    if (this.summary == '') {
-      throw recover(new Error('summary empty.'));
-    }
-  }
-
-  static async create(repository: Repository, published: Date, actor: Actor, content: string, {
-    uri = null,
-    inReplyToId = null,
-    inReplyToUri = null,
-    summary = null,
-    attachments = [],
-    hashtags = [],
-    mentions = []
-  }: Options, recover: (error: Error) => unknown) {
-    const note = new this({
-      repository,
-      status: new Status({
-        repository,
-        published,
-        actor,
-        uri: uri == null ? null : new URI({ repository, uri, allocated: true })
-      }),
-      inReplyToId,
+  static async create(repository: Repository, {
+    status,
+    inReplyTo,
+    summary,
+    content,
+    attachments,
+    hashtags,
+    mentions
+  }: Seed, recover: (error: Error) => unknown) {
+    const seed = {
+      status,
+      inReplyTo,
       summary: summary && sanitizeHtml(summary),
       content: sanitizeHtml(content),
       attachments,
-      hashtags: hashtags.map(name => new Hashtag({ repository, name })),
-      mentions: mentions.map(href => new Mention({ repository, href }))
-    });
+      hashtags,
+      mentions
+    };
 
-    note.validate(recover);
-    await repository.insertNote(note, inReplyToUri, recover);
+    validate(seed, recover);
+    const note = await repository.insertNote(seed, recover);
 
-    const status = await note.select('status');
-    if (!status) {
+    const insertedStatus = await note.select('status');
+    if (!insertedStatus) {
       throw new Error('status not inserted.');
     }
 
-    await postStatus(repository, status, recover);
+    await postStatus(repository, insertedStatus, recover);
 
     return note;
   }
@@ -420,13 +423,21 @@ export default class Note extends Relation<Properties, References> {
       return null;
     }
 
-    return this.create(repository, published, attributedTo, typeof content == 'string' ? content: '', {
-      uri: typeof uri == 'string' ? uri : null,
+    return this.create(repository, {
+      status: {
+        actor: attributedTo,
+        published,
+        uri: typeof uri == 'string' ? uri : null
+      },
       summary: typeof summary == 'string' ? summary : null,
+      content: typeof content == 'string' ? content: '',
       attachments: attachments.filter(isNotNull),
       hashtags: hashtags.filter(isString),
       mentions: mentions.filter(isNotNull),
-      inReplyToId, inReplyToUri
+      inReplyTo: {
+        id: inReplyToId,
+        uri: inReplyToUri
+      } as any
     }, recover);
   }
 
@@ -440,12 +451,7 @@ export default class Note extends Relation<Properties, References> {
 
       const uriEntity = await repository.selectAllocatedURI(uri);
       if (uriEntity) {
-        const { id } = uriEntity;
-        if (!id) {
-          throw new Error('The internal id cannot be fetched');
-        }
-
-        const remoteNote = await repository.selectNoteById(id);
+        const remoteNote = await repository.selectNoteById(uriEntity.id);
         if (remoteNote) {
           return remoteNote;
         }

@@ -17,17 +17,30 @@
 import { Pool } from 'pg';
 import { Analytics } from '../session/types';
 import Actor from '../tuples/actor';
-import Announce from '../tuples/announce';
+import Announce, {
+  Seed as AnnounceSeed
+} from '../tuples/announce';
 import Challenge from '../tuples/challenge';
 import Cookie from '../tuples/cookie';
+import DirtyDocument from '../tuples/dirty_document';
 import Document from '../tuples/document';
-import Follow from '../tuples/follow';
+import Follow, {
+  Seed as FollowSeed
+} from '../tuples/follow';
 import Hashtag from '../tuples/hashtag';
-import Like from '../tuples/like';
-import LocalAccount from '../tuples/local_account';
+import Like, {
+  Seed as LikeSeed
+} from '../tuples/like';
+import LocalAccount, {
+  Seed as LocalAccountSeed
+} from '../tuples/local_account';
 import Mention from '../tuples/mention';
-import Note from '../tuples/note';
-import RemoteAccount from '../tuples/remote_account';
+import Note, {
+  Seed as NoteSeed
+} from '../tuples/note';
+import RemoteAccount, {
+  Seed as RemoteAccountSeed
+} from '../tuples/remote_account';
 import Status from '../tuples/status';
 import URI from '../tuples/uri';
 import Actors from './actors';
@@ -144,20 +157,26 @@ export default class Repository implements
   readonly selectActorsMentionedByNoteId!:
   (id: string) => Promise<Actor[]>;
 
-  readonly insertAnnounce!: (announce: Announce & {
-    readonly status: Status & { readonly uri: URI };
-  }, recover: (error: Error) => unknown) => Promise<void>;
+  readonly insertAnnounce!: (
+    seed: AnnounceSeed,
+    recover: (error: Error) => unknown
+  ) => Promise<Announce>;
 
   readonly insertChallenge!:
-  (challenge: Challenge) => Promise<void>;
+  (digest: Buffer) => Promise<Challenge>;
   readonly selectChallengeByDigest!:
   (digest: Buffer) => Promise<Challenge | null>;
 
-  readonly insertCookie!:
-  (cookie: Cookie) => Promise<void>;
+  readonly insertCookie!: ({ account, digest }: {
+    readonly account: LocalAccount;
+    readonly digest: Buffer;
+  }) => Promise<Cookie>;
 
-  readonly insertDocument!:
-  (document: Document & { readonly url: URI }, dirtyId: number, recover: (error: Error) => unknown) => Promise<void>;
+  readonly insertDocument!: (
+    dirty: DirtyDocument,
+    url: string,
+    recover: (error: Error) => unknown
+  ) => Promise<Document>;
   readonly selectDocumentById!:
   (id: string) => Promise<Document | null>;
   readonly selectDocumentsByAttachedNoteId!:
@@ -165,8 +184,10 @@ export default class Repository implements
 
   readonly deleteFollowByActorAndObject!:
   (actor: Actor, object: Actor) => Promise<void>;
-  readonly insertFollow!:
-  (follow: Follow, recover: (error: Error) => unknown) => Promise<void>;
+  readonly insertFollow!: (
+    seed: FollowSeed,
+    recover: (error: Error) => unknown
+  ) => Promise<Follow>;
   readonly selectFollowIncludingActorAndObjectById!:
   (id: string) => Promise<Follow | null>;
 
@@ -175,15 +196,19 @@ export default class Repository implements
 
   readonly deleteLikeByActorAndObject!:
   (actor: Actor, object: Note) => Promise<void>;
-  readonly insertLike!:
-  (like: Like, recover: (error: Error) => unknown) => Promise<void>;
+  readonly insertLike!: (
+    seed: LikeSeed,
+    recover: (error: Error) => unknown
+  ) => Promise<Like>;
   readonly selectLikeById!:
   (id: string) => Promise<Like | null>;
 
   readonly getInboxChannel!:
   (accountOrActor: LocalAccount | Actor) => string;
-  readonly insertLocalAccount!:
-  (account: LocalAccount, recover: (error: Error) => unknown) => Promise<void>;
+  readonly insertLocalAccount!: (
+    seed: LocalAccountSeed & { readonly privateKeyDer: Buffer },
+    recover: (error: Error) => unknown
+  ) => Promise<LocalAccount>;
   readonly insertIntoInboxes!:
   (accountOrActors: (LocalAccount | Actor)[], item: Status) => Promise<void>;
   readonly selectLocalAccountByDigestOfCookie!:
@@ -195,12 +220,12 @@ export default class Repository implements
   (id: string) => Promise<Mention[]>;
 
   readonly insertNote!:
-  (note: Note, inReplyToUri: string | null, recover: (error: Error) => unknown) => Promise<void>;
+  (seed: NoteSeed, recover: (error: Error) => unknown) => Promise<Note>;
   readonly selectNoteById!:
   (id: string) => Promise<Note | null>;
 
   readonly insertRemoteAccount!:
-  (account: RemoteAccount) => Promise<void>;
+  (seed: RemoteAccountSeed) => Promise<RemoteAccount>;
   readonly selectRemoteAccountById!:
   (id: string) => Promise<RemoteAccount | null>;
   readonly selectRemoteAccountByKeyUri!:
@@ -228,9 +253,11 @@ export default class Repository implements
   () => Promise<{ id: string; uuid: string; format: string }[]>;
 
   readonly deleteDirtyDocument!:
-  (id: number) => Promise<void>;
-  readonly insertDirtyDocument!:
-  (this: Repository, document: Document) => Promise<number>;
+  (dirty: DirtyDocument) => Promise<void>;
+  readonly insertDirtyDocument!: (
+    uuid: string,
+    format: string
+  ) => Promise<DirtyDocument>;
 
   readonly selectURIById!:
   (id: string) => Promise<URI | null>;
@@ -257,9 +284,10 @@ export default class Repository implements
 
 for (const Constructor of [
   Actors, Announces, Challenges, Cookies,
-  Documents, Follows, Hashtags, Likes,
-  LocalAccounts, Mentions, RemoteAccounts, Notes,
-  Statuses, Subscribers, UnlinkedDocuments, URIs
+  DirtyDocuments, Documents, Follows, Hashtags,
+  Likes, LocalAccounts, Mentions, RemoteAccounts,
+  Notes, Statuses, Subscribers, UnlinkedDocuments,
+  URIs
 ]) {
   for (const key of Object.getOwnPropertyNames(Constructor.prototype)) {
     (Repository.prototype as any)[key] = (Constructor.prototype as any)[key];

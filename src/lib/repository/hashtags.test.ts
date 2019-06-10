@@ -16,10 +16,9 @@
 
 import { fabricateNote } from '../test/fabricator';
 import repository from '../test/repository';
-import { unwrap } from '../test/types';
 
 test('inserts note and allows to query its hashtags', async () => {
-  const { id } = await fabricateNote({ hashtags: [{ name: '名前' }] });
-  const hashtags = await repository.selectHashtagsByNoteId(unwrap(id));
+  const { id } = await fabricateNote({ hashtags: ['名前'] });
+  const hashtags = await repository.selectHashtagsByNoteId(id);
   expect(hashtags[0]).toHaveProperty('name', '名前');
 });

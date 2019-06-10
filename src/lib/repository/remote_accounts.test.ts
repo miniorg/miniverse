@@ -21,9 +21,7 @@ import {
 } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
-import Note from '../tuples/note';
 import RemoteAccount from '../tuples/remote_account';
-import Status from '../tuples/status';
 
 async function testInsertAndQuery(query: (account: RemoteAccount) => Promise<RemoteAccount>) {
   const inserted = await fabricateRemoteAccount({
@@ -31,9 +29,10 @@ async function testInsertAndQuery(query: (account: RemoteAccount) => Promise<Rem
       username: 'username',
       host: 'FiNgEr.ReMoTe.xn--kgbechtv'
     },
-    inboxURI: { uri: 'https://ReMoTe.إختبار/inbox' },
-    publicKeyURI: { uri: 'https://ReMoTe.إختبار/publickey' },
-    publicKeyDer: createPublicKey(`-----BEGIN RSA PUBLIC KEY-----
+    inbox: { uri: 'https://ReMoTe.إختبار/inbox' },
+    publicKey: {
+      uri: 'https://ReMoTe.إختبار/publickey',
+      publicKeyDer: createPublicKey(`-----BEGIN RSA PUBLIC KEY-----
 MIIBCgKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGTrcO6
 S16XQ3tffCo0QA7G1MOzTeOEJHMiNM4jQQuY0NgDGMs3KEgo0J4ik75VnlyOiSyF
 ZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2/POH
@@ -41,8 +40,9 @@ ZXCKA/X4vsYZsKyCHGCrbHA6J2m21rbFKj4XChLryn5ZnH6LkdZcaePZwrZ2/POH
 ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 +DHYFaVXQy60WzCEFjiQPZ8XdNQKvDyjKwIDAQAB
 -----END RSA PUBLIC KEY-----
-`).export({ format: 'der', type: 'pkcs1' }),
-    uri: { uri: 'https://ReMoTe.إختبار/' }
+`).export({ format: 'der', type: 'pkcs1' })
+    },
+    uri: 'https://ReMoTe.إختبار/'
   });
 
   const queried = await query(inserted);
@@ -69,69 +69,65 @@ test('inserts account and allows to query one by key URI', () =>
 
 test('inserts account and allows to query one by its id', () =>
   testInsertAndQuery(({ id }) =>
-    repository.selectRemoteAccountById(unwrap(id)).then(unwrap)));
+    repository.selectRemoteAccountById(id).then(unwrap)));
 
 test('inserts accounts with common inbox URI', async () => {
   await expect(fabricateRemoteAccount({
-    inboxURI: { uri: 'https://ReMoTe.إختبار/inbox' }
+    inbox: { uri: 'https://ReMoTe.إختبار/inbox' }
   })).resolves.toBeInstanceOf(RemoteAccount);
 
   await expect(fabricateRemoteAccount({
-    inboxURI: { uri: 'https://ReMoTe.إختبار/inbox' }
+    inbox: { uri: 'https://ReMoTe.إختبار/inbox' }
   })).resolves.toBeInstanceOf(RemoteAccount);
 });
 
 test('inserts accounts with inbox whose URI is reserved for note inReplyTo', async () => {
   const account = await fabricateLocalAccount();
 
-  const reply = new Note({
-    repository,
-    status: new Status({
-      repository,
+  const recover = jest.fn();
+  const reply = await repository.insertNote({
+    status: {
       published: new Date,
-      actor: unwrap(await account.select('actor'))
-    }),
+      actor: unwrap(await account.select('actor')),
+      uri: null
+    },
     summary: null,
     content: '',
+    inReplyTo: { id: null, uri: 'https://ReMoTe.إختبار/' },
     attachments: [],
     hashtags: [],
     mentions: []
-  });
+  }, recover);
 
-  const recover = jest.fn();
-
-  await repository.insertNote(reply, 'https://ReMoTe.إختبار/', recover);
   expect(recover).not.toHaveBeenCalled();
 
   await expect(fabricateRemoteAccount({
-    inboxURI: { uri: 'https://ReMoTe.إختبار/inbox' }
+    inbox: { uri: 'https://ReMoTe.إختبار/inbox' }
   })).resolves.not.toHaveProperty('inboxURIId', reply.inReplyToId);
 });
 
 test('inserts accounts with key whose URI is reserved for note inReplyTo', async () => {
   const account = await fabricateLocalAccount();
 
-  const reply = new Note({
-    repository,
-    status: new Status({
-      repository,
+  const recover = jest.fn();
+  const reply = await repository.insertNote({
+    status: {
       published: new Date,
-      actor: unwrap(await account.select('actor'))
-    }),
+      actor: unwrap(await account.select('actor')),
+      uri: null
+    },
     summary: null,
     content: '',
+    inReplyTo: { id: null, uri: 'https://ReMoTe.إختبار/' },
     attachments: [],
     hashtags: [],
     mentions: []
-  });
+  }, recover);
 
-  const recover = jest.fn();
-
-  await repository.insertNote(reply, 'https://ReMoTe.إختبار/', recover);
   expect(recover).not.toHaveBeenCalled();
 
   await expect(fabricateRemoteAccount({
-    publicKeyURI: { uri: 'https://ReMoTe.إختبار/inbox' }
+    publicKey: { uri: 'https://ReMoTe.إختبار/inbox' }
   })).resolves.not.toHaveProperty('publicKeyURIId', reply.inReplyToId);
 });
 
@@ -142,7 +138,9 @@ describe('selectRemoteAccountById', () => {
 
 describe('selectRemoteAccountByKeyUri', () => {
   test('returns null if not found', () =>
-    expect(repository.selectRemoteAccountByKeyUri({ allocated: true, uri: '0' }))
-      .resolves
-      .toBe(null));
+    expect(repository.selectRemoteAccountByKeyUri({
+      id: '0',
+      allocated: true,
+      uri: '0'
+    })).resolves.toBe(null));
 });

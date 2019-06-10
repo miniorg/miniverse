@@ -14,11 +14,11 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Document from '../tuples/document';
+import DirtyDocument from '../tuples/dirty_document';
 import Repository from '.';
 
 export default class {
-  async deleteDirtyDocument(this: Repository, id: number) {
+  async deleteDirtyDocument(this: Repository, { id }: DirtyDocument) {
     await this.pg.query({
       name: 'deleteDirtyDocument',
       text: 'DELETE FROM dirty_documents WHERE id = $1',
@@ -26,13 +26,13 @@ export default class {
     });
   }
 
-  async insertDirtyDocument(this: Repository, { uuid, format }: Document) {
+  async insertDirtyDocument(this: Repository, uuid: string, format: string) {
     const { rows } = await this.pg.query({
       name: 'insertDirtyDocument',
       text: 'INSERT INTO dirty_documents (uuid, format) VALUES ($1, $2) RETURNING id',
       values: [uuid, format]
     });
 
-    return rows[0].id as number;
+    return new DirtyDocument({ repository: this, id: rows[0].id, uuid, format });
   }
 }

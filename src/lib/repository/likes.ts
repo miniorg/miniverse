@@ -15,7 +15,7 @@
 */
 
 import Actor from '../tuples/actor';
-import Like from '../tuples/like';
+import Like, { Seed } from '../tuples/like';
 import Note from '../tuples/note';
 import Repository from '.';
 
@@ -28,14 +28,18 @@ export default class {
     });
   }
 
-  async insertLike(this: Repository, like: Like, recover: (error: Error) => unknown) {
+  async insertLike(
+    this: Repository,
+    { actor, object }: Seed,
+    recover: (error: Error) => unknown
+  ) {
     let result;
 
     try {
       result = await this.pg.query({
         name: 'insertLike',
         text: 'INSERT INTO likes (actor_id, object_id) VALUES ($1, $2) RETURNING id',
-        values: [like.actorId, like.objectId]
+        values: [actor.id, object.id]
       });
     } catch (error) {
       if (error.code == '23505') {
@@ -45,7 +49,7 @@ export default class {
       throw error;
     }
 
-    like.id = result.rows[0].id;
+    return new Like({ repository: this, id: result.rows[0].id, actor, object });
   }
 
   async selectLikeById(this: Repository, id: string): Promise<Like | null> {

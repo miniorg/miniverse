@@ -14,11 +14,10 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { fabricateChallenge } from '../test/fabricator';
 import repository from '../test/repository';
 
 test('inserts challenge and allows to query with digest', async () => {
-  await fabricateChallenge({ digest: Buffer.from('digest') });
+  await repository.insertChallenge(Buffer.from('digest'));
 
   const digest = Buffer.from('digest');
   await expect(repository.selectChallengeByDigest(digest))

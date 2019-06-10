@@ -14,10 +14,9 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Document from '../tuples/document';
 import Hashtag from '../tuples/hashtag';
 import Mention from '../tuples/mention';
-import Note from '../tuples/note';
+import Note, { Seed } from '../tuples/note';
 import Status from '../tuples/status';
 import URI from '../tuples/uri';
 import Repository from '.';
@@ -38,12 +37,15 @@ function parse(this: Repository, { id, in_reply_to_id, summary, content }: {
 }
 
 export default class {
-  async insertNote(this: Repository, note: Note & {
-    readonly status: Status & { readonly uri: URI };
-    readonly attachments: Document[];
-    readonly hashtags: Hashtag[];
-    readonly mentions: Mention[];
-  }, inReplyToUri: null | string, recover: (error: Error) => unknown) {
+  async insertNote(this: Repository, {
+    status,
+    inReplyTo,
+    summary,
+    content,
+    attachments,
+    hashtags,
+    mentions
+  }: Seed, recover: (error: Error) => unknown) {
     let result;
 
     try {
@@ -51,16 +53,16 @@ export default class {
         name: 'insertNote',
         text: 'SELECT * FROM insert_note($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) AS (id BIGINT, in_reply_to_id BIGINT)',
         values: [
-          note.status.published,
-          note.status.uri && note.status.uri.uri,
-          note.status.actorId,
-          note.inReplyToId,
-          inReplyToUri,
-          note.summary || '',
-          note.content,
-          note.attachments.map(({ id }) => id),
-          note.hashtags.map(({ name }) => name),
-          note.mentions.map(({ hrefId }) => hrefId)
+          status.published,
+          status.uri,
+          status.actor.id,
+          inReplyTo.id,
+          inReplyTo.uri,
+          summary || '',
+          content,
+          attachments.map(({ id }) => id),
+          hashtags,
+          mentions.map(({ id }) => id)
         ]
       });
     } catch (error) {
@@ -71,13 +73,27 @@ export default class {
       throw error;
     }
 
-    note.id = result.rows[0].id;
-    note.status.id = note.id;
-    note.inReplyToId = result.rows[0].in_reply_to_id;
-
-    if (note.status.uri) {
-      note.status.uri.id = note.id;
-    }
+    return new Note({
+      repository: this,
+      status: new Status({
+        repository: this,
+        id: result.rows[0].id,
+        published: status.published,
+        actor: status.actor,
+        uri: status.uri == null ? null : new URI({
+          repository: this,
+          id: result.rows[0].id,
+          uri: status.uri,
+          allocated: true
+        })
+      }),
+      inReplyToId: result.rows[0].in_reply_to_id,
+      summary,
+      content,
+      attachments,
+      hashtags: hashtags.map(name => new Hashtag({ repository: this, name })),
+      mentions: mentions.map(href => new Mention({ repository: this, href }))
+    });
   }
 
   async selectNoteById(this: Repository, id: string): Promise<Note | null> {

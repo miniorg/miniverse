@@ -35,7 +35,7 @@ describe('toActivityStreams', () => {
     const announce = unwrap(await fabricateAnnounce({
       status: { published: new Date('2000-01-01T00:00:00.000Z') },
       object: await fabricateNote(
-        { status: { uri: { uri: 'https://ReMoTe.xn--kgbechtv/' } } })
+        { status: { uri: 'https://ReMoTe.xn--kgbechtv/' } })
     }));
 
     await expect(announce.toActivityStreams(recover)).resolves.toEqual({
@@ -58,16 +58,17 @@ describe('create', () => {
         .then(account => account.select('actor'))
         .then(unwrap),
       fabricateNote(
-        { status: { uri: { uri: 'https://ReMoTe.xn--kgbechtv/oBjEcT' } } })
+        { status: { uri: 'https://ReMoTe.xn--kgbechtv/oBjEcT' } })
     ]);
 
-    const announce = await Announce.create(
-      repository,
-      published,
-      actor,
-      object,
-      'https://ReMoTe.xn--kgbechtv/AnNoUnCe',
-      recover);
+    const announce = await Announce.create(repository, {
+      status: {
+        published,
+        actor,
+        uri: 'https://ReMoTe.xn--kgbechtv/AnNoUnCe'
+      },
+      object
+    }, recover);
 
     expect(recover).not.toHaveBeenCalled();
 
@@ -82,7 +83,7 @@ describe('create', () => {
           expect(status.select('uri'))
             .resolves
             .toHaveProperty('uri', 'https://ReMoTe.xn--kgbechtv/AnNoUnCe'),
-          expect(repository.selectStatusById(unwrap(announce.id)))
+          expect(repository.selectStatusById(announce.id))
             .resolves
             .toHaveProperty('actorId', status.actorId)
         ]);
@@ -105,7 +106,14 @@ describe('create', () => {
     ]);
 
     const recover = jest.fn();
-    const announce = await Announce.create(repository, new Date, object, note, null, recover);
+    const announce = await Announce.create(repository, {
+      status: {
+        published: new Date,
+        actor: object,
+        uri: null
+      },
+      object: note
+    }, recover);
 
     expect(recover).not.toHaveBeenCalled
     expect((await actorAccount.select('inbox'))[0])
@@ -120,7 +128,7 @@ describe('createFromParsedActivityStreams', () => {
         .then(account => account.select('actor'))
         .then(unwrap),
       fabricateNote(
-        { status: { uri: { uri: 'https://ReMoTe.xn--kgbechtv/oBjEcT' } } })
+        { status: { uri: 'https://ReMoTe.xn--kgbechtv/oBjEcT' } })
     ]);
 
     const recover = jest.fn();
@@ -144,14 +152,14 @@ describe('createFromParsedActivityStreams', () => {
     expect(status.published.toISOString())
       .toBe('2000-01-01T00:00:00.000Z');
 
-    expect(announce.objectId).toBe(unwrap(object.id));
+    expect(announce.objectId).toBe(object.id);
 
     await Promise.all([
       expect(status.select('actor')).resolves.toBe(actor),
       expect(status.select('uri'))
         .resolves
         .toHaveProperty('uri', 'https://ReMoTe.xn--kgbechtv/AnNoUnCe'),
-      expect(repository.selectStatusById(unwrap(announce.id)))
+      expect(repository.selectStatusById(announce.id))
         .resolves
         .toHaveProperty('actorId', status.actorId)
     ]);
@@ -164,7 +172,7 @@ describe('createFromParsedActivityStreams', () => {
         .then(account => account.select('actor'))
         .then(unwrap),
       fabricateNote(
-        { status: { uri: { uri: 'https://ReMoTe.xn--kgbechtv/oBjEcT' } } })
+        { status: { uri: 'https://ReMoTe.xn--kgbechtv/oBjEcT' } })
     ]);
 
     await expect(Announce.createFromParsedActivityStreams(
@@ -189,7 +197,7 @@ describe('createFromParsedActivityStreams', () => {
         .then(account => account.select('actor'))
         .then(unwrap),
       fabricateNote(
-        { status: { uri: { uri: 'https://ReMoTe.xn--kgbechtv/oBjEcT' } } })
+        { status: { uri: 'https://ReMoTe.xn--kgbechtv/oBjEcT' } })
     ]);
 
     await expect(Announce.createFromParsedActivityStreams(

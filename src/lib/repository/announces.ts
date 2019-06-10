@@ -14,15 +14,17 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Announce from '../tuples/announce';
+import Announce, { Seed } from '../tuples/announce';
 import Status from '../tuples/status';
 import URI from '../tuples/uri';
 import Repository from '.';
 
 export default class {
-  async insertAnnounce(this: Repository, announce: Announce & {
-    readonly status: Status & { readonly uri: URI };
-  }, recover: (error: Error) => unknown) {
+  async insertAnnounce(
+    this: Repository,
+    { status, object }: Seed,
+    recover: (error: Error) => unknown
+  ) {
     let result;
 
     try {
@@ -30,10 +32,10 @@ export default class {
         name: 'insertAnnounce',
         text: 'SELECT insert_announce($1, $2, $3, $4)',
         values: [
-          announce.status.published,
-          announce.status.uri && announce.status.uri.uri,
-          announce.status.actorId,
-          announce.objectId
+          status.published,
+          status.uri,
+          status.actor.id,
+          object.id
         ]
       });
     } catch (error) {
@@ -44,11 +46,21 @@ export default class {
       throw error;
     }
 
-    announce.id = result.rows[0].insert_announce;
-    announce.status.id = announce.id;
-
-    if (announce.status.uri) {
-      announce.status.uri.id = announce.id;
-    }
+    return new Announce({
+      repository: this,
+      status: new Status({
+        repository: this,
+        id: result.rows[0].insert_announce,
+        published: status.published,
+        actor: status.actor,
+        uri: status.uri == null ? null : new URI({
+          repository: this,
+          id: result.rows[0].insert_announce,
+          uri: status.uri,
+          allocated: true
+        })
+      }),
+      object
+    });
   }
 }

@@ -69,7 +69,7 @@ describe('create', () => {
     expect(follow).toHaveProperty('repository', repository);
     expect(follow).toHaveProperty('actor', actor);
     expect(follow).toHaveProperty('object', object);
-    expect((await repository.selectActorsByFolloweeId(unwrap(object.id)))[0])
+    expect((await repository.selectActorsByFolloweeId(object.id))[0])
       .toBeInstanceOf(Actor);
   });
 
@@ -93,7 +93,7 @@ describe('create', () => {
         .then(unwrap)
     ]);
 
-    await Follow.create(repository, actor, object, recover);
+    await Follow.create(repository, { actor, object }, recover);
 
     expect(recover).not.toHaveBeenCalled();
     await expect((await repository.queue.getWaiting())[0])
@@ -186,7 +186,7 @@ describe('createFromParsedActivityStreams', () => {
         .then(account => account.select('actor'))
         .then(unwrap),
       fabricateRemoteAccount(
-        { uri: { uri: 'https://ObJeCt.إختبار/' } })
+        { uri: 'https://ObJeCt.إختبار/' })
     ]);
 
     const activity = new ParsedActivityStreams(repository, {

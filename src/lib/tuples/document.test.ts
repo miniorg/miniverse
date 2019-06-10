@@ -16,6 +16,7 @@
 
 import { AbortController } from 'abort-controller';
 import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
+import { fabricateDocument, fabricateDirtyDocument } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
 import Document, { unexpectedType } from './document';
@@ -26,37 +27,17 @@ const { signal } = new AbortController;
 const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8" />';
 
 describe('toActivityStreams', () => {
-  test('resolves with ActivityStreams representation', () => {
-    const document = new Document({
-      repository,
-      uuid: '00000000-0000-1000-8000-010000000000',
-      format: 'svg',
-      url: new URI({ repository, uri: 'https://إختبار/', allocated: true })
-    });
+  test('resolves with ActivityStreams representation', async () => {
+    const document = await fabricateDocument(
+      await fabricateDirtyDocument(
+        '00000000-0000-1000-8000-010000000000', 'svg'),
+      'https://إختبار/');
 
     return expect(document.toActivityStreams()).resolves.toEqual({
       type: 'Document',
       mediaType: `image/svg`,
       url: `https://dOcUmEnTs.xn--kgbechtv/00000000-0000-1000-8000-010000000000.svg`
     });
-  });
-});
-
-describe('upload', () => {
-  test('uploads object', async () => {
-    const document = new Document({
-      repository,
-      uuid: '00000000-0000-1000-8000-010000000000',
-      format: 'svg',
-      url: new URI({ repository, uri: 'https://إختبار/', allocated: true })
-    });
-
-    await document.upload(Buffer.from(svg));
-
-    await expect(repository.s3.service.headObject({
-      Bucket: repository.s3.bucket,
-      Key: `documents/00000000-0000-1000-8000-010000000000.svg`
-    }).promise()).resolves.toHaveProperty('ContentType', 'image/svg');
   });
 });
 
@@ -84,7 +65,7 @@ describe('create', () => {
     expect(createdURL).toHaveProperty('uri', 'https://إختبار/');
     expect(createdURL).toHaveProperty('allocated', true);
 
-    const queried = await repository.selectDocumentById(unwrap(created.id));
+    const queried = await repository.selectDocumentById(created.id);
     const queriedURL = await unwrap(queried).select('url');
 
     expect(queried).toHaveProperty('id', created.id);
@@ -97,24 +78,6 @@ describe('create', () => {
       Bucket: repository.s3.bucket,
       Key: `documents/${created.uuid}.png`
     }).promise()).resolves.toHaveProperty('ContentType', 'image/png');
-  });
-
-  test('queues upload job if upload failed', async () => {
-    const recover = jest.fn();
-    const { bucket } = repository.s3;
-    nock('https://إختبار').get('/').reply(200, svg);
-    repository.s3.bucket = `${process.env.AWS_S3_BUCKET}-test-invalid`;
-
-    try {
-      await expect(Document.create(repository, 'https://إختبار/', signal, recover)).rejects.toEqual(expect.anything());
-    } finally {
-      nock.cleanAll();
-      repository.s3.bucket = bucket;
-    }
-
-    expect(recover).not.toHaveBeenCalled();
-    await expect((await repository.queue.getWaiting())[0])
-      .toHaveProperty(['data', 'type'], 'upload');
   });
 });
 

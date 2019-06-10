@@ -16,21 +16,21 @@
 
 import { createPublicKey } from 'crypto';
 import repository from '../test/repository';
-import { unwrap } from '../test/types';
 import RemoteAccount from './remote_account';
 
 describe('create', () => {
   test('creates and resolves with an account', async () => {
     const recover = jest.fn();
-    const account = await RemoteAccount.create(
-      repository,
-      'name of user',
-      'finger.remote.xn--kgbechtv',
-      '',
-      '<script>alert("XSS")</script>',
-      'https://remote.xn--kgbechtv/@name%20of%20user',
-      { uri: 'https://remote.xn--kgbechtv/@name%20of%20user/inbox' },
-      {
+    const account = await RemoteAccount.create(repository, {
+      actor: {
+        username: 'name of user',
+        host: 'finger.remote.xn--kgbechtv',
+        name: '',
+        summary: '<script>alert("XSS")</script>'
+      },
+      uri: 'https://remote.xn--kgbechtv/@name%20of%20user',
+      inbox: { uri: 'https://remote.xn--kgbechtv/@name%20of%20user/inbox' },
+      publicKey: {
         uri: 'https://remote.xn--kgbechtv/@name%20of%20user#key',
         publicKeyDer: createPublicKey(`-----BEGIN RSA PUBLIC KEY-----
 MIIBCgKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGTrcO6
@@ -41,8 +41,8 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 +DHYFaVXQy60WzCEFjiQPZ8XdNQKvDyjKwIDAQAB
 -----END RSA PUBLIC KEY-----
 `).export({ format: 'der', type: 'pkcs1' })
-      },
-      recover);
+      }
+    }, recover);
 
     expect(recover).not.toHaveBeenCalled();
     expect(account).toBeInstanceOf(RemoteAccount);
@@ -67,7 +67,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `).export({ format: 'der', type: 'pkcs1' }));
 
-    await expect(repository.selectRemoteAccountById(unwrap(account.id)))
+    await expect(repository.selectRemoteAccountById(account.id))
       .resolves
       .toHaveProperty('publicKeyDer', createPublicKey(`-----BEGIN RSA PUBLIC KEY-----
 MIIBCgKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGTrcO6
@@ -83,15 +83,16 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
   test('rejects if username is invalid', async () => {
     const recovery = {};
 
-    await expect(RemoteAccount.create(
-      repository,
-      '',
-      'finger.remote.xn--kgbechtv',
-      '',
-      '',
-      'https://remote.xn--kgbechtv/@%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E5%90%8D',
-      { uri: 'https://remote.xn--kgbechtv/@%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E5%90%8D/inbox' },
-      {
+    await expect(RemoteAccount.create(repository, {
+      actor: {
+        username: '',
+        host: 'finger.remote.xn--kgbechtv',
+        name: '',
+        summary: ''
+      },
+      uri: 'https://remote.xn--kgbechtv/@%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E5%90%8D',
+      inbox: { uri: 'https://remote.xn--kgbechtv/@%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E5%90%8D/inbox' },
+      publicKey: {
         uri: 'https://remote.xn--kgbechtv/@%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E5%90%8D#key',
         publicKeyDer: createPublicKey(`-----BEGIN RSA PUBLIC KEY-----
 MIIBCgKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGTrcO6
@@ -102,7 +103,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 +DHYFaVXQy60WzCEFjiQPZ8XdNQKvDyjKwIDAQAB
 -----END RSA PUBLIC KEY-----
 `).export({ format: 'der', type: 'pkcs1' })
-      },
-      () => recovery)).rejects.toBe(recovery);
+      }
+    }, () => recovery)).rejects.toBe(recovery);
   });
 });

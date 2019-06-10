@@ -30,11 +30,10 @@ const { signal } = new AbortController;
 describe('createFromParsedActivityStreams', () => {
   test('undoes announce activity', async () => {
     const announce = await fabricateAnnounce(
-      { status: { uri: { uri: 'https://NoTe.xn--kgbechtv/' } } });
+      { status: { uri: 'https://NoTe.xn--kgbechtv/' } });
 
     const status = unwrap(await announce.select('status'));
     const actor = unwrap(await status.select('actor'));
-    const id = unwrap(status.id);
 
     const activity = new ParsedActivityStreams(repository, {
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -47,7 +46,7 @@ describe('createFromParsedActivityStreams', () => {
     await Undo.createFromParsedActivityStreams(repository, activity, actor, signal, recover);
 
     expect(recover).not.toHaveBeenCalled();
-    await expect(repository.selectStatusById(id)).resolves.toBe(null);
+    await expect(repository.selectStatusById(status.id)).resolves.toBe(null);
   });
 
   test('undoes follow activity', async () => {
@@ -77,14 +76,14 @@ describe('createFromParsedActivityStreams', () => {
 
     expect(recover).not.toHaveBeenCalled();
 
-    await expect(repository.selectActorsByFolloweeId(unwrap(object.id)))
+    await expect(repository.selectActorsByFolloweeId(object.id))
       .resolves
       .toEqual([]);
   });
 
   test('rejects if type is unknown', async () => {
     const announce = await fabricateAnnounce(
-      { status: { uri: { uri: 'https://NoTe.xn--kgbechtv/' } } });
+      { status: { uri: 'https://NoTe.xn--kgbechtv/' } });
 
     const status = unwrap(await announce.select('status'));
     const actor = unwrap(await status.select('actor'));
