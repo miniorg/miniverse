@@ -34,6 +34,7 @@ import Actors from './actors';
 import Announces from './announces';
 import Challenges from './challenges';
 import Cookies from './cookies';
+import DirtyDocuments from './dirty_documents';
 import Documents from './documents';
 import Follows from './follows';
 import Hashtags from './hashtags';
@@ -89,9 +90,10 @@ interface RedisRepository {
 
 export default class Repository implements
     Actors, Announces, Challenges, Cookies,
-    Documents, Follows, Hashtags, Likes,
-    LocalAccounts, Mentions, Notes, RemoteAccounts,
-    Statuses, Subscribers, UnlinkedDocuments, URIs {
+    DirtyDocuments, Documents, Follows, Hashtags,
+    Likes, LocalAccounts, Mentions, Notes,
+    RemoteAccounts, Statuses, Subscribers, UnlinkedDocuments,
+    URIs {
   constructor({ analytics, captcha, console, content, host, fingerHost, pg, s3, redis }: Options) {
     this.analytics = analytics;
     this.captcha = captcha;
@@ -155,7 +157,7 @@ export default class Repository implements
   (cookie: Cookie) => Promise<void>;
 
   readonly insertDocument!:
-  (document: Document & { readonly url: URI }, recover: (error: Error) => unknown) => Promise<void>;
+  (document: Document & { readonly url: URI }, dirtyId: number, recover: (error: Error) => unknown) => Promise<void>;
   readonly selectDocumentById!:
   (id: string) => Promise<Document | null>;
   readonly selectDocumentsByAttachedNoteId!:
@@ -224,6 +226,11 @@ export default class Repository implements
   (ids: string[]) => Promise<void>;
   readonly selectUnlinkedDocuments!:
   () => Promise<{ id: string; uuid: string; format: string }[]>;
+
+  readonly deleteDirtyDocument!:
+  (id: number) => Promise<void>;
+  readonly insertDirtyDocument!:
+  (this: Repository, document: Document) => Promise<number>;
 
   readonly selectURIById!:
   (id: string) => Promise<URI | null>;

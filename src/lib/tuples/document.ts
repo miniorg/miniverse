@@ -74,12 +74,18 @@ export default class Document extends Relation<Properties, References> {
       url: new URI({ repository, uri: url, allocated: true })
     });
 
-    await repository.insertDocument(document as any, recover);
+    const dirty = await repository.insertDirtyDocument(document);
 
     try {
       await document.upload(data);
+      await repository.insertDocument(document as any, dirty, recover);
     } catch (error) {
-      await repository.queue.add({ type: 'upload', id: document.id }, { timeout: 16384 });
+      await repository.s3.service.deleteObject({
+        Bucket: repository.s3.bucket,
+        Key: `${repository.s3.keyPrefix}${uuid}.${info.format}`
+      }).promise();
+
+      await repository.deleteDirtyDocument(dirty);
       throw error;
     }
 
