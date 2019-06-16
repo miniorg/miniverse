@@ -101,7 +101,7 @@ interface RedisRepository {
   readonly subscriber: Redis.Redis;
 }
 
-export const uriConflicts = Symbol();
+export const conflict = Symbol();
 
 export default class Repository implements
     Actors, Announces, Challenges, Cookies,
@@ -161,7 +161,7 @@ export default class Repository implements
 
   readonly insertAnnounce!: (
     seed: AnnounceSeed,
-    recover: (error: Error & { [uriConflicts]: boolean }) => unknown
+    recover: (error: Error & { [conflict]: boolean }) => unknown
   ) => Promise<Announce>;
 
   readonly insertChallenge!:
@@ -177,7 +177,7 @@ export default class Repository implements
   readonly insertDocument!: (
     dirty: DirtyDocument,
     url: string,
-    recover: (error: Error & { [uriConflicts]: boolean }) => unknown
+    recover: (error: Error & { [conflict]: boolean }) => unknown
   ) => Promise<Document>;
   readonly selectDocumentById!:
   (id: string) => Promise<Document | null>;
@@ -209,7 +209,7 @@ export default class Repository implements
   (accountOrActor: LocalAccount | Actor) => string;
   readonly insertLocalAccount!: (
     seed: LocalAccountSeed & { readonly privateKeyDer: Buffer },
-    recover: (error: Error) => unknown
+    recover: (error: Error & { [conflict]: boolean }) => unknown
   ) => Promise<LocalAccount>;
   readonly insertIntoInboxes!:
   (accountOrActors: (LocalAccount | Actor)[], item: Status) => Promise<void>;
@@ -223,13 +223,15 @@ export default class Repository implements
 
   readonly insertNote!: (
     seed: NoteSeed,
-    recover: (error: Error & { [uriConflicts]: boolean }) => unknown
+    recover: (error: Error & { [conflict]: boolean }) => unknown
   ) => Promise<Note>;
   readonly selectNoteById!:
   (id: string) => Promise<Note | null>;
 
-  readonly insertRemoteAccount!:
-  (seed: RemoteAccountSeed) => Promise<RemoteAccount>;
+  readonly insertRemoteAccount!: (
+    seed: RemoteAccountSeed,
+    recover: (error: Error & { [conflict]: boolean }) => unknown
+  ) => Promise<RemoteAccount>;
   readonly selectRemoteAccountById!:
   (id: string) => Promise<RemoteAccount | null>;
   readonly selectRemoteAccountByKeyUri!:

@@ -17,7 +17,7 @@
 import { AbortSignal } from 'abort-controller';
 import { URL } from 'url';
 import ParsedActivityStreams, { AnyHost } from '../../parsed_activitystreams';
-import Repository from '../../repository';
+import Repository, { conflict } from '../../repository';
 import { fetch, temporaryError } from '../../transfer';
 import { encodeAcctUserpart } from '../uri';
 import Base, { unexpectedType } from './base';
@@ -75,8 +75,34 @@ export default class extends Base {
         }
       });
 
+      let conflictError: Error | undefined;
+
       return this.createFromHostAndParsedActivityStreams(
-        repository, host, activityStreams, signal, recover);
+        repository,
+        host,
+        activityStreams,
+        signal,
+        error => {
+          if (error[conflict]) {
+            conflictError = error;
+            return error;
+          }
+ 
+          return recover(error);
+        }
+      ).catch(async error => {
+        if (!conflictError) {
+          throw error;
+        }
+
+        const actor = await repository.selectActorByUsernameAndNormalizedHost(
+          username, normalizedHost);
+        if (actor) {
+          return actor;
+        }
+
+        throw recover(conflictError);
+      });
     }
 
     return actor;

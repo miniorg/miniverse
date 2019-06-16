@@ -21,7 +21,7 @@ import {
 } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
-import { uriConflicts } from '.';
+import { conflict } from '.';
 
 test('inserts and deletes note and prevent from querying its properties', async () => {
   const note = await fabricateNote(
@@ -96,7 +96,7 @@ test('rejects when inserting note with conflicting URI', async () => {
     hashtags: [],
     mentions: []
   }, error => {
-    expect(error[uriConflicts]).toBe(true);
+    expect(error[conflict]).toBe(true);
     return recovery;
   })).rejects.toBe(recovery);
 });

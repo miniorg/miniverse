@@ -15,7 +15,7 @@
 */
 
 import { Account as WebFinger } from '../generated_webfinger';
-import Repository from '../repository';
+import Repository, { conflict } from '../repository';
 import Relation, { Reference } from './relation';
 import Actor from './actor';
 import URI, { encodeAcctUserpart } from './uri';
@@ -89,7 +89,7 @@ export default class RemoteAccount extends Relation<Properties, References> {
   static async create(
     repository: Repository,
     { actor, uri, inbox, publicKey }: Seed,
-    recover: (error: Error) => unknown
+    recover: (error: Error & { [conflict]?: boolean }) => unknown
   ) {
     Actor.validateUsername(actor.username, recover);
 
@@ -103,7 +103,7 @@ export default class RemoteAccount extends Relation<Properties, References> {
       uri,
       inbox,
       publicKey
-    });
+    }, recover);
   }
 }
 

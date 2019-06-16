@@ -17,7 +17,7 @@
 import { AbortSignal } from 'abort-controller';
 import { domainToASCII } from 'url';
 import ParsedActivityStreams from '../../parsed_activitystreams';
-import Repository from '../../repository';
+import Repository, { conflict } from '../../repository';
 import RemoteAccount from '../remote_account';
 import { temporaryError } from '../../transfer';
 import Base, { unexpectedType } from './base';
@@ -29,6 +29,7 @@ const actorTypes =
 
 export default class extends Base {
   static async createFromHostAndParsedActivityStreams(repository: Repository, host: string, object: ParsedActivityStreams, signal: AbortSignal, recover: (error: Error & {
+    [conflict]?: boolean;
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) {
@@ -147,7 +148,12 @@ export default class extends Base {
         throw recover(new Error('Account not found.'));
       }
 
-      return account.select('actor');
+      const actor = await account.select('actor');
+      if (!actor) {
+        throw recover(new Error('actor not found.'));
+      }
+
+      return actor;
     }
 
     const { subject } = await lookup(repository, uri, signal, recover);
@@ -165,8 +171,40 @@ export default class extends Base {
     }
 
     const host = subject.split('@', 2)[1];
+    let conflictError: Error | undefined;
 
     return this.createFromHostAndParsedActivityStreams(
-      repository, host, object, signal, recover);
+      repository,
+      host,
+      object,
+      signal,
+      error => {
+        if (error[conflict]) {
+          conflictError = error;
+          return error;
+        }
+
+        return recover(error);
+      }
+    ).catch(async error => {
+      if (!conflictError) {
+        throw error;
+      }
+
+      const uriEntity = await repository.selectAllocatedURI(uri);
+      if (uriEntity) {
+        const account = await repository.selectRemoteAccountById(uriEntity.id);
+        if (!account) {
+          throw recover(new Error('Account not found.'));
+        }
+  
+        const actor = account.select('actor');
+        if (!actor) {
+          throw recover(new Error('actor not found.'));
+        }
+      }
+
+      throw recover(conflictError);
+    })
   }
 }

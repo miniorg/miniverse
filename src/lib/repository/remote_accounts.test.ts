@@ -14,7 +14,8 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { createPublicKey } from 'crypto';
+import { createPublicKey, generateKeyPair } from 'crypto';
+import { promisify } from 'util';
 import {
   fabricateLocalAccount,
   fabricateRemoteAccount
@@ -22,6 +23,9 @@ import {
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
 import RemoteAccount from '../tuples/remote_account';
+import { conflict } from '.';
+
+const promisifiedGenerateKeyPair = promisify(generateKeyPair);
 
 async function testInsertAndQuery(query: (account: RemoteAccount) => Promise<RemoteAccount>) {
   const inserted = await fabricateRemoteAccount({
@@ -143,4 +147,50 @@ describe('selectRemoteAccountByKeyUri', () => {
       allocated: true,
       uri: '0'
     })).resolves.toBe(null));
+});
+
+test('rejects when inserting remote account with conflicting URI', async () => {
+  const recover = jest.fn();
+  const recovery = {};
+
+  await repository.insertRemoteAccount({
+    actor: {
+      username: 'first',
+      host: 'FiNgEr.ReMoTe.إختبار',
+      name: '',
+      summary: ''
+    },
+    uri: 'https://ReMoTe.إختبار/AcCoUnT/first',
+    inbox: { uri: 'https://ReMoTe.إختبار/InBoX/first' },
+    publicKey: {
+      uri: 'https://ReMoTe.إختبار/KeY/first',
+      publicKeyDer: (await promisifiedGenerateKeyPair('rsa', {
+        modulusLength: 2048,
+        publicKeyEncoding: { format: 'der', type: 'pkcs1' }
+      })).publicKey,
+    }
+  }, recover);
+
+  expect(recover).not.toHaveBeenCalled();
+
+  await expect(repository.insertRemoteAccount({
+    actor: {
+      username: 'second',
+      host: 'FiNgEr.ReMoTe.إختبار',
+      name: '',
+      summary: ''
+    },
+    uri: 'https://ReMoTe.إختبار/AcCoUnT/first',
+    inbox: { uri: 'https://ReMoTe.إختبار/InBoX/second' },
+    publicKey: {
+      uri: 'https://ReMoTe.إختبار/KeY/second',
+      publicKeyDer: (await promisifiedGenerateKeyPair('rsa', {
+        modulusLength: 2048,
+        publicKeyEncoding: { format: 'der', type: 'pkcs1' }
+      })).publicKey,
+    }
+  }, error => {
+    expect(error[conflict]).toBe(true);
+    return recovery;
+  })).rejects.toBe(recovery);
 });

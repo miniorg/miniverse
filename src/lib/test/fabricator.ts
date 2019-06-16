@@ -119,7 +119,9 @@ export async function fabricateRemoteAccount(properties?: {
     readonly publicKeyDer?: Buffer;
   };
 }) {
-  return repository.insertRemoteAccount(Object.assign({
+  const recover = jest.fn();
+
+  const account = await repository.insertRemoteAccount(Object.assign({
     uri: `https://ReMoTe.إختبار/AcCoUnT/${generateId()}`,
   }, properties, {
     actor: Object.assign({
@@ -138,7 +140,11 @@ export async function fabricateRemoteAccount(properties?: {
         publicKeyEncoding: { format: 'der', type: 'pkcs1' }
       })).publicKey,
     }, properties && properties.publicKey),
-  }));
+  }), recover);
+
+  expect(recover).not.toHaveBeenCalled();
+
+  return account;
 }
 
 export async function fabricateFollow(properties?: {

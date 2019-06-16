@@ -22,9 +22,7 @@ import {
   Mention as ActivityStreamsMention
 } from '../generated_activitystreams';
 import ParsedActivityStreams, { NoHost } from '../parsed_activitystreams';
-import Repository, {
-  uriConflicts as repositoryUriConflicts
-} from '../repository';
+import Repository, { conflict } from '../repository';
 import { postStatus, temporaryError } from '../transfer';
 import Actor from './actor';
 import Document from './document';
@@ -83,7 +81,6 @@ const mentionToActivityStramsFailed = {};
 const noteNotFound = {};
 const statusUriUnresolved = {};
 const tagError = {};
-const uriConflicts = {};
 
 const isNotNull = Boolean as unknown as <T>(t: T | null) => t is T;
 
@@ -339,7 +336,7 @@ export default class Note extends Relation<Properties, References> {
   }
 
   static async createFromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, givenAttributedTo: Actor | null, signal: AbortSignal, recover: (error: Error & {
-    [repositoryUriConflicts]?: boolean;
+    [conflict]?: boolean;
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) {
@@ -471,27 +468,37 @@ export default class Note extends Relation<Properties, References> {
       }
     }
 
+    let conflictError: Error | undefined;
+
     return this.createFromParsedActivityStreams(
       repository, object, givenAttributedTo, signal,
-      error => error[repositoryUriConflicts] ? uriConflicts : error).catch(async error => {
-        if (error != uriConflicts) {
-          throw error;
+      error => {
+        if (error[conflict]) {
+          conflictError = error;
+          return error;
         }
+        
+        return recover(error);
+      }
+    ).catch(async error => {
+      if (!conflictError) {
+        throw error;
+      }
 
-        if (typeof uri != 'string') {
-          throw new Error('URI conflicts occured while URI is not given.');
-        }
-
+      if (typeof uri == 'string') {
         const uriEntity = await repository.selectAllocatedURI(uri);
         if (uriEntity) {
           const remoteNote = await repository.selectNoteById(uriEntity.id);
           if (remoteNote) {
             return remoteNote;
           }
-        }
 
-        throw recover(new Error('Note not found.'));
-      });
+          throw recover(new Error('Note not found.'));
+        }
+      }
+
+      throw recover(conflictError);
+    });
   }
 }
 

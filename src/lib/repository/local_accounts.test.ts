@@ -22,6 +22,7 @@ import {
 } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
+import { conflict } from '.';
 
 const privateKeyDer = createPrivateKey(`-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGT
@@ -133,4 +134,40 @@ test('inserts account allows to query one by its id', async () => {
   expect(Buffer.from('salt').equals(queried.salt)).toBe(true);
   expect(Buffer.from('serverKey').equals(queried.serverKey)).toBe(true);
   expect(Buffer.from('storedKey').equals(queried.storedKey)).toBe(true);
+});
+
+test('rejects when inserting local account with conflicting username', async () => {
+  const recover = jest.fn();
+  const recovery = {};
+
+  await repository.insertLocalAccount({
+    actor: {
+      username: 'username',
+      name: '',
+      summary: ''
+    },
+    admin: true,
+    privateKeyDer,
+    salt: Buffer.from(''),
+    serverKey: Buffer.from(''),
+    storedKey: Buffer.from('')
+  }, recover);
+
+  expect(recover).not.toHaveBeenCalled();
+
+  await expect(repository.insertLocalAccount({
+    actor: {
+      username: 'username',
+      name: '',
+      summary: ''
+    },
+    admin: true,
+    privateKeyDer,
+    salt: Buffer.from(''),
+    serverKey: Buffer.from(''),
+    storedKey: Buffer.from('')
+  }, error => {
+    expect(error[conflict]).toBe(true);
+    return recovery;
+  })).rejects.toBe(recovery);
 });

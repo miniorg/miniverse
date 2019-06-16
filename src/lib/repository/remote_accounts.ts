@@ -17,7 +17,7 @@
 import Actor from '../tuples/actor';
 import RemoteAccount, { Seed } from '../tuples/remote_account';
 import URI from '../tuples/uri';
-import Repository from '.';
+import Repository, { conflict } from '.';
 
 function parse(this: Repository, { id, inbox_uri_id, key_uri_id, public_key_der }: {
   readonly id: string;
@@ -35,7 +35,7 @@ function parse(this: Repository, { id, inbox_uri_id, key_uri_id, public_key_der 
 }
 
 export default class {
-  async insertRemoteAccount(this: Repository, { actor, uri, inbox, publicKey }: Seed) {
+  async insertRemoteAccount(this: Repository, { actor, uri, inbox, publicKey }: Seed, recover: (error: Error & { [conflict]: boolean }) => unknown) {
     const { rows } = await this.pg.query({
       name: 'insertRemoteAccount',
       text: 'SELECT * FROM insert_remote_account($1, $2, $3, $4, $5, $6, $7, $8) AS (id BIGINT, inbox_uri_id BIGINT, key_uri_id BIGINT)',
@@ -49,6 +49,12 @@ export default class {
         publicKey.uri,
         publicKey.publicKeyDer
       ]
+    }).catch(error => {
+      if (error.code == '23502') {
+        throw recover(Object.assign(new Error('URI conflicts'), { [conflict]: true }));
+      }
+
+      throw error;
     });
 
     return new RemoteAccount({

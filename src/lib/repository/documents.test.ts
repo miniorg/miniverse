@@ -17,7 +17,7 @@
 import { fabricateDirtyDocument, fabricateNote } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
-import { uriConflicts } from '.';
+import { conflict } from '.';
 
 test('inserts and allows to query documents by id', async () => {
   const recover = jest.fn();
@@ -86,7 +86,7 @@ test('rejects when inserting document with conflicting URI', async () => {
     await fabricateDirtyDocument(),
     'https://إختبار/',
     error => {
-      expect(error[uriConflicts]).toBe(true);
+      expect(error[conflict]).toBe(true);
       return recovery;
     }
   )).rejects.toBe(recovery);

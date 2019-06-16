@@ -17,7 +17,7 @@
 import Actor from '../tuples/actor';
 import LocalAccount, { Seed } from '../tuples/local_account';
 import Status from '../tuples/status';
-import Repository from '.';
+import Repository, { conflict } from '.';
 
 function parse(this: Repository, { id, admin, private_key_der, salt, server_key, stored_key }: {
   readonly id: string;
@@ -56,7 +56,7 @@ export default class {
     storedKey
   }: Seed & {
     readonly privateKeyDer: Buffer;
-  }, recover: (error: Error) => unknown) {
+  }, recover: (error: Error & { [conflict]: boolean }) => unknown) {
     let result;
 
     try {
@@ -76,7 +76,9 @@ export default class {
       });
     } catch (error) {
       if (error.code == '23505') {
-        throw recover(new Error('username conflicts.'));
+        throw recover(Object.assign(
+          new Error('username conflicts.'),
+          { [conflict]: true }));
       }
 
       throw error;

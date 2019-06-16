@@ -28,7 +28,7 @@ import RemoteAccount from '../remote_account';
 import Status from '../status';
 import { encodeSegment } from '../uri';
 import ParsedActivityStreams from '../../parsed_activitystreams';
-import Repository from '../../repository';
+import Repository, { conflict } from '../../repository';
 import FromParsedActivityStreams from './from_parsed_activitystreams';
 import Resolver from './resolver';
 
@@ -144,6 +144,7 @@ export default class Base extends Relation<Properties, References>
 
   static readonly createFromHostAndParsedActivityStreams:
   (repository: Repository, host: string, object: ParsedActivityStreams, signal: AbortSignal, recover: (error: Error & {
+    [conflict]?: boolean;
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) => Promise<Base | null>;
