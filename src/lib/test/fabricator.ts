@@ -123,7 +123,6 @@ export async function fabricateRemoteAccount(properties?: {
     uri: `https://ReMoTe.إختبار/AcCoUnT/${generateId()}`,
   }, properties, {
     actor: Object.assign({
-      repository,
       username: generateId().toString(),
       host: 'FiNgEr.ReMoTe.إختبار',
       name: '',
