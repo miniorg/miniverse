@@ -17,7 +17,7 @@
 import DirtyDocument from '../tuples/dirty_document';
 import Document from '../tuples/document';
 import URI from '../tuples/uri';
-import Repository from '.';
+import Repository, { uriConflicts } from '.';
 
 function parse(this: Repository, { id, uuid, format }: {
   readonly id: string;
@@ -32,7 +32,7 @@ export default class {
     this: Repository,
     dirty: DirtyDocument,
     url: string,
-    recover: (error: Error) => unknown
+    recover: (error: Error & { [uriConflicts]: boolean }) => unknown
   ) {
     let result;
 
@@ -44,7 +44,9 @@ export default class {
       });
     } catch (error) {
       if (error.code == '23502') {
-        throw recover(new Error('uri conflicts.'));
+        throw recover(Object.assign(
+          new Error('uri conflicts.'),
+          { [uriConflicts]: true }));
       }
 
       throw error;

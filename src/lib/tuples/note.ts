@@ -22,7 +22,9 @@ import {
   Mention as ActivityStreamsMention
 } from '../generated_activitystreams';
 import ParsedActivityStreams, { NoHost } from '../parsed_activitystreams';
-import Repository from '../repository';
+import Repository, {
+  uriConflicts as repositoryUriConflicts
+} from '../repository';
 import { postStatus, temporaryError } from '../transfer';
 import Actor from './actor';
 import Document from './document';
@@ -33,24 +35,24 @@ import Status from './status';
 import { encodeSegment } from './uri';
 import sanitizeHtml = require('sanitize-html');
 
-async function tryToResolveLocalNoteByURI(repository: Repository, uri: string) {
+async function tryToResolveLocalNoteByURI(repository: Repository, uri: string, recover: (error: Error) => unknown) {
   const localPrefix = `https://${domainToASCII(repository.host)}/@`;
 
   if (uri.startsWith(localPrefix)) {
     const [username, id] = uri.slice(localPrefix.length).split('/', 2);
     const note = await repository.selectNoteById(id);
     if (!note) {
-      return null;
+      throw recover(new Error('Note not found.'));
     }
 
     const status = await note.select('status');
     if (!status) {
-      return null;
+      throw recover(new Error('status not found.'));
     }
 
     const actor = await status.select('actor');
     if (!actor || username != actor.username) {
-      return null;
+      throw recover(new Error('actor mismatches.'));
     }
 
     return note;
@@ -78,8 +80,10 @@ const attachmentError = {};
 const idMissing = {};
 const inReplyToError = {};
 const mentionToActivityStramsFailed = {};
+const noteNotFound = {};
 const statusUriUnresolved = {};
 const tagError = {};
+const uriConflicts = {};
 
 const isNotNull = Boolean as unknown as <T>(t: T | null) => t is T;
 
@@ -335,6 +339,7 @@ export default class Note extends Relation<Properties, References> {
   }
 
   static async createFromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, givenAttributedTo: Actor | null, signal: AbortSignal, recover: (error: Error & {
+    [repositoryUriConflicts]?: boolean;
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) {
@@ -383,7 +388,13 @@ export default class Note extends Relation<Properties, References> {
           return [null, null];
         }
 
-        const note = await tryToResolveLocalNoteByURI(repository, uri);
+        const note = await tryToResolveLocalNoteByURI(repository, uri, () => noteNotFound).catch(error => {
+          if (error == noteNotFound) {
+            return null;
+          }
+
+          throw error;
+        });
 
         return [note ? note.id : null, uri];
       }).catch(error => {
@@ -444,7 +455,7 @@ export default class Note extends Relation<Properties, References> {
   static async fromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, givenAttributedTo: Actor | null, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
     const uri = await object.getId(recover);
     if (typeof uri == 'string') {
-      const localNote = await tryToResolveLocalNoteByURI(repository, uri);
+      const localNote = await tryToResolveLocalNoteByURI(repository, uri, recover);
       if (localNote) {
         return localNote;
       }
@@ -461,7 +472,26 @@ export default class Note extends Relation<Properties, References> {
     }
 
     return this.createFromParsedActivityStreams(
-      repository, object, givenAttributedTo, signal, recover);
+      repository, object, givenAttributedTo, signal,
+      error => error[repositoryUriConflicts] ? uriConflicts : error).catch(async error => {
+        if (error != uriConflicts) {
+          throw error;
+        }
+
+        if (typeof uri != 'string') {
+          throw new Error('URI conflicts occured while URI is not given.');
+        }
+
+        const uriEntity = await repository.selectAllocatedURI(uri);
+        if (uriEntity) {
+          const remoteNote = await repository.selectNoteById(uriEntity.id);
+          if (remoteNote) {
+            return remoteNote;
+          }
+        }
+
+        throw recover(new Error('Note not found.'));
+      });
   }
 }
 

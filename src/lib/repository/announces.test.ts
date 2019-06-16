@@ -21,6 +21,7 @@ import {
 } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
+import { uriConflicts } from '.';
 
 test('inserts announce with URI and allows to query it', async () => {
   const [actor, object] = await Promise.all([
@@ -96,7 +97,10 @@ test('rejects announce with conflicting URI', async () => {
   await expect(repository.insertAnnounce({
     status: { published: new Date, actor, uri: 'https://ReMoTe.إختبار/' },
     object
-  }, () => recovery)).rejects.toBe(recovery);
+  }, error => {
+    expect(error[uriConflicts]).toBe(true);
+    return recovery;
+  })).rejects.toBe(recovery);
 });
 
 test('inserts announce without URI', async () => {

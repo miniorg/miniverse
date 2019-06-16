@@ -21,6 +21,7 @@ import {
 } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
+import { uriConflicts } from '.';
 
 test('inserts and deletes note and prevent from querying its properties', async () => {
   const note = await fabricateNote(
@@ -58,6 +59,46 @@ test('inserts note with URI and allows to query it', async () => {
   await expect(repository.selectURIById(note.id))
     .resolves
     .toHaveProperty('uri', 'https://ReMoTe.إختبار/');
+});
+
+test('rejects when inserting note with conflicting URI', async () => {
+  const account = await fabricateRemoteAccount();
+  const actor = unwrap(await account.select('actor'));
+  const recover = jest.fn();
+  const recovery = {};
+
+  await repository.insertNote({
+    status: {
+      published: new Date,
+      actor,
+      uri: 'https://ReMoTe.إختبار/'
+    },
+    summary: null,
+    content: '',
+    inReplyTo: { id: null, uri: null },
+    attachments: [],
+    hashtags: [],
+    mentions: []
+  }, recover);
+
+  expect(recover).not.toHaveBeenCalled();
+
+  await expect(repository.insertNote({
+    status: {
+      published: new Date,
+      actor,
+      uri: 'https://ReMoTe.إختبار/'
+    },
+    summary: null,
+    content: '',
+    inReplyTo: { id: null, uri: null },
+    attachments: [],
+    hashtags: [],
+    mentions: []
+  }, error => {
+    expect(error[uriConflicts]).toBe(true);
+    return recovery;
+  })).rejects.toBe(recovery);
 });
 
 test('inserts note without URI', async () => {

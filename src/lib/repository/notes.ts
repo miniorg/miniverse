@@ -19,7 +19,7 @@ import Mention from '../tuples/mention';
 import Note, { Seed } from '../tuples/note';
 import Status from '../tuples/status';
 import URI from '../tuples/uri';
-import Repository from '.';
+import Repository, { uriConflicts } from '.';
 
 function parse(this: Repository, { id, in_reply_to_id, summary, content }: {
   readonly id: string;
@@ -45,7 +45,7 @@ export default class {
     attachments,
     hashtags,
     mentions
-  }: Seed, recover: (error: Error) => unknown) {
+  }: Seed, recover: (error: Error & { [uriConflicts]: boolean }) => unknown) {
     let result;
 
     try {
@@ -67,7 +67,9 @@ export default class {
       });
     } catch (error) {
       if (error.code == '23502') {
-        throw recover(new Error('uri conflicts.'));
+        throw recover(Object.assign(
+          new Error('uri conflicts.'),
+          { [uriConflicts]: true }));
       }
 
       throw error;

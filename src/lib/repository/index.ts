@@ -101,6 +101,8 @@ interface RedisRepository {
   readonly subscriber: Redis.Redis;
 }
 
+export const uriConflicts = Symbol();
+
 export default class Repository implements
     Actors, Announces, Challenges, Cookies,
     DirtyDocuments, Documents, Follows, Hashtags,
@@ -159,7 +161,7 @@ export default class Repository implements
 
   readonly insertAnnounce!: (
     seed: AnnounceSeed,
-    recover: (error: Error) => unknown
+    recover: (error: Error & { [uriConflicts]: boolean }) => unknown
   ) => Promise<Announce>;
 
   readonly insertChallenge!:
@@ -175,7 +177,7 @@ export default class Repository implements
   readonly insertDocument!: (
     dirty: DirtyDocument,
     url: string,
-    recover: (error: Error) => unknown
+    recover: (error: Error & { [uriConflicts]: boolean }) => unknown
   ) => Promise<Document>;
   readonly selectDocumentById!:
   (id: string) => Promise<Document | null>;
@@ -219,8 +221,10 @@ export default class Repository implements
   readonly selectMentionsIncludingActorsByNoteId!:
   (id: string) => Promise<Mention[]>;
 
-  readonly insertNote!:
-  (seed: NoteSeed, recover: (error: Error) => unknown) => Promise<Note>;
+  readonly insertNote!: (
+    seed: NoteSeed,
+    recover: (error: Error & { [uriConflicts]: boolean }) => unknown
+  ) => Promise<Note>;
   readonly selectNoteById!:
   (id: string) => Promise<Note | null>;
 

@@ -17,13 +17,13 @@
 import Announce, { Seed } from '../tuples/announce';
 import Status from '../tuples/status';
 import URI from '../tuples/uri';
-import Repository from '.';
+import Repository, { uriConflicts } from '.';
 
 export default class {
   async insertAnnounce(
     this: Repository,
     { status, object }: Seed,
-    recover: (error: Error) => unknown
+    recover: (error: Error & { [uriConflicts]: boolean }) => unknown
   ) {
     let result;
 
@@ -40,7 +40,9 @@ export default class {
       });
     } catch (error) {
       if (error.code == '23502') {
-        throw recover(new Error('uri conflicts.'));
+        throw recover(Object.assign(
+          new Error('uri conflicts.'),
+          { [uriConflicts]: true }));
       }
 
       throw error;
