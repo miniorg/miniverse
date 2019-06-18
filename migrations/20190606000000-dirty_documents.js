@@ -20,7 +20,7 @@ CREATE TABLE dirty_documents (
   uuid uuid NOT NULL,
   format varchar NOT NULL);
 
-DROP FUNCTION insert_document_with_url;
+DROP FUNCTION insert_document_with_url(uuid, varchar, varchar);
 
 CREATE FUNCTION insert_document_with_url(dirty_id integer, url varchar)
     RETURNS bigint LANGUAGE plpgsql AS $_$
