@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import {
   fabricateLocalAccount,
   fabricateNote,
@@ -23,29 +24,40 @@ import repository from '../test/repository';
 import { unwrap } from '../test/types';
 import { conflict } from '.';
 
+const { signal } = new AbortController;
+
 test('inserts and deletes note and prevent from querying its properties', async () => {
+  const recover = jest.fn();
+
   const note = await fabricateNote(
     { status: { uri: 'https://ReMoTe.إختبار/' } });
 
   const [actor, uri] = await Promise.all([
-    note.select('status')
-      .then(status => unwrap(status).select('actor'))
+    note.select('status', signal, recover)
+      .then(status => unwrap(status).select('actor', signal, recover))
       .then(unwrap),
-    repository.selectAllocatedURI('https://ReMoTe.إختبار/').then(unwrap)
+    repository.selectAllocatedURI('https://ReMoTe.إختبار/', signal, recover)
+      .then(unwrap)
   ]);
 
-  await repository.deleteStatusByUriAndAttributedTo(uri, actor);
+  await repository.deleteStatusByUriAndAttributedTo(uri, actor, signal, recover);
 
-  await expect(repository.selectRecentStatusesIncludingExtensionsByActorId(actor.id))
-    .resolves
-    .toEqual([]);
+  await expect(repository.selectRecentStatusesIncludingExtensionsByActorId(
+    actor.id,
+    signal,
+    recover
+  )).resolves.toEqual([]);
+
+  expect(recover).not.toHaveBeenCalled();
 });
 
 test('inserts note and allows to query by its id', async () => {
+  const recover = jest.fn();
   const note = await fabricateNote({ summary: null, content: '内容' });
 
-  const queried = await repository.selectNoteById(note.id);
+  const queried = await repository.selectNoteById(note.id, signal, recover);
 
+  expect(recover).not.toHaveBeenCalled();
   expect(queried).toHaveProperty('repository', repository);
   expect(queried).toHaveProperty('id', note.id);
   expect(queried).toHaveProperty('summary', null);
@@ -53,18 +65,20 @@ test('inserts note and allows to query by its id', async () => {
 });
 
 test('inserts note with URI and allows to query it', async () => {
+  const recover = jest.fn();
+
   const note =
     await fabricateNote({ status: { uri: 'https://ReMoTe.إختبار/' } });
 
-  await expect(repository.selectURIById(note.id))
+  await expect(repository.selectURIById(note.id, signal, recover))
     .resolves
     .toHaveProperty('uri', 'https://ReMoTe.إختبار/');
 });
 
 test('rejects when inserting note with conflicting URI', async () => {
-  const account = await fabricateRemoteAccount();
-  const actor = unwrap(await account.select('actor'));
   const recover = jest.fn();
+  const account = await fabricateRemoteAccount();
+  const actor = unwrap(await account.select('actor', signal, recover));
   const recovery = {};
 
   await repository.insertNote({
@@ -79,7 +93,7 @@ test('rejects when inserting note with conflicting URI', async () => {
     attachments: [],
     hashtags: [],
     mentions: []
-  }, recover);
+  }, signal, recover);
 
   expect(recover).not.toHaveBeenCalled();
 
@@ -95,38 +109,42 @@ test('rejects when inserting note with conflicting URI', async () => {
     attachments: [],
     hashtags: [],
     mentions: []
-  }, error => {
+  }, signal, error => {
     expect(error[conflict]).toBe(true);
     return recovery;
   })).rejects.toBe(recovery);
 });
 
 test('inserts note without URI', async () => {
+  const recover = jest.fn();
   const note = await fabricateNote({ status: { uri: null } });
-  await expect(repository.selectURIById(note.id)).resolves.toBe(null);
+  await expect(repository.selectURIById(note.id, signal, recover))
+    .resolves.toBe(null);
+  expect(recover).not.toHaveBeenCalled();
 });
 
 test('inserts note with inReplyToId', async () => {
+  const recover = jest.fn();
   const inReplyTo = await fabricateNote();
-  const status = unwrap(await inReplyTo.select('status'));
+  const status = unwrap(await inReplyTo.select('status', signal, recover));
   const note = await fabricateNote({ inReplyTo: { id: status.id, uri: null } });
 
-  await expect(repository.selectNoteById(note.id))
+  await expect(repository.selectNoteById(note.id, signal, recover))
     .resolves
     .toHaveProperty('inReplyToId', status.id);
 });
 
 test('inserts note with inReplyTo URI which is already resolved', async () => {
+  const recover = jest.fn();
+
   const [actor, status] = await Promise.all([
     fabricateLocalAccount()
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap),
     fabricateNote({ status: { uri: 'https://ReMoTe.إختبار/' } })
-      .then(note => note.select('status'))
+      .then(note => note.select('status', signal, recover))
       .then(unwrap)
   ]);
-
-  const recover = jest.fn();
 
   const note = await repository.insertNote({
     status: { published: new Date, actor, uri: null },
@@ -136,23 +154,22 @@ test('inserts note with inReplyTo URI which is already resolved', async () => {
     attachments: [],
     hashtags: [],
     mentions: []
-  }, recover);
+  }, signal, recover);
 
   expect(recover).not.toHaveBeenCalled();
   expect(note).toHaveProperty('inReplyToId', status.id);
 
-  await expect(repository.selectNoteById(note.id))
+  await expect(repository.selectNoteById(note.id, signal, recover))
     .resolves
     .toHaveProperty('inReplyToId', status.id);
 });
 
 test('inserts notes with inReplyTo URI which is not resolved yet', async () => {
+  const recover = jest.fn();
   const account = await fabricateLocalAccount();
-  const actor = unwrap(await account.select('actor'));
+  const actor = unwrap(await account.select('actor', signal, recover));
 
   for (let count = 0; count < 2; count++) {
-    const recover = jest.fn();
-
     const note = await repository.insertNote({
       status: { published: new Date, actor, uri: null },
       summary: null,
@@ -161,25 +178,27 @@ test('inserts notes with inReplyTo URI which is not resolved yet', async () => {
       attachments: [],
       hashtags: [],
       mentions: []
-    }, recover);
+    }, signal, recover);
 
-    expect(recover).not.toHaveBeenCalled();
-
-    await expect(repository.selectURIById(unwrap(note.inReplyToId)))
-      .resolves
-      .toHaveProperty('uri', 'https://ReMoTe.إختبار/');
+    await expect(repository.selectURIById(
+      unwrap(note.inReplyToId),
+      signal,
+      recover
+    )).resolves.toHaveProperty('uri', 'https://ReMoTe.إختبار/');
   }
+
+  expect(recover).not.toHaveBeenCalled();
 });
 
 test('inserts notes with inReplyTo URI and allows to resolve later', async () => {
+  const recover = jest.fn();
+
   const [note, actor] = await Promise.all([
     fabricateLocalAccount().then(async account => {
-      const recover = jest.fn();
-
       const note = await repository.insertNote({
         status: {
           published: new Date,
-          actor: unwrap(await account.select('actor')),
+          actor: unwrap(await account.select('actor', signal, recover)),
           uri: null
         },
         summary: null,
@@ -188,22 +207,20 @@ test('inserts notes with inReplyTo URI and allows to resolve later', async () =>
         attachments: [],
         hashtags: [],
         mentions: []
-      }, recover);
+      }, signal, recover);
 
-      expect(recover).not.toHaveBeenCalled();
-
-      await expect(repository.selectURIById(unwrap(note.inReplyToId)))
-        .resolves
-        .toHaveProperty('uri', 'https://ReMoTe.إختبار/');
+      await expect(repository.selectURIById(
+        unwrap(note.inReplyToId),
+        signal,
+        recover
+      )).resolves.toHaveProperty('uri', 'https://ReMoTe.إختبار/');
 
       return note;
     }),
     fabricateRemoteAccount()
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap)
   ]);
-
-  const recover = jest.fn();
 
   const inReplyTo = await repository.insertNote({
     status: {
@@ -217,24 +234,32 @@ test('inserts notes with inReplyTo URI and allows to resolve later', async () =>
     attachments: [],
     hashtags: [],
     mentions: []
-  }, recover);
+  }, signal, recover);
 
-  expect(recover).not.toHaveBeenCalled();
   expect(inReplyTo).toHaveProperty('id', note.inReplyToId);
 
-  await expect(repository.selectNoteById(unwrap(note.inReplyToId)))
-    .resolves
-    .toHaveProperty('content', '');
+  await expect(repository.selectNoteById(
+    unwrap(note.inReplyToId),
+    signal,
+    recover
+  )).resolves.toHaveProperty('content', '');
 
-  await expect(repository.selectStatusById(unwrap(note.inReplyToId)))
-    .resolves
-    .toHaveProperty('actorId', actor.id);
+  await expect(repository.selectStatusById(
+    unwrap(note.inReplyToId),
+    signal,
+    recover
+  )).resolves.toHaveProperty('actorId', actor.id);
+
+  expect(recover).not.toHaveBeenCalled();
 });
 
 test('inserts notes with a hashtag', async () => {
   for (let count = 0; count < 2; count++) {
+    const recover = jest.fn();
     const { id } = await fabricateNote({ hashtags: ['名前'] });
-    const hashtags = await repository.selectHashtagsByNoteId(id);
+    const hashtags =
+      await repository.selectHashtagsByNoteId(id, signal, recover);
+    expect(recover).not.toHaveBeenCalled();
     await expect(hashtags[0]).toHaveProperty('name', '名前');
   }
 });

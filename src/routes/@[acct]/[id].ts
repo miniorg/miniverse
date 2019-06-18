@@ -18,11 +18,16 @@ import { normalizeHost } from '../../lib/tuples/uri';
 import secure from '../_secure';
 import sendActivityStreams from '../_send_activitystreams';
 
+const recovery = {};
+
 export const get = secure(async (request, response) => {
   const { params } = request;
   const { repository } = response.app.locals;
+  const { signal } = response.locals;
   const acct = decodeURIComponent(params.acct);
   const atIndex = acct.lastIndexOf('@');
+  let extension;
+  let actor;
   let username;
   let normalizedHost;
 
@@ -34,21 +39,32 @@ export const get = secure(async (request, response) => {
     normalizedHost = normalizeHost(acct.slice(atIndex + 1));
   }
 
-  const status = await repository.selectStatusIncludingExtensionById(params.id);
-  if (!status) {
-    response.sendStatus(404);
-    return;
-  }
+  try {
+    const status = await repository.selectStatusIncludingExtensionById(params.id, signal, () => recovery);
+    if (!status) {
+      response.sendStatus(404);
+      return;
+    }
 
-  const [extension, actor] =
-    await Promise.all([status.select('extension'), status.select('actor')]);
-  if (!extension || !actor ||
-      actor.username != username ||
-      (actor.host != normalizedHost &&
-       actor.host &&
-       normalizeHost(actor.host) != normalizedHost)) {
-    response.sendStatus(404);
-    return;
+    [extension, actor] = await Promise.all([
+      status.select('extension', signal, () => recovery),
+      status.select('actor', signal, () => recovery)
+    ]);
+    if (!extension || !actor ||
+        actor.username != username ||
+        (actor.host != normalizedHost &&
+         actor.host &&
+        normalizeHost(actor.host) != normalizedHost)) {
+      response.sendStatus(404);
+      return;
+    }
+  } catch (error) {
+    if (error == recovery) {
+      response.sendStatus(422);
+      return;
+    }
+
+    throw error;
   }
 
   await sendActivityStreams(response, extension);

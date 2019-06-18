@@ -26,12 +26,16 @@ import { unwrap } from '../../../lib/test/types';
 import postStatus from './post_status';
 import nock = require('nock');
 
+const { signal } = new AbortController;
+
 test('delivers announce to remote account', async () => {
+  const recover = jest.fn();
+
   const [recipient, actor] = await Promise.all([
     fabricateRemoteAccount(
       { inbox: { uri: 'https://ReCiPiEnT.إختبار/?inbox' } }),
     fabricateLocalAccount()
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap)
   ]);
 
@@ -42,11 +46,10 @@ test('delivers announce to remote account', async () => {
     inboxURIId: recipient.inboxURIId
   });
 
-  const recover = jest.fn();
   const post = nock('https://ReCiPiEnT.إختبار').post('/?inbox').reply(200);
 
   try {
-    await postStatus(repository, job, (new AbortController).signal, recover);
+    await postStatus(repository, job, signal, recover);
     expect(post.isDone()).toBe(true);
   } finally {
     nock.cleanAll();
@@ -56,11 +59,13 @@ test('delivers announce to remote account', async () => {
 });
 
 test('delivers note to remote account', async () => {
+  const recover = jest.fn();
+
   const [recipient, actor] = await Promise.all([
     fabricateRemoteAccount(
       { inbox: { uri: 'https://ReCiPiEnT.إختبار/?inbox' } }),
     fabricateLocalAccount()
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap)
   ]);
 
@@ -71,11 +76,10 @@ test('delivers note to remote account', async () => {
     inboxURIId: recipient.inboxURIId
   });
 
-  const recover = jest.fn();
   const post = nock('https://ReCiPiEnT.إختبار').post('/?inbox').reply(200);
 
   try {
-    await postStatus(repository, job, (new AbortController).signal, recover);
+    await postStatus(repository, job, signal, recover);
     expect(post.isDone()).toBe(true);
   } finally {
     nock.cleanAll();

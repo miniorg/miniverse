@@ -56,7 +56,7 @@ describe('create', () => {
 
     expect(recover).not.toHaveBeenCalled();
 
-    const createdURL = await created.select('url');
+    const createdURL = await created.select('url', signal, recover);
 
     expect(created).toBeInstanceOf(Document);
     expect(created).toHaveProperty('repository', repository);
@@ -65,8 +65,9 @@ describe('create', () => {
     expect(createdURL).toHaveProperty('uri', 'https://إختبار/');
     expect(createdURL).toHaveProperty('allocated', true);
 
-    const queried = await repository.selectDocumentById(created.id);
-    const queriedURL = await unwrap(queried).select('url');
+    const queried =
+      await repository.selectDocumentById(created.id, signal, recover);
+    const queriedURL = await unwrap(queried).select('url', signal, recover);
 
     expect(queried).toHaveProperty('id', created.id);
     expect(queried).toHaveProperty('uuid', created.uuid);

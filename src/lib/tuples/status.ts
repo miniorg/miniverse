@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { domainToASCII } from 'url';
 import Actor from './actor';
 import Announce from './announce';
@@ -51,14 +52,17 @@ export default class Status extends Relation<Properties, References> {
   readonly extension?: Reference<Announce | Note | null>;
   readonly published!: Date;
 
-  async getUri(recover: (error: Error) => unknown) {
-    const actor = await this.select('actor');
+  async getUri(
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ) {
+    const actor = await this.select('actor', signal, recover);
     if (!actor) {
       throw recover(new Error('actor not found.'));
     }
 
     if (actor.host) {
-      const uri = await this.select('uri');
+      const uri = await this.select('uri', signal, recover);
       if (!uri) {
         throw recover(new Error('uri not found.'));
       }

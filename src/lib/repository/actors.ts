@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import Actor from '../tuples/actor';
 import Repository from '.';
 
@@ -35,42 +36,63 @@ function parse(this: Repository, { id, username, host, name, summary }: {
 }
 
 export default class {
-  async selectActorById(this: Repository, id: string): Promise<Actor | null> {
+  async selectActorById(
+    this: Repository,
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ): Promise<Actor | null> {
     const { rows } = await this.pg.query({
       name: 'selectActorById',
       text: 'SELECT * FROM actors WHERE id = $1',
       values: [id]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     return rows[0] ? parse.call(this, rows[0]) : null;
   }
 
-  async selectActorByUsernameAndNormalizedHost(this: Repository, username: string, normalizedHost: string): Promise<Actor | null> {
+  async selectActorByUsernameAndNormalizedHost(
+    this: Repository,
+    username: string,
+    normalizedHost: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ): Promise<Actor | null> {
     const { rows } = await this.pg.query({
       name: 'selectActorByUsernameAndNormalizedHost',
       text: 'SELECT * FROM actors WHERE username = $1 AND lower(host) = $2',
       values: [username, normalizedHost || '']
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     return rows[0] ? parse.call(this, rows[0]) : null;
   }
 
-  async selectActorsByFolloweeId(this: Repository, id: string) {
+  async selectActorsByFolloweeId(
+    this: Repository,
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) {
     const { rows } = await this.pg.query({
       name: 'selectActorsByFollowee',
       text: 'SELECT actors.* FROM actors JOIN follows ON actors.id = follows.actor_id WHERE follows.object_id = $1',
       values: [id]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     return (rows as any[]).map(parse, this);
   }
 
-  async selectActorsMentionedByNoteId(this: Repository, id: string) {
+  async selectActorsMentionedByNoteId(
+    this: Repository,
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) {
     const { rows } = await this.pg.query({
       name: 'selectActorsMentionedByNoteId',
       text: 'SELECT actors.* FROM actors JOIN mentions ON actors.id = mentions.href_id WHERE mentions.note_id = $1',
       values: [id]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     return (rows as any[]).map(parse, this);
   }

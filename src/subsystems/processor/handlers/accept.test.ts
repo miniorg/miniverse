@@ -26,23 +26,25 @@ import accept from './accept';
 import nock = require('nock');
 
 test('delivers to remote account', async () => {
+  const recover = jest.fn();
+  const { signal } = new AbortController;
+
   const [actor, object] = await Promise.all([
     fabricateRemoteAccount({ inbox: { uri: 'https://AcToR.إختبار/?inbox' } })
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap),
     fabricateLocalAccount()
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap)
   ]);
 
   const { id } = await fabricateFollow({ actor, object });
   const job = await repository.queue.add({ objectId: id });
-  const recover = jest.fn();
 
   const post = nock('https://AcToR.إختبار').post('/?inbox').reply(200);
 
   try {
-    await accept(repository, job, (new AbortController).signal, recover);
+    await accept(repository, job, signal, recover);
     expect(post.isDone()).toBe(true);
   } finally {
     nock.cleanAll();

@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import {
   fabricateFollow,
   fabricateLocalAccount,
@@ -23,13 +24,19 @@ import {
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
 
+const { signal } = new AbortController;
+
 describe('selectActorById', () => {
   test('selects actor by id', async () => {
+    const recover = jest.fn();
+
     const account = await fabricateLocalAccount(
       { actor: { username: 'username', name: '', summary: '' } });
 
-    const selected = await repository.selectActorById(account.id);
+    const selected =
+      await repository.selectActorById(account.id, signal, recover);
 
+    expect(recover).not.toHaveBeenCalled();
     expect(selected).toHaveProperty('username', 'username');
     expect(selected).toHaveProperty('host', null);
     expect(selected).toHaveProperty('name', '');
@@ -37,11 +44,13 @@ describe('selectActorById', () => {
   });
 
   test('selects actor of local account by username and host', async () => {
+    const recover = jest.fn();
+
     const account = await fabricateLocalAccount(
       { actor: { username: 'username', name: '', summary: '' } });
 
     const selected = await repository.selectActorByUsernameAndNormalizedHost(
-      'username', null);
+      'username', null, signal, recover);
 
     expect(selected).toHaveProperty('id', account.id);
     expect(selected).toHaveProperty('username', 'username');
@@ -51,6 +60,8 @@ describe('selectActorById', () => {
   });
 
   test('selects actor of remote account by username and host', async () => {
+    const recover = jest.fn();
+
     const account = await fabricateRemoteAccount({
       actor: {
         username: 'username',
@@ -61,8 +72,9 @@ describe('selectActorById', () => {
     });
 
     const selected = await repository.selectActorByUsernameAndNormalizedHost(
-      'username', 'finger.remote.xn--kgbechtv');
+      'username', 'finger.remote.xn--kgbechtv', signal, recover);
 
+    expect(recover).not.toHaveBeenCalled();
     expect(selected).toHaveProperty('id', account.id);
     expect(selected).toHaveProperty('username', 'username');
     expect(selected).toHaveProperty('host', 'FiNgEr.ReMoTe.xn--kgbechtv');
@@ -70,19 +82,29 @@ describe('selectActorById', () => {
     expect(selected).toHaveProperty('summary', '');
   });
 
-  test('resolves with null if not found', () =>
-    expect(repository.selectActorById('0')).resolves.toBe(null));
+  test('resolves with null if not found', async () => {
+    const recover = jest.fn();
+
+    await expect(repository.selectActorById('0', signal, recover))
+      .resolves.toBe(null);
+
+    expect(recover).not.toHaveBeenCalled();
+  });
 });
 
 test('inserts follow and allows to query actor by its object', async () => {
+  const recover = jest.fn();
+
   const actorAccount = await fabricateLocalAccount(
     { actor: { username: '行動者', name: '', summary: '' } });
 
-  const actor = unwrap(await actorAccount.select('actor'));
+  const actor = unwrap(await actorAccount.select('actor', signal, recover));
   const { objectId } = await fabricateFollow({ actor });
 
-  const [queried] = await repository.selectActorsByFolloweeId(objectId);
+  const [queried] = await repository.selectActorsByFolloweeId(
+    objectId, signal, recover);
 
+  expect(recover).not.toHaveBeenCalled();
   expect(queried).toHaveProperty('repository', repository);
   expect(queried).toHaveProperty('id', actor.id);
   expect(queried).toHaveProperty('username', '行動者');
@@ -92,16 +114,21 @@ test('inserts follow and allows to query actor by its object', async () => {
 });
 
 test('inserts note and allow to query actors mentioned by the note', async () => {
+  const recover = jest.fn();
+
   const account = await fabricateLocalAccount(
     { actor: { username: 'AtTrIbUtEdTo', summary: '' } });
 
-  const actor = unwrap(await account.select('actor'));
+  const actor = unwrap(await account.select('actor', signal, recover));
   const { id } = await fabricateNote({
     status: { actor },
     mentions: [actor]
   });
 
-  const [queried] = await repository.selectActorsMentionedByNoteId(id);
+  const [queried] =
+    await repository.selectActorsMentionedByNoteId(id, signal, recover);
+
+  expect(recover).not.toHaveBeenCalled();
   expect(queried).toHaveProperty('repository', repository);
   expect(queried).toHaveProperty('id', actor.id);
   expect(queried).toHaveProperty('username', 'AtTrIbUtEdTo');

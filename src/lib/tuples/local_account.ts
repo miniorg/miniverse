@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { generateKeyPair } from 'crypto';
 import { domainToASCII } from 'url';
 import { promisify } from 'util';
@@ -62,15 +63,18 @@ export default class LocalAccount extends Relation<Properties, References> {
   readonly serverKey!: Buffer;
   readonly storedKey!: Buffer;
 
-  async toWebFinger(recover: (error: Error) => unknown): Promise<WebFinger> {
-    const actor = await this.select('actor');
+  async toWebFinger(
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ): Promise<WebFinger> {
+    const actor = await this.select('actor', signal, recover);
     if (!actor) {
       throw recover(new Error('actor not found.'));
     }
 
     const encodedUserpart = encodeAcctUserpart(actor.username);
     const encodedHost = domainToASCII(this.repository.fingerHost);
-    const href = await actor.getUri(recover);
+    const href = await actor.getUri(signal, recover);
 
     if (!href) {
       throw recover(new Error('actor\'s uri not found.'));
@@ -94,8 +98,7 @@ export default class LocalAccount extends Relation<Properties, References> {
     salt,
     serverKey,
     storedKey,
-  }: Seed, recover: (error: Error) => unknown
-  ) {
+  }: Seed, signal: AbortSignal, recover: (error: Error & { name?: string }) => unknown) {
     Actor.validateUsername(actor.username, recover);
 
     return repository.insertLocalAccount({
@@ -112,7 +115,7 @@ export default class LocalAccount extends Relation<Properties, References> {
       salt,
       serverKey,
       storedKey
-    }, recover);
+    }, signal, recover);
   }
 }
 

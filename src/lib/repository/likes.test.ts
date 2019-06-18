@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import {
   fabricateLike,
   fabricateLocalAccount,
@@ -22,36 +23,50 @@ import {
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
 
+const { signal } = new AbortController;
+
 describe('deleteLikeByActorAndObject', () => {
   test('deletes like by actor and object', async () => {
+    const recover = jest.fn();
     const like = await fabricateLike();
     const [actor, object] = await Promise.all([
-      like.select('actor').then(unwrap),
-      like.select('object').then(unwrap)
+      like.select('actor', signal, recover).then(unwrap),
+      like.select('object', signal, recover).then(unwrap)
     ]);
 
-    await repository.deleteLikeByActorAndObject(actor, object);
-    await expect(repository.selectLikeById(like.id)).resolves.toBe(null);
+    await repository.deleteLikeByActorAndObject(actor, object, signal, recover);
+    await expect(repository.selectLikeById(like.id, signal, recover))
+      .resolves.toBe(null);
+
+    expect(recover).not.toHaveBeenCalled();
   });
 });
 
 describe('selectLikeById', () => {
-  test('resolves with null if not found', () =>
-    expect(repository.selectLikeById('0')).resolves.toBe(null));
+  test('resolves with null if not found', async () => {
+    const recover = jest.fn();
+
+    await expect(repository.selectLikeById('0', signal, recover))
+      .resolves.toBe(null);
+
+    expect(recover).not.toHaveBeenCalled();
+  });
 });
 
 test('inserts like and allows to query it by id', async () => {
+  const recover = jest.fn();
+
   const [actor, object] = await Promise.all([
     fabricateLocalAccount()
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap),
     fabricateNote()
   ]);
 
-  const recover = jest.fn();
-  const inserted = await repository.insertLike({ actor, object }, recover);
+  const seed = { actor, object };
+  const inserted = await repository.insertLike(seed, signal, recover);
 
-  const queried = await repository.selectLikeById(inserted.id);
+  const queried = await repository.selectLikeById(inserted.id, signal, recover);
   expect(recover).not.toHaveBeenCalled();
   expect(queried).toHaveProperty('repository', repository);
   expect(queried).toHaveProperty('id', inserted.id);
@@ -60,18 +75,19 @@ test('inserts like and allows to query it by id', async () => {
 });
 
 test('rejects when inserting a duplicate like', async () => {
+  const recover = jest.fn();
   const [actor, object] = await Promise.all([
     fabricateLocalAccount()
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap),
     fabricateNote()
   ]);
 
-  const recover = jest.fn();
   const recovery = {};
-  await repository.insertLike({ actor, object }, recover);
+  await repository.insertLike({ actor, object }, signal, recover);
 
   await expect(repository.insertLike(
     { actor, object },
+    signal,
     () => recovery)).rejects.toBe(recovery);
 });

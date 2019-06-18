@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import {
   fabricateAccept,
   fabricateFollow,
@@ -24,14 +25,18 @@ import repository from '../test/repository';
 import { unwrap } from '../test/types';
 import Accept from './accept';
 
+const { signal } = new AbortController;
+
 describe('toActivityStreams', () => {
   test('returns ActivityStreams representation', async () => {
+    const recover = jest.fn();
+
     const [actor, object] = await Promise.all([
       fabricateRemoteAccount({ uri: 'https://ReMoTe.xn--kgbechtv/' })
-        .then(account => account.select('actor'))
+        .then(account => account.select('actor', signal, recover))
         .then(unwrap),
       fabricateLocalAccount({ actor: { username: '被行動者' } })
-        .then(account => account.select('actor'))
+        .then(account => account.select('actor', signal, recover))
         .then(unwrap)
     ]);
 
@@ -39,9 +44,7 @@ describe('toActivityStreams', () => {
       object: await fabricateFollow({ actor, object })
     });
 
-    const recover = jest.fn();
-
-    await expect(accept.toActivityStreams(recover)).resolves.toEqual({
+    await expect(accept.toActivityStreams(signal, recover)).resolves.toEqual({
       type: 'Accept',
       object: {
         type: 'Follow',
@@ -58,27 +61,28 @@ describe('create', () => {
   test('returns a promise which will be resolved with an Accept', async () => {
     const follow = await fabricateFollow();
     const recover = jest.fn();
-    const accept = await Accept.create(repository, follow, recover);
+    const accept = await Accept.create(repository, follow, signal, recover);
 
     expect(recover).not.toHaveBeenCalled();
     expect(accept).toBeInstanceOf(Accept);
-    await expect(accept.select('object')).resolves.toBe(follow);
+    await expect(accept.select('object', signal, recover)).resolves.toBe(follow);
   });
 
   test('queues a delivery job if the actor is local and the object is remote', async () => {
+    const recover = jest.fn();
+
     const [actor, object] = await Promise.all([
       fabricateRemoteAccount()
-        .then(account => account.select('actor'))
+        .then(account => account.select('actor', signal, recover))
         .then(unwrap),
       fabricateLocalAccount()
-        .then(account => account.select('actor'))
+        .then(account => account.select('actor', signal, recover))
         .then(unwrap)
     ]);
 
     const follow = await fabricateFollow({ actor, object });
-    const recover = jest.fn();
 
-    await Accept.create(repository, follow, recover);
+    await Accept.create(repository, follow, signal, recover);
 
     await expect((await repository.queue.getWaiting())[0])
       .toHaveProperty(['data', 'type'], 'accept');

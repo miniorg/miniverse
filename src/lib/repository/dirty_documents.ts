@@ -14,24 +14,36 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import DirtyDocument from '../tuples/dirty_document';
 import Repository from '.';
 
 export default class {
-  async deleteDirtyDocument(this: Repository, { id }: DirtyDocument) {
+  async deleteDirtyDocument(
+    this: Repository,
+    { id }: DirtyDocument,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) {
     await this.pg.query({
       name: 'deleteDirtyDocument',
       text: 'DELETE FROM dirty_documents WHERE id = $1',
       values: [id]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
   }
 
-  async insertDirtyDocument(this: Repository, uuid: string, format: string) {
+  async insertDirtyDocument(
+    this: Repository,
+    uuid: string,
+    format: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) {
     const { rows } = await this.pg.query({
       name: 'insertDirtyDocument',
       text: 'INSERT INTO dirty_documents (uuid, format) VALUES ($1, $2) RETURNING id',
       values: [uuid, format]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     return new DirtyDocument({ repository: this, id: rows[0].id, uuid, format });
   }

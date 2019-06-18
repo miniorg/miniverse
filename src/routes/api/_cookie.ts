@@ -22,11 +22,25 @@ import LocalAccount from '../../lib/tuples/local_account';
 import Repository from '../../lib/repository';
 
 const promisifiedRandomBytes = promisify(randomBytes);
+const recovery = {};
 
 export default async function(repository: Repository, account: LocalAccount, response: Response) {
   const secret = await promisifiedRandomBytes(64);
 
-  await Cookie.create(repository, account, secret);
+  await Cookie.create(
+    repository,
+    account,
+    secret,
+    response.locals.signal,
+    () => recovery
+  ).catch(error => {
+    if (error == recovery) {
+      response.sendStatus(500);
+      return;
+    }
+
+    throw error;
+  });
 
   response.cookie('miniverse', getToken(secret), {
     httpOnly: true,

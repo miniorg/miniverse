@@ -46,21 +46,24 @@ export default class Follow extends Relation<Properties, References> {
   readonly object?: Reference<Actor | null>;
   readonly objectId!: string;
 
-  async toActivityStreams(recover: (error: Error) => unknown): Promise<ActivityStreams> {
+  async toActivityStreams(
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ): Promise<ActivityStreams> {
     const [actor, object] = await Promise.all([
-      this.select('actor').then(actor => {
+      this.select('actor', signal, recover).then(actor => {
         if (!actor) {
           throw recover(new Error('actor not found.'));
         }
 
-        return actor.getUri(recover);
+        return actor.getUri(signal, recover);
       }),
-      this.select('object').then(actor => {
+      this.select('object', signal, recover).then(actor => {
         if (!actor) {
           throw recover(new Error('object not found.'));
         }
 
-        return actor.getUri(recover);
+        return actor.getUri(signal, recover);
       })
     ]);
 
@@ -75,11 +78,16 @@ export default class Follow extends Relation<Properties, References> {
     return { type: 'Follow', actor, object };
   }
 
-  static async create(repository: Repository, seed: Seed, recover: (error: Error) => unknown) {
-    const follow = await repository.insertFollow(seed, recover);
+  static async create(
+    repository: Repository,
+    seed: Seed,
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ) {
+    const follow = await repository.insertFollow(seed, signal, recover);
 
     await Promise.all([
-      Accept.create(repository, follow, recover),
+      Accept.create(repository, follow, signal, recover),
       !seed.actor.host && seed.object.host && repository.queue.add({
         type: 'postFollow',
         id: follow.id
@@ -89,10 +97,17 @@ export default class Follow extends Relation<Properties, References> {
     return follow;
   }
 
-  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor, signal: AbortSignal, recover: (error: Error & {
-    [temporaryError]?: boolean;
-    [unexpectedType]?: boolean;
-  }) => unknown) {
+  static async createFromParsedActivityStreams(
+    repository: Repository,
+    activity: ParsedActivityStreams,
+    actor: Actor,
+    signal: AbortSignal,
+    recover: (error: Error & {
+      name?: string;
+      [temporaryError]?: boolean;
+      [unexpectedType]?: boolean;
+    }) => unknown
+  ) {
     const type = await activity.getType(signal, recover);
     if (!type.has('Follow')) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Follow.'), { [unexpectedType]: true }));
@@ -112,7 +127,7 @@ export default class Follow extends Relation<Properties, References> {
     return this.create(repository, {
       actor,
       object: objectActor
-    }, recover);
+    }, signal, recover);
   }
 }
 

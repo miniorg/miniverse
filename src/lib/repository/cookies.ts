@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import Cookie from '../tuples/cookie';
 import LocalAccount from '../tuples/local_account';
 import Repository from '.';
@@ -22,12 +23,12 @@ export default class {
   async insertCookie(this: Repository, { account, digest }: {
     readonly account: LocalAccount;
     readonly digest: Buffer;
-  }) {
+  }, signal: AbortSignal, recover: (error: Error & { name: string }) => unknown) {
     await this.pg.query({
       name: 'insertCookie',
       text: 'INSERT INTO cookies (digest, account_id) VALUES ($1, $2)',
       values: [digest, account.id]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     return new Cookie({ repository: this, account, digest });
   }

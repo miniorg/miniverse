@@ -14,16 +14,22 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import Hashtag from '../tuples/hashtag';
 import Repository from '.';
 
 export default class {
-  async selectHashtagsByNoteId(this: Repository, noteId: string) {
+  async selectHashtagsByNoteId(
+    this: Repository,
+    noteId: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) {
     const { rows } = await this.pg.query({
       name: 'selectHashtagsByNoteId',
       text: 'SELECT * FROM hashtags JOIN hashtags_notes ON hashtags.id = hashtags_notes.hashtag_id WHERE hashtags_notes.note_id = $1',
       values: [noteId]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     return (rows as any[]).map(properties => new Hashtag(properties));
   }

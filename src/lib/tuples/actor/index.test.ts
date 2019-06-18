@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import { createPrivateKey } from 'crypto';
 import {
   fabricateLocalAccount,
@@ -52,6 +53,8 @@ OyJRYe+sFKZ6lXqnwdWuTrxTNucFuhw+6BVyzNn6lI5cNXLr1reH
 -----END RSA PRIVATE KEY-----
 `).export({ format: 'der', type: 'pkcs1' });
 
+const { signal } = new AbortController;
+
 /*
   RFC 7565 - The 'acct' URI Scheme
   7. IANA Considerations
@@ -78,8 +81,10 @@ describe('getUri', () => {
     const account = await fabricateLocalAccount(
       { actor: { username: 'ユーザー名', name: '' } });
 
+    const actor = unwrap(await account.select('actor', signal, recover));
+
     // host and username must be encoded.
-    await expect(unwrap(await account.select('actor')).getUri(recover))
+    await expect(actor.getUri(signal, recover))
       .resolves
       .toBe('https://xn--kgbechtv/@%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E5%90%8D');
 
@@ -87,11 +92,11 @@ describe('getUri', () => {
   });
 
   test('loads and returns URI of remote account', async () => {
-    const { id } = await fabricateRemoteAccount({ uri: 'https://ReMoTe.إختبار/' });
-    const actor = unwrap(await repository.selectActorById(id));
     const recover = jest.fn();
+    const { id } = await fabricateRemoteAccount({ uri: 'https://ReMoTe.إختبار/' });
+    const actor = unwrap(await repository.selectActorById(id, signal, recover));
 
-    await expect(actor.getUri(recover))
+    await expect(actor.getUri(signal, recover))
       .resolves
       .toBe('https://ReMoTe.إختبار/');
 
@@ -108,11 +113,11 @@ describe('toActivityStreams', () => {
       salt: Buffer.from('salt')
     });
 
-    const actor = unwrap(await account.select('actor'));
     const recover = jest.fn();
+    const actor = unwrap(await account.select('actor', signal, recover));
 
     // URIs must properly be encoded.
-    await expect(actor.toActivityStreams(recover)).resolves.toEqual({
+    await expect(actor.toActivityStreams(signal, recover)).resolves.toEqual({
       id: 'https://xn--kgbechtv/@%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E5%90%8D',
       type: 'Person',
       preferredUsername: 'ユーザー名',
@@ -152,11 +157,11 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
       uri: 'https://ReMoTe.xn--kgbechtv/'
     });
 
-    const actor = unwrap(await account.select('actor'));
     const recover = jest.fn();
+    const actor = unwrap(await account.select('actor', signal, recover));
 
     // URIs must properly be encoded.
-    await expect(actor.toActivityStreams(recover)).resolves.toEqual({
+    await expect(actor.toActivityStreams(signal, recover)).resolves.toEqual({
       id: 'https://ReMoTe.xn--kgbechtv/',
       preferredUsername: 'ユーザー名',
       name: '',

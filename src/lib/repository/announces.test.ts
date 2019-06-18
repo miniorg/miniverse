@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import {
   fabricateLocalAccount,
   fabricateNote,
@@ -23,38 +24,40 @@ import repository from '../test/repository';
 import { unwrap } from '../test/types';
 import { conflict } from '.';
 
+const { signal } = new AbortController;
+
 test('inserts announce with URI and allows to query it', async () => {
+  const recover = jest.fn();
   const [actor, object] = await Promise.all([
     fabricateRemoteAccount()
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap),
     fabricateNote()
   ]);
 
-  const recover = jest.fn();
-
   const { id } = await repository.insertAnnounce({
     status: { published: new Date, actor, uri: 'https://ReMoTe.إختبار/' },
     object
-  }, recover);
+  }, signal, recover);
 
-  expect(recover).not.toHaveBeenCalled();
-  await expect(repository.selectURIById(id))
+  await expect(repository.selectURIById(id, signal, recover))
     .resolves
     .toHaveProperty('uri', 'https://ReMoTe.إختبار/');
+
+  expect(recover).not.toHaveBeenCalled();
 });
 
 test('inserts announce with URI reserved for note inReplyTo and allows to query it', async () => {
   const recover = jest.fn();
   const [actor, object] = await Promise.all([
     fabricateRemoteAccount()
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap),
     fabricateNote(),
     fabricateLocalAccount().then(async account => repository.insertNote({
       status: {
         published: new Date,
-        actor: unwrap(await account.select('actor')),
+        actor: unwrap(await account.select('actor', signal, recover)),
         uri: null
       },
       summary: null,
@@ -63,62 +66,64 @@ test('inserts announce with URI reserved for note inReplyTo and allows to query 
       attachments: [],
       hashtags: [],
       mentions: []
-    }, recover))
+    }, signal, recover))
   ]);
 
   const { id } = await repository.insertAnnounce({
     status: { published: new Date, actor, uri: 'https://ReMoTe.إختبار/' },
     object
-  }, recover);
+  }, signal, recover);
 
-  expect(recover).not.toHaveBeenCalled();
-  await expect(repository.selectURIById(id))
+  await expect(repository.selectURIById(id, signal, recover))
     .resolves
     .toHaveProperty('uri', 'https://ReMoTe.إختبار/');
+
+  expect(recover).not.toHaveBeenCalled();
 });
 
 test('rejects announce with conflicting URI', async () => {
+  const recover = jest.fn();
+
   const [actor, object] = await Promise.all([
     fabricateRemoteAccount()
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap),
     fabricateNote()
   ]);
 
-  const recover = jest.fn();
   const recovery = {};
 
   await repository.insertAnnounce({
     status: { published: new Date, actor, uri: 'https://ReMoTe.إختبار/' },
     object
-  }, recover);
+  }, signal, recover);
   expect(recover).not.toHaveBeenCalled();
 
   await expect(repository.insertAnnounce({
     status: { published: new Date, actor, uri: 'https://ReMoTe.إختبار/' },
     object
-  }, error => {
+  }, signal, error => {
     expect(error[conflict]).toBe(true);
     return recovery;
   })).rejects.toBe(recovery);
 });
 
 test('inserts announce without URI', async () => {
+  const recover = jest.fn();
   const [actor, object] = await Promise.all([
     fabricateLocalAccount()
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap),
     fabricateNote()
   ]);
 
-  const recover = jest.fn();
   const { id } = await repository.insertAnnounce({
     status: { published: new Date, actor, uri: null },
     object
-  }, recover);
+  }, signal, recover);
 
   expect(recover).not.toHaveBeenCalled();
-  await expect(repository.selectURIById(id))
+  await expect(repository.selectURIById(id, signal, recover))
     .resolves
     .toBe(null);
 });

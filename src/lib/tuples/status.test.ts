@@ -14,31 +14,36 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import { fabricateLocalAccount, fabricateNote } from '../test/fabricator';
 import { unwrap } from '../test/types';
 
 describe('getUri', () => {
+  const { signal } = new AbortController;
+
   test('resolves with local URI', async () => {
+    const recover = jest.fn();
+
     const account =
       await fabricateLocalAccount({ actor: { username: 'attributed to' } });
 
-    const actor = unwrap(await account.select('actor'));
+    const actor = unwrap(await account.select('actor', signal, recover));
     const note = await fabricateNote({ status: { actor } });
-    const status = unwrap(await note.select('status'));
-    const recover = jest.fn();
+    const status = unwrap(await note.select('status', signal, recover));
 
-    await expect(status.getUri(recover)).resolves.toMatch(/^https:\/\/xn--kgbechtv\/@attributed%20to\//);
+    await expect(status.getUri(signal, recover)).resolves.toMatch(/^https:\/\/xn--kgbechtv\/@attributed%20to\//);
     expect(recover).not.toHaveBeenCalled();
   });
 
   test('resolves with remote URI when it is resolved remote status', async () => {
+    const recover = jest.fn();
+
     const note = await fabricateNote(
       { status: { uri: 'https://NoTe.xn--kgbechtv/' } });
 
-    const status = unwrap(await note.select('status'));
-    const recover = jest.fn();
+    const status = unwrap(await note.select('status', signal, recover));
 
-    await expect(status.getUri(recover)).resolves.toBe('https://NoTe.xn--kgbechtv/');
+    await expect(status.getUri(signal, recover)).resolves.toBe('https://NoTe.xn--kgbechtv/');
     expect(recover).not.toHaveBeenCalled();
   });
 });

@@ -32,9 +32,9 @@ describe('createFromParsedActivityStreams', () => {
     const note = await fabricateNote(
       { status: { uri: 'https://ReMoTe.إختبار/' } });
 
-    const status = unwrap(await note.select('status'));
-    const actor = unwrap(await status.select('actor'));
     const recover = jest.fn();
+    const status = unwrap(await note.select('status', signal, recover));
+    const actor = unwrap(await status.select('actor', signal, recover));
     const activityStreams = new ParsedActivityStreams(repository, {
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'Delete',
@@ -44,13 +44,18 @@ describe('createFromParsedActivityStreams', () => {
     await expect(Delete.createFromParsedActivityStreams(
       repository, activityStreams, actor, signal, recover)).resolves.toBeInstanceOf(Delete);
 
+    await expect(repository.selectRecentStatusesIncludingExtensionsByActorId(
+      status.actorId,
+      signal,
+      recover
+    )).resolves.toEqual([]);
+
     expect(recover).not.toHaveBeenCalled();
-    await expect(repository.selectRecentStatusesIncludingExtensionsByActorId(status.actorId))
-      .resolves
-      .toEqual([]);
   });
 
   test('deletes attachments', async () => {
+    const recover = jest.fn();
+
     const document = await fabricateDocument(
       await fabricateDirtyDocument(
         '00000000-0000-1000-8000-010000000000', 'png'));
@@ -59,9 +64,8 @@ describe('createFromParsedActivityStreams', () => {
       status: { uri: 'https://ReMoTe.إختبار/' }
     });
 
-    const status = unwrap(await note.select('status'));
-    const actor = unwrap(await status.select('actor'));
-    const recover = jest.fn();
+    const status = unwrap(await note.select('status', signal, recover));
+    const actor = unwrap(await status.select('actor', signal, recover));
     const activityStreams = new ParsedActivityStreams(repository, {
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'Delete',
@@ -71,21 +75,27 @@ describe('createFromParsedActivityStreams', () => {
     await expect(Delete.createFromParsedActivityStreams(
       repository, activityStreams, actor, signal, recover)).resolves.toBeInstanceOf(Delete);
 
+    await Promise.all([
+      expect(repository.selectDocumentById(document.id, signal, recover))
+        .resolves.toBe(null),
+      expect(repository.selectUnlinkedDocuments(signal, recover))
+        .resolves.toEqual([]),
+      expect(repository.s3.service.headObject({
+        Bucket: repository.s3.bucket,
+        Key: 'documents/00000000-0000-1000-8000-010000000000.png'
+      }).promise()).rejects.toHaveProperty('code', 'NotFound')
+    ]);
+
     expect(recover).not.toHaveBeenCalled();
-    await expect(repository.selectDocumentById(document.id)).resolves.toBe(null);
-    await expect(repository.selectUnlinkedDocuments()).resolves.toEqual([]);
-    await expect(repository.s3.service.headObject({
-      Bucket: repository.s3.bucket,
-      Key: 'documents/00000000-0000-1000-8000-010000000000.png'
-    }).promise()).rejects.toHaveProperty('code', 'NotFound');
   });
 
   test('rejects if type is not Delete', async () => {
     const note = await fabricateNote(
       { status: {  uri: 'https://ReMoTe.إختبار/' } });
 
+    const recover = jest.fn();
     const recovery = {};
-    const status = unwrap(await note.select('status'));
+    const status = unwrap(await note.select('status', signal, recover));
     const activityStreams = new ParsedActivityStreams(repository, {
       '@context': 'https://www.w3.org/ns/activitystreams',
       object: 'https://ReMoTe.إختبار/'
@@ -94,11 +104,13 @@ describe('createFromParsedActivityStreams', () => {
     await expect(Delete.createFromParsedActivityStreams(
       repository,
       activityStreams,
-      unwrap(await status.select('actor')),
+      unwrap(await status.select('actor', signal, recover)),
       signal,
       error => {
         expect(error[unexpectedType]).toBe(true);
         return recovery;
       })).rejects.toBe(recovery);
+
+    expect(recover).not.toHaveBeenCalled();
   });
 });

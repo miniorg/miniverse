@@ -65,9 +65,12 @@ export default class Base extends Relation<Properties, References>
     }
   }
 
-  async getUri(recover: (error: Error) => unknown) {
+  async getUri(
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ) {
     if (this.host) {
-      const account = await this.select('account');
+      const account = await this.select('account', signal, recover);
       if (!account) {
         throw recover(new Error('account not found.'));
       }
@@ -76,7 +79,7 @@ export default class Base extends Relation<Properties, References>
         throw new Error('Invalid account.');
       }
 
-      const uri = await account.select('uri');
+      const uri = await account.select('uri', signal, recover);
       return uri && uri.uri;
     }
 
@@ -86,13 +89,16 @@ export default class Base extends Relation<Properties, References>
     return `https://${host}/@${username}`;
   }
 
-  async toActivityStreams(recover: (error: Error) => unknown): Promise<ActivityStreams | LocalActivityStreams> {
+  async toActivityStreams(
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ): Promise<ActivityStreams | LocalActivityStreams> {
     const asciiHost = domainToASCII(this.repository.host);
 
     if (this.host) {
       const acct = `${this.username}@${domainToUnicode(this.host)}`;
       const proxyBase = `https://${asciiHost}/@${encodeSegment(acct)}`;
-      const id = await this.getUri(recover);
+      const id = await this.getUri(signal, recover);
 
       if (!id) {
         throw recover(new Error('id unresolved.'));
@@ -111,9 +117,9 @@ export default class Base extends Relation<Properties, References>
     const key = new Key({ owner: this, repository: this.repository });
 
     const [id, publicKey, account] = await Promise.all([
-      this.getUri(recover),
-      key.toActivityStreams(recover),
-      this.select('account')
+      this.getUri(signal, recover),
+      key.toActivityStreams(signal, recover),
+      this.select('account', signal, recover)
     ]);
 
     if (!account) {
@@ -166,10 +172,10 @@ export default class Base extends Relation<Properties, References>
 
   static references = {
     account: {
-      query({ repository, id, host }: Base) {
+      query({ repository, id, host }: Base, signal: AbortSignal, recover: (error: Error & { name?: string }) => unknown) {
         return host ?
-          repository.selectRemoteAccountById(id) :
-          repository.selectLocalAccountById(id);
+          repository.selectRemoteAccountById(id, signal, recover) :
+          repository.selectLocalAccountById(id, signal, recover);
       },
       id: 'id',
       inverseOf: 'actor'

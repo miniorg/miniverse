@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import { fabricateLocalAccount } from '../test/fabricator';
 import repository from '../test/repository';
 import Cookie, { digestToken } from './cookie';
@@ -29,13 +30,20 @@ const token = 'c2VjcmV0';
 describe('create', () => {
   test('creates cookie', async () => {
     const account = await fabricateLocalAccount();
-    const cookie = await Cookie.create(repository, account, secret);
+    const { signal } = new AbortController;
+    const recover = jest.fn();
+    const cookie = await Cookie.create(
+      repository, account, secret, signal, recover);
 
     expect(expectedDigest.equals(cookie.digest)).toBe(true);
 
-    await expect(repository.selectLocalAccountByDigestOfCookie(expectedDigest))
-      .resolves
-      .toBeInstanceOf(LocalAccount);
+    await expect(repository.selectLocalAccountByDigestOfCookie(
+      expectedDigest,
+      signal,
+      recover
+    )).resolves.toBeInstanceOf(LocalAccount);
+
+    expect(recover).not.toHaveBeenCalled();
   });
 });
 

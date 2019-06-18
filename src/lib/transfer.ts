@@ -71,48 +71,66 @@ function isRecipientAccount(account: LocalAccount | RemoteAccount | null): accou
   return true;
 }
 
-export async function postStatus(repository: Repository, status: Status, recover: (error: Error) => unknown) {
-  const actor = await status.select('actor');
+export async function postStatus(
+  repository: Repository,
+  status: Status,
+  signal: AbortSignal,
+  recover: (error: Error & { name?: string }) => unknown
+) {
+  const actor = await status.select('actor', signal, recover);
   if (!actor) {
     throw recover(new Error('actor not found.'));
   }
 
-  const followers = await actor.select('followers');
+  const followers = await actor.select('followers', signal, recover);
 
   await Promise.all([
     actor.host || Promise.all(followers.map(
-      recipient => recipient.host ? recipient.select('account') : null)).then(
-      unfilteredAccounts => {
-        const accounts = unfilteredAccounts.filter(isRecipientAccount);
-        const inboxURIIds = accounts.map(({ inboxURIId }) => inboxURIId);
-        const inboxURIIdSet = new Set(inboxURIIds);
+      recipient => recipient.host ?
+        recipient.select('account', signal, recover) : null
+    )).then(unfilteredAccounts => {
+      const accounts = unfilteredAccounts.filter(isRecipientAccount);
+      const inboxURIIds = accounts.map(({ inboxURIId }) => inboxURIId);
+      const inboxURIIdSet = new Set(inboxURIIds);
 
-        return Promise.all((function *() {
-          for (const inboxURIId of inboxURIIdSet) {
-            yield repository.queue.add({
-              type: 'postStatus',
-              statusId: status.id,
-              inboxURIId
-            }, { timeout: 16384 });
-          }
-        })());
-      }),
+      return Promise.all((function *() {
+        for (const inboxURIId of inboxURIIdSet) {
+          yield repository.queue.add({
+            type: 'postStatus',
+            statusId: status.id,
+            inboxURIId
+          }, { timeout: 16384 });
+        }
+      })());
+    }),
     repository.insertIntoInboxes(
       followers.concat([actor]).filter(recipient => !recipient.host),
-      status)
+      status,
+      signal,
+      recover)
   ] as unknown[]);
 }
 
-export async function postToInbox<T>(repository: Repository, sender: LocalAccount, { uri }: URI, object: { toActivityStreams(recover: (error: T) => unknown): { [key: string]: unknown } }, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean } | T) => unknown) {
+export async function postToInbox<T>(
+  repository: Repository,
+  sender: LocalAccount,
+  { uri }: URI,
+  object: { toActivityStreams(signal: AbortSignal, recover: (error: T) => unknown): { [key: string]: unknown } },
+  signal: AbortSignal,
+  recover: (error: Error & { name?: string; [temporaryError]?: boolean } | T) => unknown
+) {
   const [activityStreams, [keyId, key]] = await Promise.all([
-    object.toActivityStreams(recover),
-    sender.select('actor').then(owner => {
+    object.toActivityStreams(signal, recover),
+    sender.select('actor', signal, recover).then(owner => {
       if (!owner) {
         throw recover(Object.assign(new Error('sender\'s actor not found'), { [temporaryError]: false }));
       }
 
       const key = new Key({ owner, repository });
-      return Promise.all([key.getUri(recover), key.selectPrivateKeyDer(recover)]);
+      return Promise.all([
+        key.getUri(signal, recover),
+        key.selectPrivateKeyDer(signal, recover)
+      ]);
     })
   ]);
 

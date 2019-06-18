@@ -14,15 +14,14 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { AbortController } from 'abort-controller';
 import Actor from '../../lib/tuples/actor';
 import { normalizeHost } from '../../lib/tuples/uri';
 import secure from '../_secure';
 
 const recovery = {};
 
-export const get = secure(async (request, response) => {
-  const lowerResource = request.query.resource;
+export const get = secure(async ({ query }, response) => {
+  const lowerResource = query.resource;
   const parsed = /(?:acct:)?(.*)@(.*)/.exec(lowerResource);
 
   if (!parsed) {
@@ -32,48 +31,38 @@ export const get = secure(async (request, response) => {
 
   const [, userpart, host] = parsed;
   const { repository } = response.app.locals;
-  const controller = new AbortController;
+  const { signal } = response.locals;
   let actor;
 
-  request.on('aborted', () => controller.abort());
-
-  if (host == normalizeHost(repository.fingerHost)) {
-    actor = await repository.selectActorByUsernameAndNormalizedHost(
-      decodeURI(userpart), null);
-  } else {
-    try {
+  try {
+    if (host == normalizeHost(repository.fingerHost)) {
+      actor = await repository.selectActorByUsernameAndNormalizedHost(
+        decodeURI(userpart), null, signal, () => recovery);
+    } else {
       actor = await Actor.fromUsernameAndNormalizedHost(
         repository,
         decodeURI(userpart),
         host,
-        controller.signal,
+        signal,
         () => recovery);
-    } catch (error) {
-      if (error == recovery) {
-        response.sendStatus(500);
-        return;
-      }
-
-      throw error;
     }
-  }
-  if (!actor) {
-    response.sendStatus(404);
-    return;
-  }
 
-  const account = await actor.select('account');
-  if (!account) {
-    response.sendStatus(404);
-    return;
-  }
+    if (!actor) {
+      response.sendStatus(404);
+      return;
+    }
 
-  try {
-    response.json(await account.toWebFinger(_error => recovery));
+    const account = await actor.select('account', signal, () => recovery);
+    if (!account) {
+      response.sendStatus(404);
+      return;
+    }
+
+    response.json(await account.toWebFinger(signal, _error => recovery));
   } catch (error) {
     if (error == recovery) {
       response.sendStatus(500);
-      return;
+      return;signal
     }
 
     throw error;

@@ -14,17 +14,21 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import { fabricateLocalAccount, fabricateNote } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
 
 test('inserts note and allows to query its mentions', async () => {
+  const recover = jest.fn();
+  const { signal } = new AbortController;
   const account = await fabricateLocalAccount();
-  const actor = unwrap(await account.select('actor'));
+  const actor = unwrap(await account.select('actor', signal, recover));
   const note = await fabricateNote({ mentions: [actor] });
 
-  const mentions =
-    await repository.selectMentionsIncludingActorsByNoteId(note.id);
+  const mentions = await repository.selectMentionsIncludingActorsByNoteId(
+    note.id, signal, recover);
 
+  expect(recover).not.toHaveBeenCalled();
   expect(mentions[0]).toHaveProperty('hrefId', actor.id);
 });

@@ -14,20 +14,25 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import { fabricateDirtyDocument, fabricateNote } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
 import { conflict } from '.';
 
+const { signal } = new AbortController;
+
 test('inserts and allows to query documents by id', async () => {
   const recover = jest.fn();
   const inserted = await repository.insertDocument(
     await repository.insertDirtyDocument(
-      '00000000-0000-1000-8000-010000000000', 'png'),
+      '00000000-0000-1000-8000-010000000000', 'png', signal, recover),
     'https://إختبار/',
+    signal,
     recover);
 
-  const queried = await repository.selectDocumentById(inserted.id);
+  const queried =
+    await repository.selectDocumentById(inserted.id, signal, recover);
 
   expect(recover).not.toHaveBeenCalled();
   expect(queried).toHaveProperty('repository', repository);
@@ -41,13 +46,14 @@ test('inserts document with URL and allows to query the URL', async () => {
   const inserted = await repository.insertDocument(
     await fabricateDirtyDocument(),
     'https://إختبار/',
+    signal,
     recover);
 
   expect(recover).not.toHaveBeenCalled();
 
   const [insertedUrl, queriedUrl] = await Promise.all([
-    inserted.select('url'),
-    repository.selectAllocatedURI('https://إختبار/')
+    inserted.select('url', signal, recover),
+    repository.selectAllocatedURI('https://إختبار/', signal, recover)
   ]);
 
   expect(queriedUrl).toHaveProperty('id', unwrap(insertedUrl).id);
@@ -57,12 +63,14 @@ test('inserts and allows to query documents by attached note id', async () => {
   const recover = jest.fn();
   const inserted = await repository.insertDocument(
     await repository.insertDirtyDocument(
-      '00000000-0000-1000-8000-010000000000', 'png'),
+      '00000000-0000-1000-8000-010000000000', 'png', signal, recover),
     'https://إختبار/',
+    signal,
     recover);
 
   const { id } = await fabricateNote({ attachments: [inserted] });
-  const [queried] = await repository.selectDocumentsByAttachedNoteId(id);
+  const [queried] =
+    await repository.selectDocumentsByAttachedNoteId(id, signal, recover);
 
   expect(recover).not.toHaveBeenCalled();
   expect(queried).toHaveProperty('repository', repository);
@@ -78,6 +86,7 @@ test('rejects when inserting document with conflicting URI', async () => {
   await repository.insertDocument(
     await fabricateDirtyDocument(),
     'https://إختبار/',
+    signal,
     recover);
 
   expect(recover).not.toHaveBeenCalled();
@@ -85,6 +94,7 @@ test('rejects when inserting document with conflicting URI', async () => {
   await expect(repository.insertDocument(
     await fabricateDirtyDocument(),
     'https://إختبار/',
+    signal,
     error => {
       expect(error[conflict]).toBe(true);
       return recovery;

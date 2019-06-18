@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { Accept as ActivityStreams } from '../generated_activitystreams';
 import Follow from './follow';
 import Relation, { Reference } from './relation';
@@ -29,8 +30,11 @@ export default class Accept extends Relation<Properties, References> {
   readonly object?: Reference<Follow | null>;
   readonly objectId!: string;
 
-  async toActivityStreams(recover: (error: Error) => unknown): Promise<ActivityStreams> {
-    const object = await this.select('object');
+  async toActivityStreams(
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ): Promise<ActivityStreams> {
+    const object = await this.select('object', signal, recover);
 
     if (!object) {
       throw recover(new Error('object not found.'));
@@ -38,14 +42,21 @@ export default class Accept extends Relation<Properties, References> {
 
     return {
       type: 'Accept',
-      object: await object.toActivityStreams(recover)
+      object: await object.toActivityStreams(signal, recover)
     };
   }
 
-  static async create(repository: Repository, object: Follow, recover: (error: Error) => unknown) {
+  static async create(
+    repository: Repository,
+    object: Follow,
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ) {
     const accept = new this({ object, repository });
-    const [objectActor, objectObject] =
-      await Promise.all([object.select('actor'), object.select('object')]);
+    const [objectActor, objectObject] = await Promise.all([
+      object.select('actor', signal, recover),
+      object.select('object', signal, recover)
+    ]);
 
     if (!objectActor) {
       throw recover(new Error('object\'s actor not found.'));

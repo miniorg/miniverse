@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController, AbortSignal } from 'abort-controller';
 import { parse } from 'cookie';
 import { randomBytes } from 'crypto';
 import { promisify } from 'util';
@@ -27,8 +28,8 @@ import LocalAccount from '../lib/tuples/local_account';
 import Arena = require('bull-arena');
 import express = require('express');
 
-const actorError = {};
 const promisifiedRandomBytes = promisify(randomBytes);
+const recovery = {};
 
 export interface Application extends express.Application {
   readonly locals: {
@@ -40,6 +41,7 @@ export interface Response extends express.Response {
   readonly app: Application;
   readonly locals: {
     nonce: string;
+    signal: AbortSignal;
     user: LocalAccount | null;
     userActivityStreams: User | null;
   };
@@ -54,16 +56,23 @@ export default function (repository: Repository, port: number): Application {
     express.static('static'),
     (request, response, next) => {
       const { locals }: Response = response;
+      const controller = new AbortController();
       const cookie = request.headers.cookie && parse(request.headers.cookie);
       let asyncAccount;
 
+      locals.signal = controller.signal;
+
       if (cookie && cookie.miniverse) {
         const digest = digestToken(cookie.miniverse);
-        asyncAccount = repository.selectLocalAccountByDigestOfCookie(digest);
+        asyncAccount = repository.selectLocalAccountByDigestOfCookie(
+          digest,
+          locals.signal,
+          () => recovery);
       } else {
         asyncAccount = Promise.resolve(null) as Promise<LocalAccount | null>;
       }
 
+      request.once('aborted', () => controller.abort());
       response.set('Referrer-Policy', 'same-origin');
 
       asyncAccount.then(async account => {
@@ -74,20 +83,19 @@ export default function (repository: Repository, port: number): Application {
         } else {
           const [bytes, actor] = await Promise.all([
             promisifiedRandomBytes(64),
-            account && account.select('actor').then(async actor => {
+            account && account.select('actor', locals.signal, () => recovery).then(async actor => {
               if (actor) {
-                try {
-                  const activityStreams = await actor.toActivityStreams(() => actorError) as User;
-                  activityStreams.inbox = [];
+                await actor.toActivityStreams(locals.signal, () => recovery).then(activityStreams => {
+                  locals.userActivityStreams = activityStreams as User;
+                  locals.userActivityStreams.inbox = [];
                   locals.user = account;
-                  locals.userActivityStreams = activityStreams;
-                } catch (error) {
-                  if (error != actorError) {
+                }, error => {
+                  if (error != recovery) {
                     throw error;
                   }
 
                   actor = null;
-                }
+                });
               }
 
               return actor;
@@ -107,7 +115,13 @@ export default function (repository: Repository, port: number): Application {
             await Challenge.create(repository, bytes);
           }
         }
-      }).then(next, next);
+      }).then(next, error => {
+        if (error == recovery) {
+          response.sendStatus(422);
+        } else {
+          next(error);
+        }
+      });
     },
     Arena({
       queues: [

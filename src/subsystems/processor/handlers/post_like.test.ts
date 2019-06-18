@@ -27,24 +27,26 @@ import postLike from './post_like';
 import nock = require('nock');
 
 test('delivers to remote account', async () => {
+  const recover = jest.fn();
+  const { signal } = new AbortController;
+
   const [actor, object] = await Promise.all([
     fabricateLocalAccount()
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap),
     fabricateRemoteAccount({ inbox: { uri: 'https://ObJeCt.إختبار/?inbox' } })
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap)
       .then(actor => fabricateNote({ status: { actor } }))
   ]);
 
   const { id } = await fabricateLike({ actor, object });
   const job = await repository.queue.add({ id });
-  const recover = jest.fn();
 
   const post = nock('https://ObJeCt.إختبار').post('/?inbox').reply(200);
 
   try {
-    await postLike(repository, job, (new AbortController).signal, recover);
+    await postLike(repository, job, signal, recover);
     expect(post.isDone()).toBe(true);
   } finally {
     nock.cleanAll();

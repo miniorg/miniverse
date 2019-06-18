@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { BinaryLike, createHash } from 'crypto';
 import Repository from '../repository';
 import LocalAccount from './local_account';
@@ -57,8 +58,17 @@ export default class Cookie extends Relation<Properties, References> {
   readonly accountId!: string;
   readonly digest!: Buffer;
 
-  static create(repository: Repository, account: LocalAccount, secret: Buffer) {
-    return repository.insertCookie({ account, digest: digest(secret) });
+  static create(
+    repository: Repository,
+    account: LocalAccount,
+    secret: Buffer,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) {
+    return repository.insertCookie(
+      { account, digest: digest(secret) },
+      signal,
+      recover);
   }
 }
 

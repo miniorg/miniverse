@@ -24,10 +24,17 @@ import { temporaryError } from '../transfer';
 export const unexpectedType = Symbol();
 
 export default class Undo {
-  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor, signal: AbortSignal, recover: (error: Error & {
-    [temporaryError]?: boolean;
-    [unexpectedType]?: boolean;
-  }) => unknown) {
+  static async createFromParsedActivityStreams(
+    repository: Repository,
+    activity: ParsedActivityStreams,
+    actor: Actor,
+    signal: AbortSignal,
+    recover: (error: Error & {
+      name?: string;
+      [temporaryError]?: boolean;
+      [unexpectedType]?: boolean;
+    }) => unknown
+  ) {
     const type = await activity.getType(signal, recover);
 
     if (!type.has('Undo')) {
@@ -47,12 +54,12 @@ export default class Undo {
         throw recover(new Error('Unsupported id type.'));
       }
 
-      const uriEntity = await repository.selectAllocatedURI(id);
+      const uriEntity = await repository.selectAllocatedURI(id, signal, recover);
       if (!uriEntity) {
         throw recover(new Error('uri not found.'));
       }
 
-      await repository.deleteStatusByUriAndAttributedTo(uriEntity, actor);
+      await repository.deleteStatusByUriAndAttributedTo(uriEntity, actor, signal, recover);
     } else if (objectType.has('Follow')) {
       const objectActorActivityStreams = await object.getObject(signal, recover);
       if (!objectActorActivityStreams) {
@@ -65,7 +72,7 @@ export default class Undo {
         throw recover(new Error('object\'s actor not found.'));
       }
 
-      await repository.deleteFollowByActorAndObject(actor, objectActor);
+      await repository.deleteFollowByActorAndObject(actor, objectActor, signal, recover);
     } else if (objectType.has('Like')) {
       const noteActivityStreams = await object.getObject(signal, recover);
       if (!noteActivityStreams) {
@@ -78,7 +85,7 @@ export default class Undo {
         throw recover(new Error('object\'s object not found.'));
       }
 
-      await repository.deleteLikeByActorAndObject(actor, note);
+      await repository.deleteLikeByActorAndObject(actor, note, signal, recover);
     } else {
       throw recover(new Error('Unsupported object type. Expected Announce, Follow or Like.'));
     }

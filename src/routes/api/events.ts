@@ -17,9 +17,12 @@
 import OrderedCollectionPage from '../../lib/tuples/ordered_collection_page';
 import secure from '../_secure';
 
+const recovery = {};
+
 export const get = secure(async (request, response) => {
   const { repository } = response.app.locals;
-  const { user } = response.locals;
+  const { signal, user } = response.locals;
+  let resolved;
 
   if (!user) {
     response.sendStatus(403);
@@ -29,16 +32,27 @@ export const get = secure(async (request, response) => {
   response.setHeader('Content-Type', 'text/event-stream');
   response.setHeader('Transfer-Encoding', 'chunked');
 
-  const statuses = await user.select('inbox');
+  try {
+    const statuses = await user.select('inbox', signal, () => recovery);
 
-  const initialCollection = new OrderedCollectionPage({
-    orderedItems: (await Promise.all(statuses
-      .reverse()
-      .map(status => status.select('extension'))))
-      .filter(Boolean as unknown as <T>(t: T | null) => t is T)
-  });
+    const initialCollection = new OrderedCollectionPage({
+      orderedItems: (await Promise.all(statuses
+        .reverse()
+        .map(status => status.select('extension', signal, () => recovery))))
+        .filter(Boolean as unknown as <T>(t: T | null) => t is T)
+    });
 
-  const resolved = await initialCollection.toActivityStreams() as { [key: string]: unknown };
+    resolved = await initialCollection.toActivityStreams(
+      signal, () => recovery) as { [key: string]: unknown };
+  } catch (error) {
+    if (error == recovery) {
+      response.sendStatus(500);
+      return;
+    }
+
+    throw error;
+  }
+
   const subscribedChannel = repository.getInboxChannel(user);
 
   function listen(_publishedChannel: string, message: string) {

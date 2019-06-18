@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { AbortSignal } from 'abort-controller';
+import { AbortController, AbortSignal } from 'abort-controller';
 import { domainToASCII, domainToUnicode } from 'url';
 import {
   Note as ActivityStreams,
@@ -33,22 +33,27 @@ import Status from './status';
 import { encodeSegment } from './uri';
 import sanitizeHtml = require('sanitize-html');
 
-async function tryToResolveLocalNoteByURI(repository: Repository, uri: string, recover: (error: Error) => unknown) {
+async function tryToResolveLocalNoteByURI(
+  repository: Repository,
+  uri: string,
+  signal: AbortSignal,
+  recover: (error: Error & { name?: string }) => unknown
+) {
   const localPrefix = `https://${domainToASCII(repository.host)}/@`;
 
   if (uri.startsWith(localPrefix)) {
     const [username, id] = uri.slice(localPrefix.length).split('/', 2);
-    const note = await repository.selectNoteById(id);
+    const note = await repository.selectNoteById(id, signal, recover);
     if (!note) {
       throw recover(new Error('Note not found.'));
     }
 
-    const status = await note.select('status');
+    const status = await note.select('status', signal, recover);
     if (!status) {
       throw recover(new Error('status not found.'));
     }
 
-    const actor = await status.select('actor');
+    const actor = await status.select('actor', signal, recover);
     if (!actor || username != actor.username) {
       throw recover(new Error('actor mismatches.'));
     }
@@ -215,7 +220,10 @@ export default class Note extends Relation<Properties, References> {
   readonly hashtags?: Reference<Hashtag[]>;
   readonly mentions?: Reference<Mention[]>;
 
-  async toActivityStreams(recover: (error: Error) => unknown): Promise<ActivityStreams> {
+  async toActivityStreams(
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ): Promise<ActivityStreams> {
     const [
       [published, [attributedToActor, attributedTo]],
       attachment,
@@ -223,43 +231,43 @@ export default class Note extends Relation<Properties, References> {
       mentions,
       inReplyTo
     ] = await Promise.all([
-      this.select('status').then(status => {
+      this.select('status', signal, recover).then(status => {
         if (!status) {
           throw recover(new Error('status not found.'));
         }
 
         return Promise.all([
           status.published,
-          status.select('actor').then(actor => {
+          status.select('actor', signal, recover).then(actor => {
             if (!actor) {
               throw recover(new Error('status\'s actor not found.'));
             }
 
-            return Promise.all([actor, actor.getUri(recover)]);
+            return Promise.all([actor, actor.getUri(signal, recover)]);
           })
         ]);
       }),
-      this.select('attachments').then(array => {
+      this.select('attachments', signal, recover).then(array => {
         if (!array) {
           throw new Error('status\'s attachments cannot be fetched.');
         }
 
         return Promise.all(array.map(element => element.toActivityStreams()));
       }),
-      this.select('hashtags').then(array =>
+      this.select('hashtags', signal, recover).then(array =>
         Promise.all(array.map(element => element.toActivityStreams()))),
-      this.select('mentions').then(array =>
+      this.select('mentions', signal, recover).then(array =>
         Promise.all(array.map(element =>
-          element.toActivityStreams(() => mentionToActivityStramsFailed).catch(error => {
+          element.toActivityStreams(signal, () => mentionToActivityStramsFailed).catch(error => {
             if (error == mentionToActivityStramsFailed) {
               return null;
             }
 
             throw error;
           })))),
-      this.inReplyToId ? this.repository.selectStatusById(this.inReplyToId).then(async status => {
+      this.inReplyToId ? this.repository.selectStatusById(this.inReplyToId, signal, recover).then(async status => {
         if (status) {
-          return status.getUri(() => statusUriUnresolved).catch(error => {
+          return status.getUri(signal, () => statusUriUnresolved).catch(error => {
             if (error == statusUriUnresolved) {
               return null;
             }
@@ -272,7 +280,7 @@ export default class Note extends Relation<Properties, References> {
           return null;
         }
 
-        const uri = await this.repository.selectURIById(this.inReplyToId);
+        const uri = await this.repository.selectURIById(this.inReplyToId, signal, recover);
         return uri && uri.uri;
       }) : null,
     ]);
@@ -311,7 +319,10 @@ export default class Note extends Relation<Properties, References> {
     attachments,
     hashtags,
     mentions
-  }: Seed, recover: (error: Error) => unknown) {
+  }: Seed, signal: AbortSignal, recover: (error: Error & {
+    name?: string;
+    [conflict]?: boolean;
+  }) => unknown) {
     const seed = {
       status,
       inReplyTo,
@@ -323,23 +334,31 @@ export default class Note extends Relation<Properties, References> {
     };
 
     validate(seed, recover);
-    const note = await repository.insertNote(seed, recover);
+    const note = await repository.insertNote(seed, signal, recover);
+    const controller = new AbortController;
 
-    const insertedStatus = await note.select('status');
+    const insertedStatus = await note.select('status', controller.signal, recover);
     if (!insertedStatus) {
       throw new Error('status not inserted.');
     }
 
-    await postStatus(repository, insertedStatus, recover);
+    await postStatus(repository, insertedStatus, controller.signal, recover);
 
     return note;
   }
 
-  static async createFromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, givenAttributedTo: Actor | null, signal: AbortSignal, recover: (error: Error & {
-    [conflict]?: boolean;
-    [temporaryError]?: boolean;
-    [unexpectedType]?: boolean;
-  }) => unknown) {
+  static async createFromParsedActivityStreams(
+    repository: Repository,
+    object: ParsedActivityStreams,
+    givenAttributedTo: Actor | null,
+    signal: AbortSignal,
+    recover: (error: Error & {
+      name?: string;
+      [conflict]?: boolean;
+      [temporaryError]?: boolean;
+      [unexpectedType]?: boolean;
+    }) => unknown
+  ) {
     const type = await object.getType(signal, recover);
     if (!type.has('Note')) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Note.'), { [unexpectedType]: true }));
@@ -385,7 +404,7 @@ export default class Note extends Relation<Properties, References> {
           return [null, null];
         }
 
-        const note = await tryToResolveLocalNoteByURI(repository, uri, () => noteNotFound).catch(error => {
+        const note = await tryToResolveLocalNoteByURI(repository, uri, signal, () => noteNotFound).catch(error => {
           if (error == noteNotFound) {
             return null;
           }
@@ -446,20 +465,32 @@ export default class Note extends Relation<Properties, References> {
         id: inReplyToId,
         uri: inReplyToUri
       } as any
-    }, recover);
+    }, signal, recover);
   }
 
-  static async fromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, givenAttributedTo: Actor | null, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+  static async fromParsedActivityStreams(
+    repository: Repository,
+    object: ParsedActivityStreams,
+    givenAttributedTo: Actor | null,
+    signal: AbortSignal,
+    recover: (error: Error & {
+      name?: string;
+      [temporaryError]?: boolean;
+    }) => unknown
+  ) {
     const uri = await object.getId(recover);
     if (typeof uri == 'string') {
-      const localNote = await tryToResolveLocalNoteByURI(repository, uri, recover);
+      const localNote = await tryToResolveLocalNoteByURI(
+        repository, uri, signal, recover);
       if (localNote) {
         return localNote;
       }
 
-      const uriEntity = await repository.selectAllocatedURI(uri);
+      const uriEntity = await repository.selectAllocatedURI(
+        uri, signal, recover);
       if (uriEntity) {
-        const remoteNote = await repository.selectNoteById(uriEntity.id);
+        const remoteNote = await repository.selectNoteById(
+          uriEntity.id, signal, recover);
         if (remoteNote) {
           return remoteNote;
         }
@@ -486,9 +517,11 @@ export default class Note extends Relation<Properties, References> {
       }
 
       if (typeof uri == 'string') {
-        const uriEntity = await repository.selectAllocatedURI(uri);
+        const uriEntity = await repository.selectAllocatedURI(
+          uri, signal, recover);
         if (uriEntity) {
-          const remoteNote = await repository.selectNoteById(uriEntity.id);
+          const remoteNote = await repository.selectNoteById(
+            uriEntity.id, signal, recover);
           if (remoteNote) {
             return remoteNote;
           }

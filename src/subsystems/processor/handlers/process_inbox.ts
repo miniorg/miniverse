@@ -43,7 +43,7 @@ export default async function(repository: Repository, { data }: Job<Data>, signa
 
   const key = new Key({ owner, repository });
 
-  if (await key.verifySignature(signature, recover)) {
+  if (await key.verifySignature(signature, signal, recover)) {
     const { host } = new URL(signature.keyId);
     const normalizedHost = normalizeHost(host);
     const parsed = JSON.parse(body);

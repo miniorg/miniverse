@@ -46,35 +46,40 @@ export default class Like extends Relation<Properties, References> {
   readonly object?: Reference<Note | null>;
   readonly objectId!: string;
 
-  async toActivityStreams(recover: (error: Error) => unknown): Promise<ActivityStreams> {
-    const note = await this.select('object');
+  async toActivityStreams(
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ): Promise<ActivityStreams> {
+    const note = await this.select('object', signal, recover);
     if (!note) {
       throw recover(new Error('object not found.'));
     }
 
-    const status = await note.select('status');
+    const status = await note.select('status', signal, recover);
     if (!status) {
       throw recover(new Error('object\'s status not found.'));
     }
 
-    return { type: 'Like', object: await status.getUri(recover) };
+    return { type: 'Like', object: await status.getUri(signal, recover) };
   }
 
-  static async create(repository: Repository, seed: Seed, recover: (error: Error) => unknown) {
-    const [recipient, like] = await Promise.all([
-      seed.object.select('status').then(status => {
-        if (!status) {
-          throw recover(new Error('object\'s status not found.'));
-        }
+  static async create(
+    repository: Repository,
+    seed: Seed,
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ) {
+    const status = await seed.object.select('status', signal, recover);
+    if (!status) {
+      throw recover(new Error('object\'s status not found.'));
+    }
 
-        return status.select('actor');
-      }),
-      repository.insertLike(seed, recover)
-    ]);
-
+    const recipient = await status.select('actor', signal, recover);
     if (!recipient) {
       throw recover(new Error('object\'s actor not found.'));
     }
+
+    const like = await repository.insertLike(seed, signal, recover);
 
     if (!seed.actor.host && recipient.host) {
       await repository.queue.add({ type: 'postLike', id: like.id }, { timeout: 16384 });
@@ -83,10 +88,17 @@ export default class Like extends Relation<Properties, References> {
     return like;
   }
 
-  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor, signal: AbortSignal, recover: (error: Error & {
-    [temporaryError]?: boolean;
-    [unexpectedType]?: boolean;
-  }) => unknown) {
+  static async createFromParsedActivityStreams(
+    repository: Repository,
+    activity: ParsedActivityStreams,
+    actor: Actor,
+    signal: AbortSignal,
+    recover: (error: Error & {
+      name?: string;
+      [temporaryError]?: boolean;
+      [unexpectedType]?: boolean;
+    }) => unknown
+  ) {
     const type = await activity.getType(signal, recover);
     if (!type.has('Like')) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Like.'), { [unexpectedType]: true }));
@@ -102,7 +114,7 @@ export default class Like extends Relation<Properties, References> {
       throw recover(new Error('object not found.'));
     }
 
-    return this.create(repository, { actor, object: note }, recover);
+    return this.create(repository, { actor, object: note }, signal, recover);
   }
 }
 

@@ -29,11 +29,13 @@ const { signal } = new AbortController;
 
 describe('createFromParsedActivityStreams', () => {
   test('undoes announce activity', async () => {
+    const recover = jest.fn();
+
     const announce = await fabricateAnnounce(
       { status: { uri: 'https://NoTe.xn--kgbechtv/' } });
 
-    const status = unwrap(await announce.select('status'));
-    const actor = unwrap(await status.select('actor'));
+    const status = unwrap(await announce.select('status', signal, recover));
+    const actor = unwrap(await status.select('actor', signal, recover));
 
     const activity = new ParsedActivityStreams(repository, {
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -41,15 +43,17 @@ describe('createFromParsedActivityStreams', () => {
       object: { type: 'Announce', id: 'https://NoTe.xn--kgbechtv/' }
     }, AnyHost);
 
-    const recover = jest.fn();
-
     await Undo.createFromParsedActivityStreams(repository, activity, actor, signal, recover);
 
+    await expect(repository.selectStatusById(status.id, signal, recover))
+      .resolves.toBe(null);
+
     expect(recover).not.toHaveBeenCalled();
-    await expect(repository.selectStatusById(status.id)).resolves.toBe(null);
   });
 
   test('undoes follow activity', async () => {
+    const recover = jest.fn();
+
     const activity = new ParsedActivityStreams(repository, {
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'Undo',
@@ -61,32 +65,34 @@ describe('createFromParsedActivityStreams', () => {
 
     const [actor, object] = await Promise.all([
       fabricateLocalAccount()
-        .then(account => account.select('actor'))
+        .then(account => account.select('actor', signal, recover))
         .then(unwrap),
       fabricateLocalAccount({ actor: { username: '被行動者' } })
-        .then(account => account.select('actor'))
+        .then(account => account.select('actor', signal, recover))
         .then(unwrap)
     ]);
 
     await fabricateFollow({ actor, object });
 
-    const recover = jest.fn();
-
     await Undo.createFromParsedActivityStreams(repository, activity, actor, signal, recover);
 
-    expect(recover).not.toHaveBeenCalled();
-
-    await expect(repository.selectActorsByFolloweeId(object.id))
+    await expect(repository.selectActorsByFolloweeId(object.id, signal, recover))
       .resolves
       .toEqual([]);
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
   test('rejects if type is unknown', async () => {
+    const recover = jest.fn();
+
     const announce = await fabricateAnnounce(
       { status: { uri: 'https://NoTe.xn--kgbechtv/' } });
 
-    const status = unwrap(await announce.select('status'));
-    const actor = unwrap(await status.select('actor'));
+    const status = unwrap(await announce.select('status', signal, recover));
+    const actor = unwrap(await status.select('actor', signal, recover));
+
+    expect(recover).not.toHaveBeenCalled();
 
     const activity = new ParsedActivityStreams(repository, {
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -115,14 +121,19 @@ describe('createFromParsedActivityStreams', () => {
       fabricateLocalAccount(),
       fabricateLocalAccount({ actor: { username: '被行動者' } })
     ]);
-    const actorActor = unwrap(await actor.select('actor'));
+    const recover = jest.fn();
+    const actorActor = unwrap(await actor.select('actor', signal, recover));
     const recovery = {};
+
+    expect(recover).not.toHaveBeenCalled();
 
     await expect(Undo.createFromParsedActivityStreams(repository, activity, actorActor, signal, () => recovery))
       .rejects.toBe(recovery);
   });
 
   test('resolves with undo', async () => {
+    const recover = jest.fn();
+
     const activity = new ParsedActivityStreams(repository, {
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'Undo',
@@ -135,10 +146,9 @@ describe('createFromParsedActivityStreams', () => {
     const objectAccount =
       await fabricateLocalAccount({ actor: { username: '被行動者' } });
 
-    const object = unwrap(await objectAccount.select('actor'));
+    const object = unwrap(await objectAccount.select('actor', signal, recover));
     const follow = await fabricateFollow({ object });
-    const actor = unwrap(await follow.select('actor'));
-    const recover = jest.fn();
+    const actor = unwrap(await follow.select('actor', signal, recover));
 
     await expect(Undo.createFromParsedActivityStreams(repository, activity, actor, signal, recover))
       .resolves.toBeInstanceOf(Undo);

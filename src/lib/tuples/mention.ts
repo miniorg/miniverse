@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { Mention as ActivityStreams } from '../generated_activitystreams';
 import Actor from './actor';
 import Relation, { Reference } from './relation';
@@ -28,13 +29,16 @@ export default class Mention extends Relation<Properties, References> {
   readonly href?: Reference<Actor | null>;
   readonly hrefId!: string;
 
-  async toActivityStreams(recover: (error: Error) => unknown): Promise<ActivityStreams> {
-    const actor = await this.select('href');
+  async toActivityStreams(
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ): Promise<ActivityStreams> {
+    const actor = await this.select('href', signal, recover);
     if (!actor) {
       throw recover(new Error('href not found.'));
     }
 
-    const href = await actor.getUri(recover);
+    const href = await actor.getUri(signal, recover);
     if (!href) {
       throw recover(new Error('href\'s uri not found.'));
     }

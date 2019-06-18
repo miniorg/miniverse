@@ -26,31 +26,31 @@ interface Data {
 }
 
 export default async function (repository: Repository, { data }: Job<Data>, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-  const follow = await repository.selectFollowIncludingActorAndObjectById(data.id);
+  const follow = await repository.selectFollowIncludingActorAndObjectById(data.id, signal, recover);
 
   if (!follow) {
     throw recover(new Error('Follow not found.'));
   }
 
   const [sender, inboxURI] = await Promise.all([
-    follow.select('actor').then(actor => {
+    follow.select('actor', signal, recover).then(actor => {
       if (!actor) {
         throw new Error('actor not found.');
       }
 
-      return actor.select('account');
+      return actor.select('account', signal, recover);
     }),
-    follow.select('object').then(async actor => {
+    follow.select('object', signal, recover).then(async actor => {
       if (!actor) {
         throw new Error('object not found.');
       }
 
-      const account = await actor.select('account');
+      const account = await actor.select('account', signal, recover);
       if (!(account instanceof RemoteAccount)) {
         throw recover(new Error('object\'s account invalid'));
       }
 
-      return account.select('inboxURI');
+      return account.select('inboxURI', signal, recover);
     })
   ]);
 

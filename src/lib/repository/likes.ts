@@ -14,50 +14,63 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import Actor from '../tuples/actor';
 import Like, { Seed } from '../tuples/like';
 import Note from '../tuples/note';
 import Repository from '.';
 
 export default class {
-  async deleteLikeByActorAndObject(this: Repository, actor: Actor, object: Note) {
+  async deleteLikeByActorAndObject(
+    this: Repository,
+    actor: Actor,
+    object: Note,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) {
     await this.pg.query({
       name: 'deleteLikeByActorAndObject',
       text: 'DELETE FROM likes WHERE actor_id = $1 AND object_id = $2',
       values: [actor.id, object.id]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
   }
 
   async insertLike(
     this: Repository,
     { actor, object }: Seed,
-    recover: (error: Error) => unknown
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
   ) {
-    let result;
-
-    try {
-      result = await this.pg.query({
-        name: 'insertLike',
-        text: 'INSERT INTO likes (actor_id, object_id) VALUES ($1, $2) RETURNING id',
-        values: [actor.id, object.id]
-      });
-    } catch (error) {
-      if (error.code == '23505') {
-        throw recover(new Error('Already liked.'));
+    const { rows: [{ id }] } = await this.pg.query({
+      name: 'insertLike',
+      text: 'INSERT INTO likes (actor_id, object_id) VALUES ($1, $2) RETURNING id',
+      values: [actor.id, object.id]
+    }, signal, error => {
+      if (error.name == 'AbortError') {
+        return recover(error);
       }
 
-      throw error;
-    }
+      if (error.code == '23505') {
+        return recover(new Error('Already liked.'));
+      }
 
-    return new Like({ repository: this, id: result.rows[0].id, actor, object });
+      return error;
+    });
+
+    return new Like({ repository: this, id, actor, object });
   }
 
-  async selectLikeById(this: Repository, id: string): Promise<Like | null> {
+  async selectLikeById(
+    this: Repository,
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ): Promise<Like | null> {
     const { rows } = await this.pg.query({
       name: 'selectLikeById',
       text: 'SELECT * FROM likes WHERE id = $1',
       values: [id]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     return rows[0] ? new Like({
       repository: this,

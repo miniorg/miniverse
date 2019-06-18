@@ -26,40 +26,40 @@ interface Data {
 }
 
 export default async function(repository: Repository, { data }: Job<Data>, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
-  const like = await repository.selectLikeById(data.id);
+  const like = await repository.selectLikeById(data.id, signal, recover);
   if (!like) {
     throw recover(new Error('Like not found.'));
   }
 
   const [sender, inboxURI] = await Promise.all([
-    like.select('actor').then(actor => {
+    like.select('actor', signal, recover).then(actor => {
       if (!actor) {
         throw recover(new Error('actor not found.'));
       }
 
-      return actor.select('account');
+      return actor.select('account', signal, recover);
     }),
-    like.select('object').then(async note => {
+    like.select('object', signal, recover).then(async note => {
       if (!note) {
         throw recover(new Error('object not found.'));
       }
 
-      const status = await note.select('status');
+      const status = await note.select('status', signal, recover);
       if (!status) {
         throw recover(new Error('object\'s status not found.'));
       }
 
-      const actor = await status.select('actor');
+      const actor = await status.select('actor', signal, recover);
       if (!actor) {
         throw recover(new Error('object\'s actor not found.'));
       }
 
-      const account = await actor.select('account');
+      const account = await actor.select('account', signal, recover);
       if (!(account instanceof RemoteAccount)) {
         throw recover(new Error('object\'s actor\'s account invalid.'));
       }
 
-      return account.select('inboxURI');
+      return account.select('inboxURI', signal, recover);
     })
   ]);
 

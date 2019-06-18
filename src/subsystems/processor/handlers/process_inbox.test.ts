@@ -27,6 +27,8 @@ import processInbox from './process_inbox';
 import { createPublicKey } from 'crypto';
 import nock = require('nock');
 
+const { signal } = new AbortController;
+
 const signature = {
   scheme: 'Signature',
   params: {
@@ -76,10 +78,13 @@ ewIDAQAB
   await processInbox(repository, await repository.queue.add({
     signature,
     body: `{ "type": "Follow", "object": "https://ObJeCt.إختبار/" }`
-  }), (new AbortController).signal, recover);
+  }), signal, recover);
   expect(recover).not.toHaveBeenCalled();
 
-  const actors = await repository.selectActorsByFolloweeId(object.id);
+  const actors =
+    await repository.selectActorsByFolloweeId(object.id, signal, recover);
+
+  expect(recover).not.toHaveBeenCalled();
   expect(actors[0]).toHaveProperty('id', actor.id);
 });
 
@@ -106,15 +111,17 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
   await processInbox(repository, await repository.queue.add({
     signature,
     body: '{ "type": "Follow", "object": "https://ObJeCt.إختبار/" }',
-  }), (new AbortController).signal, recover);
+  }), signal, recover);
 
-  expect(recover).not.toHaveBeenCalled();
-  await expect(repository.selectActorsByFolloweeId(object.id))
+  await expect(repository.selectActorsByFolloweeId(object.id, signal, recover))
     .resolves
     .toEqual([]);
+
+  expect(recover).not.toHaveBeenCalled();
 });
 
 test('rejects without [temporaryError] if all rejections are not temporary', async () => {
+  const recover = jest.fn();
   const recovery = {};
   const [actor, object] = await Promise.all([
     fabricateRemoteAccount({
@@ -131,11 +138,13 @@ ewIDAQAB
 -----END PUBLIC KEY-----
 `).export({ format: 'der', type: 'pkcs1' }),
       }
-    }).then(account => account.select('actor')).then(unwrap),
+    }).then(account => account.select('actor', signal, recover)).then(unwrap),
     fabricateLocalAccount({ actor: { username: 'oBjEcT' } })
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap)
   ]);
+
+  expect(recover).not.toHaveBeenCalled();
 
   await fabricateFollow({ actor, object });
 
@@ -145,7 +154,7 @@ ewIDAQAB
   { "type": "Follow", "object": "https://xn--kgbechtv/@oBjEcT" },
   { "type": "Follow", "object": "https://xn--kgbechtv/@oBjEcT" }
 ]`
-  }), (new AbortController).signal, error => {
+  }), signal, error => {
     expect(error[temporaryError]).toBe(false);
     return recovery;
   })).rejects.toBe(recovery);
@@ -176,7 +185,7 @@ ewIDAQAB
     await expect(processInbox(repository, await repository.queue.add({
       signature,
       body: `["https://uNrEaChAbLe.إختبار/", "https://uNrEaChAbLe.إختبار/"]`,
-    }), (new AbortController).signal, error => {
+    }), signal, error => {
       expect(error[temporaryError]).toBe(true);
       return recovery;
     })).rejects.toBe(recovery);

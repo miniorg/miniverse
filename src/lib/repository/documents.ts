@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import DirtyDocument from '../tuples/dirty_document';
 import Document from '../tuples/document';
 import URI from '../tuples/uri';
@@ -32,56 +33,67 @@ export default class {
     this: Repository,
     dirty: DirtyDocument,
     url: string,
-    recover: (error: Error & { [conflict]: boolean }) => unknown
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string; [conflict]?: boolean }) => unknown
   ) {
-    let result;
+    const { rows: [{ insert_document_with_url: id }] } = await this.pg.query({
+      name: 'insertDocument',
+      text: 'SELECT insert_document_with_url($1, $2)',
+      values: [dirty.id, url]
+    }, signal, error => {
+      if (error.name == 'AbortError') {
+        return recover(error);
+      }
 
-    try {
-      result = await this.pg.query({
-        name: 'insertDocument',
-        text: 'SELECT insert_document_with_url($1, $2)',
-        values: [dirty.id, url]
-      });
-    } catch (error) {
       if (error.code == '23502') {
-        throw recover(Object.assign(
+        return recover(Object.assign(
           new Error('uri conflicts.'),
           { [conflict]: true }));
       }
 
-      throw error;
-    }
+      return error;
+    });
 
     return new Document({
       repository: this,
-      id: result.rows[0].insert_document_with_url,
+      id,
       uuid: dirty.uuid,
       format: dirty.format,
       url: new URI({
         repository: this,
-        id: result.rows[0].insert_document_with_url,
+        id,
         uri: url,
         allocated: true
       }),
     });
   }
 
-  async selectDocumentById(this: Repository, id: string): Promise<Document | null> {
+  async selectDocumentById(
+    this: Repository,
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) {
     const { rows } = await this.pg.query({
       name: 'selectDocumentById',
       text: 'SELECT * FROM documents WHERE id = $1',
       values: [id]
-    });
+    }, signal, recover);
 
     return rows[0] ? parse.call(this, rows[0]) : null;
   }
 
-  async selectDocumentsByAttachedNoteId(this: Repository, id: string) {
+  async selectDocumentsByAttachedNoteId(
+    this: Repository,
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) {
     const { rows } = await this.pg.query({
       name: 'selectDocumentsByAttachedNoteId',
       text: 'SELECT * FROM documents JOIN attachments ON documents.id = attachments.document_id WHERE attachments.note_id = $1',
       values: [id]
-    });
+    }, signal, recover);
 
     return (rows as any[]).map(parse, this);
   }

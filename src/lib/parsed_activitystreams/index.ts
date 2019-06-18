@@ -258,12 +258,13 @@ export default class ParsedActivityStreams {
   }
 
   async act(actor: Actor, signal: AbortSignal, recover: (error: Error & {
+    name?: string;
     [temporaryError]?: boolean;
     [unexpectedType]?: boolean;
   }) => unknown) {
     const uri = await this.getId(recover);
     if (typeof uri == 'string') {
-      const entity = await this.repository.selectAllocatedURI(uri);
+      const entity = await this.repository.selectAllocatedURI(uri, signal, recover);
       if (entity) {
         return uri;
       }
@@ -271,7 +272,7 @@ export default class ParsedActivityStreams {
 
     const [actualActor, expectedActor] = await Promise.all([
       this.getActor(signal, recover).then(actual => actual && actual.getId(recover)),
-      actor.getUri(recover)
+      actor.getUri(signal, recover)
     ]);
     if (actualActor && actualActor != expectedActor) {
       throw recover(new Error('Unexpected actor.'));
@@ -336,19 +337,19 @@ export default class ParsedActivityStreams {
         return null;
       }
 
-      created = await created.select('object');
+      created = await created.select('object', signal, recover);
     }
 
     if (!created) {
       return null;
     }
 
-    created = await created.select('status');
+    created = await created.select('status', signal, recover);
     if (!created) {
       return null;
     }
 
-    return created.getUri(recover);
+    return created.getUri(signal, recover);
   }
 }
 

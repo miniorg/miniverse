@@ -29,24 +29,24 @@ interface Data {
 
 export default async function(repository: Repository, { data }: Job<Data>, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
   const [[activity, sender], inboxURI] = await Promise.all([
-    repository.selectStatusIncludingExtensionById(data.statusId).then(status => {
+    repository.selectStatusIncludingExtensionById(data.statusId, signal, recover).then(status => {
       if (!status) {
         throw recover(new Error('Status not found.'));
       }
 
       return Promise.all([
-        status.select('extension').then(object =>
+        status.select('extension', signal, recover).then(object =>
           object instanceof Note ? new Create({ repository, object }) : object),
-        status.select('actor').then(actor => {
+        status.select('actor', signal, recover).then(actor => {
           if (!actor) {
             throw recover(new Error('actor not found.'));
           }
 
-          return actor.select('account');
+          return actor.select('account', signal, recover);
         })
       ]);
     }),
-    repository.selectURIById(data.inboxURIId)
+    repository.selectURIById(data.inboxURIId, signal, recover)
   ]);
 
   if (!activity) {

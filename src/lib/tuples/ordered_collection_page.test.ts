@@ -14,9 +14,50 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import OrderedCollectionPage from './ordered_collection_page';
 
 describe('toActivityStreams', () => {
+  const { signal } = new AbortController;
+
+  test('catches an error which is not AbortError', async () => {
+    const collection = new OrderedCollectionPage({
+      orderedItems: [
+        {
+          async toActivityStreams(_signal, recover) {
+            throw recover(new Error);
+          }
+        }
+      ]
+    });
+
+    const recover = jest.fn();
+
+    await expect(collection.toActivityStreams(signal, recover)).resolves.toEqual({
+      type: 'OrderedCollectionPage',
+      orderedItems: []
+    })
+
+    expect(recover).not.toHaveBeenCalled();
+  });
+
+  test('propagates AbortError', async () => {
+    const collection = new OrderedCollectionPage({
+      orderedItems: [
+        {
+          async toActivityStreams(_signal, recover) {
+            throw recover(Object.assign(new Error, { name: 'AbortError' }));
+          }
+        }
+      ]
+    });
+
+    const recovery = {};
+
+    await expect(collection.toActivityStreams(signal, () => recovery))
+      .rejects.toBe(recovery);
+  });
+
   test('returns ActivityStreams representation', async () => {
     const item = {
       type: 'Announce',
@@ -35,7 +76,8 @@ describe('toActivityStreams', () => {
       ]
     });
 
-    const body = collection.toActivityStreams();
+    const recover = jest.fn();
+    const body = collection.toActivityStreams(signal, recover);
 
     await Promise.all([
       expect(body).resolves.toHaveProperty('type', 'OrderedCollectionPage'),

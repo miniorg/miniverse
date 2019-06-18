@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { AbortSignal } from 'abort-controller';
+import { AbortController, AbortSignal } from 'abort-controller';
 import { Document as ActivityStreams } from '../generated_activitystreams';
 import generateUuid from '../generate_uuid';
 import ParsedActivityStreams from '../parsed_activitystreams';
@@ -50,14 +50,24 @@ export default class Document extends Relation<Properties, References> {
     };
   }
 
-  static async create(repository: Repository, url: string, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+  static async create(
+    repository: Repository,
+    url: string,
+    signal: AbortSignal,
+    recover: (error: Error & {
+      name?: string;
+      [temporaryError]?: boolean;
+    }) => unknown
+  ) {
     const [uuid, { data, info: { format } }] = await Promise.all([
       generateUuid(),
       fetch(repository, url, { signal }, recover).then(({ body }) =>
         body.pipe(sharp()).toBuffer({ resolveWithObject: true }))
     ]);
 
-    const dirty = await repository.insertDirtyDocument(uuid, format);
+    const controller = new AbortController;
+    const dirty =
+      await repository.insertDirtyDocument(uuid, format, signal, recover);
 
     try {
       await repository.s3.service.upload({
@@ -67,22 +77,29 @@ export default class Document extends Relation<Properties, References> {
         Key: `${repository.s3.keyPrefix}${uuid}.${format}`
       }).promise();
 
-      return await repository.insertDocument(dirty, url, recover);
+      return await repository.insertDocument(
+        dirty, url, controller.signal, recover);
     } catch (error) {
       await repository.s3.service.deleteObject({
         Bucket: repository.s3.bucket,
         Key: `${repository.s3.keyPrefix}${uuid}.${format}`
       }).promise();
 
-      await repository.deleteDirtyDocument(dirty);
+      await repository.deleteDirtyDocument(dirty, controller.signal, recover);
       throw error;
     }
   }
 
-  static async fromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, signal: AbortSignal, recover: (error: Error & {
-    [temporaryError]?: boolean;
-    [unexpectedType]?: boolean;
-  }) => unknown) {
+  static async fromParsedActivityStreams(
+    repository: Repository,
+    object: ParsedActivityStreams,
+    signal: AbortSignal,
+    recover: (error: Error & {
+      name?: string;
+      [temporaryError]?: boolean;
+      [unexpectedType]?: boolean;
+    }) => unknown
+  ) {
     const type = await object.getType(signal, recover);
     if (!type.has('Document')) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Document.'), { [unexpectedType]: true }));
@@ -103,10 +120,10 @@ export default class Document extends Relation<Properties, References> {
       throw recover(new Error('Unsupported url\'s href type. Expected string.'));
     }
 
-    const urlEntity = await repository.selectAllocatedURI(href);
+    const urlEntity = await repository.selectAllocatedURI(href, signal, recover);
 
     if (urlEntity) {
-      return repository.selectDocumentById(urlEntity.id);
+      return repository.selectDocumentById(urlEntity.id, signal, recover);
     }
 
     return this.create(repository, href, signal, recover);

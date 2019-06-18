@@ -14,7 +14,6 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Pool } from 'pg';
 import S3 = require('aws-sdk/clients/s3');
 
 if (!process.env.AWS_S3_BUCKET) {
@@ -48,7 +47,10 @@ export default {
   },
   fingerHost: process.env.FINGER_HOST,
   host: process.env.HOST,
-  pg: new Pool,
+  pg: {
+    host: process.env.PGHOST || 'localhost',
+    port: process.env.PGPORT && parseInt(process.env.PGPORT) || 5432
+  },
   redis: {
     prefix: process.env.REDIS_PREFIX,
     url: process.env.REDIS_URL

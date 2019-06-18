@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Pool } from 'pg';
+import { AbortController } from 'abort-controller';
 import Repository from '../repository';
 import { unwrap } from './types';
 import S3 = require('aws-sdk/clients/s3');
@@ -30,7 +30,11 @@ const testRepository = new Repository({
   content: { frame: {}, image: {}, script: { sources: [] } },
   fingerHost: 'FiNgEr.إختبار',
   host: 'إختبار',
-  pg: new Pool({ database }),
+  pg: {
+    database,
+    host: process.env.PGHOST || 'localhost',
+    port: process.env.PGPORT && parseInt(process.env.PGPORT) || 5432
+  },
   s3: {
     service: new S3({
       endpoint: process.env.AWS_ENDPOINT,
@@ -53,19 +57,19 @@ const testRepository = new Repository({
 
 const { pg, redis, s3 } = testRepository;
 
-const asyncTruncateQuery =
-  pg.query('SELECT tablename FROM pg_tables WHERE schemaname = \'public\'')
-    .then(({ rows }) => 'TRUNCATE ' +
-      (rows as { tablename: string }[]).map(({ tablename }) => tablename).join());
+const asyncTruncateQuery: Promise<{ rows: { tablename: string }[] }> = pg.query(
+  'SELECT tablename FROM pg_tables WHERE schemaname = \'public\'',
+  (new AbortController).signal,
+  error => error
+);
 
-afterAll(() => {
-  redis.client.disconnect();
-  redis.subscriber.disconnect();
-  return testRepository.pg.end();
-});
+afterAll(() => testRepository.end());
 
 afterEach(() => Promise.all([
-  asyncTruncateQuery.then(pg.query.bind(pg)),
+  asyncTruncateQuery.then(({ rows }) => pg.query(
+    'TRUNCATE ' + rows.map(({ tablename }) => tablename).join(),
+    (new AbortController).signal,
+    error => error)),
   s3.service
     .listObjects({ Bucket: s3.bucket })
     .promise()
@@ -75,7 +79,7 @@ afterEach(() => Promise.all([
       .deleteObjects({ Bucket: s3.bucket, Delete: { Objects } })
       .promise()),
 
-  redis.client.keys(`${testRepository.redis.prefix}*`).then(keys =>
+  redis.client.keys(`${redis.prefix}*`).then(keys =>
     keys.length && redis.client.del(...keys)),
 ]));
 

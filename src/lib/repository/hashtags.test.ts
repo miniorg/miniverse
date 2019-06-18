@@ -14,11 +14,15 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import { fabricateNote } from '../test/fabricator';
 import repository from '../test/repository';
 
 test('inserts note and allows to query its hashtags', async () => {
   const { id } = await fabricateNote({ hashtags: ['名前'] });
-  const hashtags = await repository.selectHashtagsByNoteId(id);
+  const recover = jest.fn();
+  const { signal } = new AbortController;
+  const hashtags = await repository.selectHashtagsByNoteId(id, signal, recover);
+  expect(recover).not.toHaveBeenCalled();
   expect(hashtags[0]).toHaveProperty('name', '名前');
 });

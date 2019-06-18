@@ -14,18 +14,17 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Pool } from 'pg';
 import Repository from '.';
 import S3 = require('aws-sdk/clients/s3');
 
-test('defaults finger host to host', () => {
+test('defaults finger host to host', async () => {
   const repository = new Repository({
     analytics: {},
     captcha: { secret: '', site: '', verifier: '' },
     console,
     content: { frame: {}, image: {}, script: { sources: [] } },
     host: 'إختبار',
-    pg: new Pool,
+    pg: { host: 'localhost', port: 5432 },
     redis: {},
     s3: { service: new S3, bucket: '', keyPrefix: '', urlPrefix: '' }
   });
@@ -33,12 +32,11 @@ test('defaults finger host to host', () => {
   try {
     expect(repository).toHaveProperty('fingerHost', 'إختبار');
   } finally {
-    repository.redis.client.disconnect();
-    repository.redis.subscriber.disconnect();
+    await repository.end();
   }
 });
 
-test('allows to override finger host', () => {
+test('allows to override finger host', async () => {
   const repository = new Repository({
     analytics: {},
     captcha: { secret: '', site: '', verifier: '' },
@@ -46,7 +44,7 @@ test('allows to override finger host', () => {
     content: { frame: {}, image: {}, script: { sources: [] } },
     fingerHost: 'إختبار',
     host: '',
-    pg: new Pool,
+    pg: { host: 'localhost', port: 5432 },
     redis: {},
     s3: { service: new S3, bucket: '', keyPrefix: '', urlPrefix: '' }
   });
@@ -54,7 +52,6 @@ test('allows to override finger host', () => {
   try {
     expect(repository).toHaveProperty('fingerHost', 'إختبار');
   } finally {
-    repository.redis.client.disconnect();
-    repository.redis.subscriber.disconnect();
+    await repository.end();
   }
 });

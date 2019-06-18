@@ -29,30 +29,30 @@ interface Data {
 export default async function(repository: Repository, { data }: Job<Data>, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
   const accept = new Accept({ objectId: data.objectId, repository });
 
-  const object = await accept.select('object');
+  const object = await accept.select('object', signal, recover);
   if (!object) {
     throw recover(new Error('object not found.'));
   }
 
   const [sender, inboxURI] = await Promise.all([
-    object.select('object').then(actor => {
+    object.select('object', signal, recover).then(actor => {
       if (actor) {
-        return actor.select('account');
+        return actor.select('account', signal, recover);
       }
 
       throw recover(new Error('object\'s object not found.'));
     }),
-    object.select('actor').then(async actor => {
+    object.select('actor', signal, recover).then(async actor => {
       if (!actor) {
         throw recover(new Error('object\'s actor not found.'));
       }
 
-      const account = await actor.select('account');
+      const account = await actor.select('account', signal, recover);
       if (!(account instanceof RemoteAccount)) {
         throw recover(new Error('object\'s actor\'s account invalid.'));
       }
 
-      return account.select('inboxURI');
+      return account.select('inboxURI', signal, recover);
     })
   ]);
 

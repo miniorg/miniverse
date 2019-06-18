@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import Actor from '../tuples/actor';
 import RemoteAccount, { Seed } from '../tuples/remote_account';
 import URI from '../tuples/uri';
@@ -35,7 +36,11 @@ function parse(this: Repository, { id, inbox_uri_id, key_uri_id, public_key_der 
 }
 
 export default class {
-  async insertRemoteAccount(this: Repository, { actor, uri, inbox, publicKey }: Seed, recover: (error: Error & { [conflict]: boolean }) => unknown) {
+  async insertRemoteAccount(
+    this: Repository, { actor, uri, inbox, publicKey }: Seed,
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string; [conflict]?: boolean }) => unknown
+  ) {
     const { rows } = await this.pg.query({
       name: 'insertRemoteAccount',
       text: 'SELECT * FROM insert_remote_account($1, $2, $3, $4, $5, $6, $7, $8) AS (id BIGINT, inbox_uri_id BIGINT, key_uri_id BIGINT)',
@@ -49,12 +54,16 @@ export default class {
         publicKey.uri,
         publicKey.publicKeyDer
       ]
-    }).catch(error => {
-      if (error.code == '23502') {
-        throw recover(Object.assign(new Error('URI conflicts'), { [conflict]: true }));
+    }, signal, error => {
+      if (error.name == 'AbortError') {
+        return recover(error);
       }
 
-      throw error;
+      if (error.code == '23502') {
+        return recover(Object.assign(new Error('URI conflicts'), { [conflict]: true }));
+      }
+
+      return error;
     });
 
     return new RemoteAccount({
@@ -89,22 +98,32 @@ export default class {
     });
   }
 
-  async selectRemoteAccountById(this: Repository, id: string): Promise<RemoteAccount | null> {
+  async selectRemoteAccountById(
+    this: Repository,
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ): Promise<RemoteAccount | null> {
     const { rows } = await this.pg.query({
       name: 'selectRemoteAccountById',
       text: 'SELECT * FROM remote_accounts WHERE id = $1',
       values: [id]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     return rows[0] ? new RemoteAccount(parse.call(this, rows[0])) : null;
   }
 
-  async selectRemoteAccountByKeyUri(this: Repository, uri: URI): Promise<RemoteAccount | null> {
+  async selectRemoteAccountByKeyUri(
+    this: Repository,
+    uri: URI,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ): Promise<RemoteAccount | null> {
     const { rows } = await this.pg.query({
       name: 'selectRemoteAccountByKeyUri',
       text: 'SELECT * FROM remote_accounts WHERE key_uri_id = $1',
       values: [uri.id]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     if (rows[0]) {
       return new RemoteAccount(Object.assign(parse.call(this, rows[0]), {

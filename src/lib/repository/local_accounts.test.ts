@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import { createPrivateKey } from 'crypto';
 import {
   fabricateCookie,
@@ -53,21 +54,36 @@ OyJRYe+sFKZ6lXqnwdWuTrxTNucFuhw+6BVyzNn6lI5cNXLr1reH
 -----END RSA PRIVATE KEY-----
 `).export({ format: 'der', type: 'pkcs1' });
 
+const { signal } = new AbortController;
+
 describe('selectLocalAccountByDigestOfCookie', () => {
-  test('resolves with null if not found', () => {
+  test('resolves with null if not found', async () => {
     const digest = Buffer.from([]);
-    return expect(repository.selectLocalAccountByDigestOfCookie(digest))
-      .resolves
-      .toBe(null);
+    const recover = jest.fn();
+
+    await expect(repository.selectLocalAccountByDigestOfCookie(
+      digest,
+      signal,
+      recover
+    )).resolves.toBe(null);
+
+    expect(recover).not.toHaveBeenCalled();
   });
 });
 
 describe('selectLocalAccountById', () => {
-  test('resolves with null if not found', () =>
-    expect(repository.selectLocalAccountById('0')).resolves.toBe(null));
+  test('resolves with null if not found', async () => {
+    const recover = jest.fn();
+
+    await expect(repository.selectLocalAccountById('0', signal, recover))
+      .resolves.toBe(null);
+
+    expect(recover).not.toHaveBeenCalled();
+  });
 });
 
 test('delivers objects to inboxses', async () => {
+  const recover = jest.fn();
   const [account, note] = await Promise.all([
     fabricateLocalAccount(),
     fabricateNote({ content: '', mentions: [] })
@@ -76,20 +92,23 @@ test('delivers objects to inboxses', async () => {
   let resolveMessage: (message: unknown) => void;
   const asyncMessage = new Promise<unknown>(resolve => resolveMessage = resolve);
   const [status] = await Promise.all([
-    note.select('status').then(unwrap),
+    note.select('status', signal, recover).then(unwrap),
     repository.subscribe(
       repository.getInboxChannel(account),
       (_channel, message) => resolveMessage(JSON.parse(message)))
   ]);
 
-  await repository.insertIntoInboxes([account], status);
+  await repository.insertIntoInboxes([account], status, signal, recover);
 
   await Promise.all([
     expect(asyncMessage).resolves.toHaveProperty('type', 'Note'),
     expect(asyncMessage).resolves.toHaveProperty('content', ''),
     expect(asyncMessage).resolves.toHaveProperty('tag', []),
-    repository.selectRecentStatusesIncludingExtensionsAndActorsFromInbox(account.id)
-      .then(statuses => expect(statuses[0]).toHaveProperty('id', note.id))
+    repository.selectRecentStatusesIncludingExtensionsAndActorsFromInbox(
+      account.id,
+      signal,
+      recover
+    ).then(statuses => expect(statuses[0]).toHaveProperty('id', note.id))
   ]);
 });
 
@@ -105,9 +124,11 @@ test('inserts cookie and allows to query account with its digest', async () => {
   const digest = Buffer.from('digest');
   await fabricateCookie({ account, digest });
 
-  const queried =
-    unwrap(await repository.selectLocalAccountByDigestOfCookie(digest));
+  const recover = jest.fn();
+  const queried = unwrap(await repository.selectLocalAccountByDigestOfCookie(
+    digest, signal, recover));
 
+  expect(recover).not.toHaveBeenCalled();
   expect(queried).toHaveProperty('repository', repository);
   expect(queried).toHaveProperty('id', account.id);
   expect(queried).toHaveProperty('admin', true);
@@ -126,8 +147,11 @@ test('inserts account allows to query one by its id', async () => {
     storedKey: Buffer.from('storedKey')
   });
 
-  const queried = unwrap(await repository.selectLocalAccountById(id));
+  const recover = jest.fn();
+  const queried =
+    unwrap(await repository.selectLocalAccountById(id, signal, recover));
 
+  expect(recover).not.toHaveBeenCalled();
   expect(queried).toHaveProperty('admin', true);
   expect(queried).toHaveProperty('id', id);
   expect(queried).toHaveProperty('privateKeyDer', privateKeyDer);
@@ -151,7 +175,7 @@ test('rejects when inserting local account with conflicting username', async () 
     salt: Buffer.from(''),
     serverKey: Buffer.from(''),
     storedKey: Buffer.from('')
-  }, recover);
+  }, signal, recover);
 
   expect(recover).not.toHaveBeenCalled();
 
@@ -166,7 +190,7 @@ test('rejects when inserting local account with conflicting username', async () 
     salt: Buffer.from(''),
     serverKey: Buffer.from(''),
     storedKey: Buffer.from('')
-  }, error => {
+  }, signal, error => {
     expect(error[conflict]).toBe(true);
     return recovery;
   })).rejects.toBe(recovery);

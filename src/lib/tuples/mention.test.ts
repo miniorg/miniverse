@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import { fabricateLocalAccount } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
@@ -21,17 +22,18 @@ import Mention from './mention';
 
 describe('toActivityStreams', () => {
   test('resolves with ActivityStreams representation', async () => {
+    const recover = jest.fn();
+    const { signal } = new AbortController;
+
     const account =
       await fabricateLocalAccount({ actor: { username: '行動者' } });
 
     const mention = new Mention({
       repository,
-      href: unwrap(await account.select('actor'))
+      href: unwrap(await account.select('actor', signal, recover))
     });
 
-    const recover = jest.fn();
-
-    await expect(mention.toActivityStreams(recover)).resolves.toEqual({
+    await expect(mention.toActivityStreams(signal, recover)).resolves.toEqual({
       type: 'Mention',
       href: 'https://xn--kgbechtv/@%E8%A1%8C%E5%8B%95%E8%80%85'
     });

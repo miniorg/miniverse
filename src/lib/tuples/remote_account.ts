@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { Account as WebFinger } from '../generated_webfinger';
 import Repository, { conflict } from '../repository';
 import Relation, { Reference } from './relation';
@@ -63,13 +64,16 @@ export default class RemoteAccount extends Relation<Properties, References> {
   readonly publicKeyURIId!: string;
   readonly publicKeyDer!: Buffer;
 
-  async toWebFinger(recover: (error: Error) => unknown): Promise<WebFinger> {
-    const actor = await this.select('actor');
+  async toWebFinger(
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ): Promise<WebFinger> {
+    const actor = await this.select('actor', signal, recover);
     if (!actor) {
       throw recover(new Error('actor not found.'));
     }
 
-    const href = await actor.getUri(recover);
+    const href = await actor.getUri(signal, recover);
     if (!href) {
       throw recover(new Error('uri not found.'));
     }
@@ -89,7 +93,8 @@ export default class RemoteAccount extends Relation<Properties, References> {
   static async create(
     repository: Repository,
     { actor, uri, inbox, publicKey }: Seed,
-    recover: (error: Error & { [conflict]?: boolean }) => unknown
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string; [conflict]?: boolean }) => unknown
   ) {
     Actor.validateUsername(actor.username, recover);
 
@@ -103,7 +108,7 @@ export default class RemoteAccount extends Relation<Properties, References> {
       uri,
       inbox,
       publicKey
-    }, recover);
+    }, signal, recover);
   }
 }
 

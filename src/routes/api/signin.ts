@@ -23,6 +23,8 @@ import LocalAccount from '../../lib/tuples/local_account';
 import secure from '../_secure';
 import cookie from './_cookie';
 
+const recovery = {};
+
 const setBody = promisify(raw()) as
   unknown as
   (request: Request, response: Response) => Promise<unknown>;
@@ -72,26 +74,37 @@ export const post = secure(async (request, response) => {
 
   const { body } = request;
   const { repository } = response.app.locals;
+  const { signal } = response.locals;
   const nonce = body.slice(0, 128);
   const serverNonce = body.slice(64, 128);
   const serverNonceDigest = digest(serverNonce);
   const clientProof = body.slice(128, 160);
   const username = body.slice(160);
   const challenge = await repository.selectChallengeByDigest(serverNonceDigest);
+  let account;
 
   if (!challenge) {
     response.sendStatus(403);
     return;
   }
 
-  const actor = await repository.selectActorByUsernameAndNormalizedHost(
-    username.toString(), null);
-  if (!actor) {
-    response.sendStatus(403);
-    return;
-  }
+  try {
+    const actor = await repository.selectActorByUsernameAndNormalizedHost(
+      username.toString(), null, signal, () => recovery);
+    if (!actor) {
+      response.sendStatus(403);
+      return;
+    }
 
-  const account = await actor.select('account');
+    account = await actor.select('account', signal, () => recovery);
+  } catch (error) {
+    if (error == recovery) {
+      response.sendStatus(422);
+      return;
+    }
+
+    throw error;
+  }
   if (!(account instanceof LocalAccount)) {
     response.sendStatus(403);
     return;

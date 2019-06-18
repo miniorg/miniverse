@@ -26,6 +26,8 @@ import repository from '../test/repository';
 import { unwrap } from '../test/types';
 import Like, { unexpectedType } from './like';
 
+const { signal } = new AbortController;
+
 describe('toActivityStreams', () => {
   test('resolves with its ActivityStreams representation', async () => {
     const recover = jest.fn();
@@ -34,7 +36,7 @@ describe('toActivityStreams', () => {
         { status: { uri: 'https://ReMoTe.xn--kgbechtv/' } })
     });
 
-    await expect(like.toActivityStreams(recover)).resolves.toEqual({
+    await expect(like.toActivityStreams(signal, recover)).resolves.toEqual({
       type: 'Like',
       object: 'https://ReMoTe.xn--kgbechtv/'
     });
@@ -48,18 +50,19 @@ describe('create', () => {
     const recover = jest.fn();
     const [actor, object] = await Promise.all([
       fabricateLocalAccount()
-        .then(account => account.select('actor'))
+        .then(account => account.select('actor', signal, recover))
         .then(unwrap),
       fabricateNote()
     ]);
 
-    const like = await Like.create(repository, { actor, object }, recover);
+    const seed = { actor, object };
+    const like = await Like.create(repository, seed, signal, recover);
 
     expect(recover).not.toHaveBeenCalled();
     expect(like.actorId).toBe(actor.id);
     expect(like.objectId).toBe(object.id);
 
-    await expect(repository.selectLikeById(like.id))
+    await expect(repository.selectLikeById(like.id, signal, recover))
       .resolves
       .toHaveProperty('actorId', actor.id);
   });
@@ -68,14 +71,14 @@ describe('create', () => {
     const recover = jest.fn();
     const [actor, object] = await Promise.all([
       fabricateLocalAccount()
-        .then(account => account.select('actor'))
+        .then(account => account.select('actor', signal, recover))
         .then(unwrap),
       fabricateRemoteAccount()
-        .then(account => account.select('actor'))
+        .then(account => account.select('actor', signal, recover))
         .then(actor => fabricateNote({ status: { actor: unwrap(actor) } }))
     ]);
 
-    await Like.create(repository, { actor, object }, recover);
+    await Like.create(repository, { actor, object }, signal, recover);
 
     await expect((await repository.queue.getWaiting())[0])
       .toHaveProperty(['data', 'type'], 'postLike');
@@ -87,11 +90,12 @@ describe('createFromParsedActivityStreams', () => {
     const recover = jest.fn();
     const [actor, [object, objectUri]] = await Promise.all([
       fabricateRemoteAccount()
-        .then(account => account.select('actor'))
+        .then(account => account.select('actor', signal, recover))
         .then(unwrap),
       fabricateNote({ status: { uri: null } }).then(note => Promise.all([
         note,
-        note.select('status').then(status => unwrap(status).getUri(recover))
+        note.select('status', signal, recover)
+          .then(status => unwrap(status).getUri(signal, recover))
       ]))
     ]);
 
@@ -103,23 +107,25 @@ describe('createFromParsedActivityStreams', () => {
       (new AbortController).signal,
       recover);
 
-    expect(recover).not.toHaveBeenCalled();
     expect(like.actorId).toBe(actor.id);
     expect(like.objectId).toBe(object.id);
 
-    await expect(repository.selectLikeById(like.id))
+    await expect(repository.selectLikeById(like.id, signal, recover))
       .resolves
       .toHaveProperty('actorId', actor.id);
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
   test('rejects with TypeNotAllowed if type is not Like', async () => {
     const recover = jest.fn();
     const recovery = {};
     const [actor, objectUri] = await Promise.all([
-      fabricateRemoteAccount().then(account => account.select('actor')),
+      fabricateRemoteAccount()
+        .then(account => account.select('actor', signal, recover)),
       fabricateNote({ status: { uri: null } })
-        .then(note => note.select('status'))
-        .then(status => unwrap(status).getUri(recover))
+        .then(note => note.select('status', signal, recover))
+        .then(status => unwrap(status).getUri(signal, recover))
     ]);
 
     expect(recover).not.toHaveBeenCalled();

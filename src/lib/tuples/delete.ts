@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { AbortSignal } from 'abort-controller';
+import { AbortController, AbortSignal } from 'abort-controller';
 import ParsedActivityStreams from '../parsed_activitystreams';
 import Repository from '../repository';
 import { temporaryError } from '../transfer';
@@ -23,14 +23,22 @@ import Actor from './actor';
 export const unexpectedType = Symbol();
 
 export default class Delete {
-  static async createFromParsedActivityStreams(repository: Repository, activity: ParsedActivityStreams, actor: Actor, signal: AbortSignal, recover: (error: Error & {
-    [temporaryError]?: boolean;
-    [unexpectedType]?: boolean;
-  }) => unknown) {
+  static async createFromParsedActivityStreams(
+    repository: Repository,
+    activity: ParsedActivityStreams,
+    actor: Actor,
+    signal: AbortSignal,
+    recover: (error: Error & {
+      [temporaryError]?: boolean;
+      [unexpectedType]?: boolean;
+    }) => unknown
+  ) {
     const type = await activity.getType(signal, recover);
 
     if (!type.has('Delete')) {
-      throw recover(Object.assign(new Error('Unsupported type. Expected Delete.'), { [unexpectedType]: true }));
+      throw recover(Object.assign(
+        new Error('Unsupported type. Expected Delete.'),
+        { [unexpectedType]: true }));
     }
 
     const object = await activity.getObject(signal, recover);
@@ -43,13 +51,16 @@ export default class Delete {
       throw recover(new Error('Unsupported id type. Expected string.'));
     }
 
-    const uri = await repository.selectAllocatedURI(id);
+    const uri = await repository.selectAllocatedURI(id, signal, recover);
 
     if (uri) {
-      await repository.deleteStatusByUriAndAttributedTo(uri, actor);
+      await repository.deleteStatusByUriAndAttributedTo(
+        uri, actor, signal, recover);
 
-      const documents = await repository.selectUnlinkedDocuments();
+      const documents =
+        await repository.selectUnlinkedDocuments(signal, recover);
       const documentIds = documents.map(({ id }) => id);
+      const controller = new AbortController;
 
       await repository.s3.service.deleteObjects({
         Bucket: repository.s3.bucket,
@@ -59,7 +70,8 @@ export default class Delete {
         }
       }).promise();
 
-      await repository.deleteUnlinkedDocumentsByIds(documentIds);
+      await repository.deleteUnlinkedDocumentsByIds(
+        documentIds, controller.signal, recover);
     }
 
     return new this;

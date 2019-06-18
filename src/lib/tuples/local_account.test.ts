@@ -14,10 +14,13 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import { createPrivateKey } from 'crypto';
 import { fabricateLocalAccount } from '../test/fabricator';
 import repository from '../test/repository';
 import LocalAccount from './local_account';
+
+const { signal } = new AbortController;
 
 describe('toWebFinger', () => {
   test('returns WebFinger representation', async () => {
@@ -29,7 +32,7 @@ describe('toWebFinger', () => {
       }
     });
 
-    await expect(account.toWebFinger(recover)).resolves.toEqual({
+    await expect(account.toWebFinger(signal, recover)).resolves.toEqual({
       links: [
         {
           href: 'https://xn--kgbechtv/@name%20of%20user',
@@ -65,7 +68,7 @@ describe('create', () => {
       salt,
       serverKey,
       storedKey
-    }, recover);
+    }, signal, recover);
 
     const privateKey = createPrivateKey({
       format: 'der',
@@ -102,6 +105,6 @@ describe('create', () => {
       salt: Buffer.from('salt'),
       serverKey: Buffer.from('serverKey'),
       storedKey: Buffer.from('storedKey'),
-    }, () => recovery)).rejects.toBe(recovery);
+    }, signal, () => recovery)).rejects.toBe(recovery);
   });
 });

@@ -14,12 +14,18 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import Mention from '../tuples/mention';
 import Repository from '.';
 
 export default class {
-  async selectMentionsIncludingActorsByNoteId(this: Repository, id: string): Promise<Mention[]> {
-    const hrefs = await this.selectActorsMentionedByNoteId(id);
+  async selectMentionsIncludingActorsByNoteId(
+    this: Repository,
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ): Promise<Mention[]> {
+    const hrefs = await this.selectActorsMentionedByNoteId(id, signal, recover);
     return hrefs.map(href => new Mention({ repository: this, href }));
   }
 }

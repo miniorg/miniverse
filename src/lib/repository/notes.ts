@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import Hashtag from '../tuples/hashtag';
 import Mention from '../tuples/mention';
 import Note, { Seed } from '../tuples/note';
@@ -45,51 +46,54 @@ export default class {
     attachments,
     hashtags,
     mentions
-  }: Seed, recover: (error: Error & { [conflict]: boolean }) => unknown) {
-    let result;
+  }: Seed, signal: AbortSignal, recover: (error: Error & {
+    name?: string;
+    [conflict]?: boolean;
+  }) => unknown) {
+    const { rows: [{ id, in_reply_to_id }] } = await this.pg.query({
+      name: 'insertNote',
+      text: 'SELECT * FROM insert_note($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) AS (id BIGINT, in_reply_to_id BIGINT)',
+      values: [
+        status.published,
+        status.uri,
+        status.actor.id,
+        inReplyTo.id,
+        inReplyTo.uri,
+        summary || '',
+        content,
+        attachments.map(({ id }) => id),
+        hashtags,
+        mentions.map(({ id }) => id)
+      ]
+    }, signal, error => {
+      if (error.name == 'AbortError') {
+        return recover(error);
+      }
 
-    try {
-      result = await this.pg.query({
-        name: 'insertNote',
-        text: 'SELECT * FROM insert_note($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) AS (id BIGINT, in_reply_to_id BIGINT)',
-        values: [
-          status.published,
-          status.uri,
-          status.actor.id,
-          inReplyTo.id,
-          inReplyTo.uri,
-          summary || '',
-          content,
-          attachments.map(({ id }) => id),
-          hashtags,
-          mentions.map(({ id }) => id)
-        ]
-      });
-    } catch (error) {
       if (error.code == '23502') {
-        throw recover(Object.assign(
+        return recover(Object.assign(
           new Error('uri conflicts.'),
           { [conflict]: true }));
       }
 
-      throw error;
-    }
+      return error;
+    });
 
     return new Note({
       repository: this,
       status: new Status({
         repository: this,
-        id: result.rows[0].id,
+        id,
         published: status.published,
         actor: status.actor,
         uri: status.uri == null ? null : new URI({
           repository: this,
-          id: result.rows[0].id,
+          id,
           uri: status.uri,
           allocated: true
         })
       }),
-      inReplyToId: result.rows[0].in_reply_to_id,
+      inReplyToId: in_reply_to_id,
       summary,
       content,
       attachments,
@@ -98,12 +102,17 @@ export default class {
     });
   }
 
-  async selectNoteById(this: Repository, id: string): Promise<Note | null> {
+  async selectNoteById(
+    this: Repository,
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ): Promise<Note | null> {
     const { rows } = await this.pg.query({
       name: 'selectNoteById',
       text: 'SELECT * FROM notes WHERE id = $1',
       values: [id]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     return rows[0] ? parse.call(this, rows[0]) : null;
   }

@@ -14,7 +14,6 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { AbortController } from 'abort-controller';
 import { Request, Response, urlencoded } from 'express';
 import { promisify } from 'util';
 import ParsedActivityStreams, {
@@ -34,14 +33,11 @@ export const post = secure(async (request, response) => {
 
   const { body } = request;
   const { repository } = response.app.locals;
-  const controller = new AbortController;
   const parsed = new ParsedActivityStreams(repository, body.id, NoHost);
   let actor;
 
-  request.on('aborted', () => controller.abort());
-
   try {
-    actor = await Actor.fromParsedActivityStreams(repository, parsed, controller.signal, () => recovery);
+    actor = await Actor.fromParsedActivityStreams(repository, parsed, response.locals.signal, () => recovery);
   } catch (error) {
     if (error == recovery) {
       response.sendStatus(500);

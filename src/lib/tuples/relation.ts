@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import Repository from '../repository';
 
 interface Descriptor<References, Key extends keyof References> {
@@ -22,9 +23,12 @@ interface Descriptor<References, Key extends keyof References> {
   readonly query: Query<References, Key>;
 }
 
-type Query<References, Key extends keyof References> =
-  (this: Descriptor<References, Key>, instance: Relation<any, References>) =>
-  Promise<References[Key]>;
+type Query<References, Key extends keyof References> = (
+  this: Descriptor<References, Key>,
+  instance: Relation<any, References>,
+  signal: AbortSignal,
+  recover: (error: Error & { name?: string }) => unknown
+) => Promise<References[Key]>;
 
 function getPropertyOf<Properties, Key extends keyof Properties>(relation: Relation<Properties, any>, key: Key) {
   return (relation as any)[key] as Properties[Key];
@@ -89,7 +93,11 @@ export default class Relation<Properties, References> {
     }
   }
 
-  async select<Key extends keyof References>(key: Key): Promise<References[Key]> {
+  async select<Key extends keyof References>(
+    key: Key,
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ): Promise<References[Key]> {
     const referenced = getReferencedBy(this, key);
 
     if (referenced) {
@@ -97,7 +105,7 @@ export default class Relation<Properties, References> {
     }
 
     const reference = getReferenceOf(this, key);
-    const query = reference.query(this);
+    const query = reference.query(this, signal, recover);
 
     setReferencedBy(this, key, query);
 
@@ -113,10 +121,15 @@ export default class Relation<Properties, References> {
   }
 
   static withRepository(query: keyof Repository): Query<any, any> {
-    return function(instance) {
+    return function(instance, signal, recover) {
       const { repository } = instance;
-      const method = repository[query] as (this: Repository, key: unknown) => Promise<unknown>;
-      return method.call(repository, getPropertyOf(instance, this.id));
+      const method = repository[query] as (
+        this: Repository,
+        key: unknown,
+        signal: AbortSignal,
+        recover: (error: Error & { name?: string }) => unknown
+      ) => Promise<unknown>;
+      return method.call(repository, getPropertyOf(instance, this.id), signal, recover);
     };
   }
 }

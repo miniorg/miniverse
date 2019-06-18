@@ -14,22 +14,32 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import Repository from '.';
 
 export default class {
-  async deleteUnlinkedDocumentsByIds(this: Repository, ids: string[]) {
+  async deleteUnlinkedDocumentsByIds(
+    this: Repository,
+    ids: string[],
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) {
     await this.pg.query({
       name: 'deleteUnlinkedDocumentsByIds',
       text: 'DELETE FROM unlinked_documents WHERE id = ANY($1)',
       values: [ids]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
   }
 
-  async selectUnlinkedDocuments(this: Repository) {
+  async selectUnlinkedDocuments(
+    this: Repository,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) {
     const { rows } = await this.pg.query({
       name: 'selectUnlinkedDocuments',
       text: 'SELECT * FROM unlinked_documents'
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     return rows as { id: string; uuid: string; format: string }[];
   }

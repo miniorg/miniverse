@@ -14,24 +14,29 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import { fabricateFollow, fabricateLocalAccount } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
 
+const { signal } = new AbortController;
+
 test('inserts and allows to query follow by its id', async () => {
+  const recover = jest.fn();
+
   const [actor, object] = await Promise.all([
     fabricateLocalAccount({ actor: { username: '行動者' } })
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap),
     fabricateLocalAccount({ actor: { username: '被行動者' } })
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap)
   ]);
 
   const { id } = await fabricateFollow({ actor, object });
 
   const queriedFollow =
-    await repository.selectFollowIncludingActorAndObjectById(id);
+    await repository.selectFollowIncludingActorAndObjectById(id, signal, recover);
 
   expect(queriedFollow).toHaveProperty(['actor', 'repository'], repository);
   expect(queriedFollow).toHaveProperty(['actor', 'username'], '行動者');
@@ -44,27 +49,36 @@ test('inserts and allows to query follow by its id', async () => {
 test('inserts and allows to delete follow', async () => {
   const insertedFollow = await fabricateFollow();
   const id = unwrap(insertedFollow.id);
+  const recover = jest.fn();
   const [actor, object] = await Promise.all([
-    insertedFollow.select('actor').then(unwrap),
-    insertedFollow.select('object').then(unwrap)
+    insertedFollow.select('actor', signal, recover).then(unwrap),
+    insertedFollow.select('object', signal, recover).then(unwrap)
   ]);
 
-  await repository.deleteFollowByActorAndObject(actor, object);
+  await repository.deleteFollowByActorAndObject(actor, object, signal, recover);
 
-  await expect(repository.selectFollowIncludingActorAndObjectById(id))
-    .resolves
-    .toBeNull();
+  await expect(repository.selectFollowIncludingActorAndObjectById(
+    id,
+    signal,
+    recover
+  )).resolves.toBeNull();
+
+  expect(recover).not.toHaveBeenCalled();
 });
 
 test('rejects when inserting a duplicate follow', async () => {
+  const recover = jest.fn();
   const recovery = {};
   const insertedFollow = await fabricateFollow();
   const [actor, object] = await Promise.all([
-    insertedFollow.select('actor').then(unwrap),
-    insertedFollow.select('object').then(unwrap)
+    insertedFollow.select('actor', signal, recover).then(unwrap),
+    insertedFollow.select('object', signal, recover).then(unwrap)
   ]);
+
+  expect(recover).not.toHaveBeenCalled();
 
   await expect(repository.insertFollow(
     { actor, object },
+    signal,
     () => recovery)).rejects.toBe(recovery);
 })

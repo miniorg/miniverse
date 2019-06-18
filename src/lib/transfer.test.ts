@@ -137,50 +137,60 @@ describe('fetch', () => {
 
 describe('postStatus', () => {
   test('inserts into inboxes of local followers', async () => {
+    const recover = jest.fn();
+    const { signal } = new AbortController;
     const actorAccount = await fabricateLocalAccount();
-    const actor = unwrap(await actorAccount.select('actor'));
+    const actor = unwrap(await actorAccount.select('actor', signal, recover));
     const follow = await fabricateFollow({ actor });
-    const object = unwrap(await follow.select('object'));
+    const object = unwrap(await follow.select('object', signal, recover));
 
     const note = await fabricateNote({
       status: { actor: object },
       content: '内容'
     });
 
-    const recover = jest.fn();
+    const status = unwrap(await note.select('status', signal, recover));
 
-    await postStatus(repository, unwrap(await note.select('status')), recover);
+    await postStatus(repository, status, signal, recover);
+
+    expect((await actorAccount.select('inbox', signal, recover))[0])
+      .toHaveProperty(['extension', 'content'], '内容');
 
     expect(recover).not.toHaveBeenCalled();
-    expect((await actorAccount.select('inbox'))[0])
-      .toHaveProperty(['extension', 'content'], '内容');
   });
 
   test('does not insert into local inboxes of remote followers', async () => {
-    const actorAccount = await fabricateRemoteAccount();
-    const actor = unwrap(await actorAccount.select('actor'));
-    const follow = await fabricateFollow({ actor });
-    const object = unwrap(await follow.select('object'));
-    const note = await fabricateNote({ status: { actor: object } });
     const recover = jest.fn();
+    const { signal } = new AbortController;
+    const actorAccount = await fabricateRemoteAccount();
+    const actor = unwrap(await actorAccount.select('actor', signal, recover));
+    const follow = await fabricateFollow({ actor });
+    const object = unwrap(await follow.select('object', signal, recover));
+    const note = await fabricateNote({ status: { actor: object } });
+    const status = unwrap(await note.select('status', signal, recover));
 
-    await postStatus(repository, unwrap(await note.select('status')), recover);
+    await postStatus(repository, status, signal, recover);
+
+    await expect(repository.selectRecentStatusesIncludingExtensionsAndActorsFromInbox(
+      actorAccount.id,
+      signal,
+      recover
+    )).resolves.toHaveProperty('length', 0);
 
     expect(recover).not.toHaveBeenCalled();
-    await expect(repository.selectRecentStatusesIncludingExtensionsAndActorsFromInbox(actorAccount.id))
-      .resolves
-      .toHaveProperty('length', 0);
   });
 
   test('posts note to inboxes of remote followers', async () => {
-    const actorAccount = await fabricateRemoteAccount();
-    const actor = unwrap(await actorAccount.select('actor'));
-    const follow = await fabricateFollow({ actor });
-    const object = unwrap(await follow.select('object'));
-    const note = await fabricateNote({ status: { actor: object } });
     const recover = jest.fn();
+    const { signal } = new AbortController;
+    const actorAccount = await fabricateRemoteAccount();
+    const actor = unwrap(await actorAccount.select('actor', signal, recover));
+    const follow = await fabricateFollow({ actor });
+    const object = unwrap(await follow.select('object', signal, recover));
+    const note = await fabricateNote({ status: { actor: object } });
+    const status = unwrap(await note.select('status', signal, recover));
 
-    await postStatus(repository, unwrap(await note.select('status')), recover);
+    await postStatus(repository, status, signal, recover);
 
     expect(recover).not.toHaveBeenCalled();
     await expect((await repository.queue.getWaiting())[0])
@@ -189,20 +199,22 @@ describe('postStatus', () => {
 
   test('deduplicates remote inboxes', async () => {
     const actors = [];
+    const recover = jest.fn();
+    const { signal } = new AbortController;
 
     for (let index = 0; index < 2; index++) {
       const account = await fabricateRemoteAccount({ inbox: { uri: '' } });
-      actors[index] = unwrap(await account.select('actor'));
+      actors[index] = unwrap(await account.select('actor', signal, recover));
     }
 
     const objectAccount = await fabricateLocalAccount();
-    const object = unwrap(await objectAccount.select('actor'));
+    const object = unwrap(await objectAccount.select('actor', signal, recover));
 
     await Promise.all(actors.map(actor => fabricateFollow({ actor, object })));
 
     const note = await fabricateNote({ status: { actor: object } });
-    const recover = jest.fn();
-    await postStatus(repository, unwrap(await note.select('status')), recover);
+    const status = unwrap(await note.select('status', signal, recover));
+    await postStatus(repository, status, signal, recover);
 
     expect(recover).not.toHaveBeenCalled();
     await expect(repository.queue.getWaiting())
@@ -212,20 +224,22 @@ describe('postStatus', () => {
 
   test('does not post note to inboxes of remote followers if note is remote',
     async () => {
+      const recover = jest.fn();
+      const { signal } = new AbortController;
       const [actor, object] = await Promise.all([
         fabricateRemoteAccount()
-          .then(account => account.select('actor'))
+          .then(account => account.select('actor', signal, recover))
           .then(unwrap),
         fabricateRemoteAccount()
-          .then(account => account.select('actor'))
+          .then(account => account.select('actor', signal, recover))
           .then(unwrap)
       ]);
 
       await fabricateFollow({ actor, object });
 
       const note = await fabricateNote({ status: { actor: object } });
-      const recover = jest.fn();
-      await postStatus(repository, unwrap(await note.select('status')), recover);
+      const status = unwrap(await note.select('status', signal, recover));
+      await postStatus(repository, status, signal, recover);
 
       await expect(repository.queue.getWaiting())
         .resolves
@@ -238,7 +252,8 @@ describe('postToInbox', () => {
     const [sender, inboxURI] = await Promise.all([
       fabricateLocalAccount({ actor: { username: 'SeNdEr' } }),
       fabricateRemoteAccount({ inbox: { uri: 'https://ReCiPiEnT.إختبار/?inbox' } })
-        .then(recipient => recipient.select('inboxURI')).then(unwrap)
+        .then(recipient => recipient.select('inboxURI', signal, recover))
+        .then(unwrap)
     ]);
 
     return postToInbox(repository, sender, inboxURI, {

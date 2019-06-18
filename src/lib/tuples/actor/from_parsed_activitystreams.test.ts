@@ -192,6 +192,7 @@ describe('fromParsedActivityStreams', () => {
       await fabricateLocalAccount({ actor: { username: 'UsErNaMe' } });
 
     const recover = jest.fn();
+    const { id } = unwrap(await account.select('actor', signal, recover));
 
     await expect(Actor.fromParsedActivityStreams(
       repository,
@@ -199,7 +200,7 @@ describe('fromParsedActivityStreams', () => {
         repository,
         'https://xn--kgbechtv/@UsErNaMe',
         AnyHost), signal, recover))
-      .resolves.toHaveProperty('id', unwrap(await account.select('actor')).id);
+      .resolves.toHaveProperty('id', id);
 
     expect(recover).not.toHaveBeenCalled();
   });

@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import { createPublicKey, generateKeyPair } from 'crypto';
 import { promisify } from 'util';
 import {
@@ -26,6 +27,8 @@ import Key from './key';
 const keyPairPromise = promisify(generateKeyPair)('rsa', {
   modulusLength: 2048
 });
+
+const { signal } = new AbortController;
 
 describe('getUri', () => {
   test('loads and returns URI of local key', async () => {
@@ -41,7 +44,7 @@ describe('getUri', () => {
       Support more variations of ActivityPub keyId in signature (#4630) · tootsuite/mastodon@72bb3e0
       https://github.com/tootsuite/mastodon/commit/72bb3e03fdf4d8c886d41f3459000b336a3a362b
      */
-    await expect(key.getUri(recover))
+    await expect(key.getUri(signal, recover))
       .resolves
       .toBe('https://xn--kgbechtv/@%E6%89%80%E6%9C%89%E8%80%85#key');
 
@@ -55,7 +58,7 @@ describe('getUri', () => {
     const key = new Key({ ownerId: owner.id, repository });
     const recover = jest.fn();
 
-    await expect(key.getUri(recover))
+    await expect(key.getUri(signal, recover))
       .resolves
       .toBe('https://OwNeR.xn--kgbechtv/');
 
@@ -108,7 +111,8 @@ ewIDAQAB
     const key = new Key({ ownerId: owner.id, repository });
     const recover = jest.fn();
 
-    await expect(key.verifySignature(signature, recover)).resolves.toBe(true);
+    await expect(key.verifySignature(signature, signal, recover))
+      .resolves.toBe(true);
     expect(recover).not.toHaveBeenCalled();
   });
 
@@ -130,7 +134,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
     const key = new Key({ ownerId: owner.id, repository });
     const recover = jest.fn();
 
-    await expect(key.verifySignature(signature, recover))
+    await expect(key.verifySignature(signature, signal, recover))
       .resolves
       .toBe(false);
 
@@ -145,7 +149,8 @@ describe('selectPrivateKeyDer', () => {
     const owner = await fabricateLocalAccount({ privateKeyDer });
     const key = new Key({ ownerId: owner.id, repository });
     const recover = jest.fn();
-    const selectedPrivateKeyDer = await key.selectPrivateKeyDer(recover);
+    const selectedPrivateKeyDer =
+      await key.selectPrivateKeyDer(signal, recover);
 
     expect(recover).not.toHaveBeenCalled();
     await expect(selectedPrivateKeyDer.equals(privateKeyDer)).toBe(true);
@@ -164,7 +169,7 @@ describe('toActivityStreams', () => {
     const key = new Key({ ownerId: owner.id, repository });
     const recover = jest.fn();
 
-    await expect(key.toActivityStreams(recover)).resolves.toEqual({
+    await expect(key.toActivityStreams(signal, recover)).resolves.toEqual({
       id: 'https://xn--kgbechtv/@#key',
       type: 'Key',
       owner: 'https://xn--kgbechtv/@',

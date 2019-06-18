@@ -38,7 +38,7 @@ describe('toActivityStreams', () => {
         { status: { uri: 'https://ReMoTe.xn--kgbechtv/' } })
     }));
 
-    await expect(announce.toActivityStreams(recover)).resolves.toEqual({
+    await expect(announce.toActivityStreams(signal, recover)).resolves.toEqual({
       id: 'https://xn--kgbechtv/@6/' + announce.id,
       type: 'Announce',
       published: new Date('2000-01-01T00:00:00.000Z'),
@@ -55,7 +55,7 @@ describe('create', () => {
     const recover = jest.fn();
     const [actor, object] = await Promise.all([
       fabricateRemoteAccount()
-        .then(account => account.select('actor'))
+        .then(account => account.select('actor', signal, recover))
         .then(unwrap),
       fabricateNote(
         { status: { uri: 'https://ReMoTe.xn--kgbechtv/oBjEcT' } })
@@ -68,44 +68,45 @@ describe('create', () => {
         uri: 'https://ReMoTe.xn--kgbechtv/AnNoUnCe'
       },
       object
-    }, recover);
-
-    expect(recover).not.toHaveBeenCalled();
+    }, signal, recover);
 
     await Promise.all([
-      announce.select('status').then(nullableStatus => {
+      announce.select('status', signal, recover).then(nullableStatus => {
         const status = unwrap(nullableStatus);
 
         expect(status.published).toBe(published);
         expect(status.actor).toBe(actor);
 
         return Promise.all([
-          expect(status.select('uri'))
+          expect(status.select('uri', signal, recover))
             .resolves
             .toHaveProperty('uri', 'https://ReMoTe.xn--kgbechtv/AnNoUnCe'),
-          expect(repository.selectStatusById(announce.id))
+          expect(repository.selectStatusById(announce.id, signal, recover))
             .resolves
             .toHaveProperty('actorId', status.actorId)
         ]);
       }),
-      expect(announce.select('object')).resolves.toBe(object)
+      expect(announce.select('object', signal, recover)).resolves.toBe(object)
     ]);
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
   test('inserts into inboxes', async () => {
+    const recover = jest.fn();
+
     const [[actorAccount, object], note] = await Promise.all([
       fabricateLocalAccount().then(account => Promise.all([
         account,
-        account.select('actor')
+        account.select('actor', signal, recover)
           .then(unwrap)
           .then(actor => fabricateFollow({ actor }))
-          .then(follow => follow.select('object'))
+          .then(follow => follow.select('object', signal, recover))
           .then(unwrap)
       ])),
       fabricateNote()
     ]);
 
-    const recover = jest.fn();
     const announce = await Announce.create(repository, {
       status: {
         published: new Date,
@@ -113,25 +114,27 @@ describe('create', () => {
         uri: null
       },
       object: note
-    }, recover);
+    }, signal, recover);
 
-    expect(recover).not.toHaveBeenCalled
-    expect((await actorAccount.select('inbox'))[0])
+    expect((await actorAccount.select('inbox', signal, recover))[0])
       .toHaveProperty('id', announce.id);
+
+    expect(recover).not.toHaveBeenCalled();
   });
 });
 
 describe('createFromParsedActivityStreams', () => {
   test('creates and returns an Announce from an ActivityStreams representation', async () => {
+    const recover = jest.fn();
+
     const [actor, object] = await Promise.all([
       fabricateRemoteAccount()
-        .then(account => account.select('actor'))
+        .then(account => account.select('actor', signal, recover))
         .then(unwrap),
       fabricateNote(
         { status: { uri: 'https://ReMoTe.xn--kgbechtv/oBjEcT' } })
     ]);
 
-    const recover = jest.fn();
     const announce = unwrap(await Announce.createFromParsedActivityStreams(
       repository,
       new ParsedActivityStreams(repository, {
@@ -145,9 +148,7 @@ describe('createFromParsedActivityStreams', () => {
       signal,
       recover));
 
-    expect(recover).not.toHaveBeenCalled();
-
-    const status = unwrap(await announce.select('status'));
+    const status = unwrap(await announce.select('status', signal, recover));
 
     expect(status.published.toISOString())
       .toBe('2000-01-01T00:00:00.000Z');
@@ -155,25 +156,30 @@ describe('createFromParsedActivityStreams', () => {
     expect(announce.objectId).toBe(object.id);
 
     await Promise.all([
-      expect(status.select('actor')).resolves.toBe(actor),
-      expect(status.select('uri'))
+      expect(status.select('actor', signal, recover)).resolves.toBe(actor),
+      expect(status.select('uri', signal, recover))
         .resolves
         .toHaveProperty('uri', 'https://ReMoTe.xn--kgbechtv/AnNoUnCe'),
-      expect(repository.selectStatusById(announce.id))
+      expect(repository.selectStatusById(announce.id, signal, recover))
         .resolves
         .toHaveProperty('actorId', status.actorId)
     ]);
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
   test('rejects if type is not Announce', async () => {
+    const recover = jest.fn();
     const recovery = {};
     const [actor] = await Promise.all([
       fabricateRemoteAccount()
-        .then(account => account.select('actor'))
+        .then(account => account.select('actor', signal, recover))
         .then(unwrap),
       fabricateNote(
         { status: { uri: 'https://ReMoTe.xn--kgbechtv/oBjEcT' } })
     ]);
+
+    expect(recover).not.toHaveBeenCalled();
 
     await expect(Announce.createFromParsedActivityStreams(
       repository,
@@ -194,7 +200,7 @@ describe('createFromParsedActivityStreams', () => {
     const recover = jest.fn();
     const [actor] = await Promise.all([
       fabricateRemoteAccount()
-        .then(account => account.select('actor'))
+        .then(account => account.select('actor', signal, recover))
         .then(unwrap),
       fabricateNote(
         { status: { uri: 'https://ReMoTe.xn--kgbechtv/oBjEcT' } })

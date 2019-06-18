@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import Actor from '../tuples/actor';
 import LocalAccount, { Seed } from '../tuples/local_account';
 import Status from '../tuples/status';
@@ -56,33 +57,36 @@ export default class {
     storedKey
   }: Seed & {
     readonly privateKeyDer: Buffer;
-  }, recover: (error: Error & { [conflict]: boolean }) => unknown) {
-    let result;
+  }, signal: AbortSignal, recover: (error: Error & {
+    name?: string;
+    [conflict]?: boolean;
+  }) => unknown) {
+    const result = await this.pg.query({
+      name: 'insertLocalAccount',
+      text: 'SELECT insert_local_account($1, $2, $3, $4, $5, $6, $7, $8)',
+      values: [
+        actor.username,
+        actor.name,
+        actor.summary,
+        admin,
+        privateKeyDer,
+        salt,
+        serverKey,
+        storedKey
+      ]
+    }, signal, error => {
+      if (error.name == 'AbortError') {
+        return recover(error);
+      }
 
-    try {
-      result = await this.pg.query({
-        name: 'insertLocalAccount',
-        text: 'SELECT insert_local_account($1, $2, $3, $4, $5, $6, $7, $8)',
-        values: [
-          actor.username,
-          actor.name,
-          actor.summary,
-          admin,
-          privateKeyDer,
-          salt,
-          serverKey,
-          storedKey
-        ]
-      });
-    } catch (error) {
       if (error.code == '23505') {
-        throw recover(Object.assign(
+        return recover(Object.assign(
           new Error('username conflicts.'),
           { [conflict]: true }));
       }
 
-      throw error;
-    }
+      return error;
+    });
 
     return new LocalAccount({
       repository: this,
@@ -102,18 +106,24 @@ export default class {
     });
   }
 
-  async insertIntoInboxes(this: Repository, accountOrActors: (LocalAccount | Actor)[], item: Status, recover: (error: Error) => unknown) {
+  async insertIntoInboxes(
+    this: Repository,
+    accountOrActors: (LocalAccount | Actor)[],
+    item: Status,
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ) {
     const { id } = item;
     if (!id) {
       throw recover(new Error('Status uninitialized.'));
     }
 
-    const extension = await item.select('extension');
+    const extension = await item.select('extension', signal, recover);
     if (!extension) {
       throw recover(new Error('extension not found.'));
     }
 
-    const message = await extension.toActivityStreams(recover) as { [key: string]: unknown };
+    const message = await extension.toActivityStreams(signal, recover) as { [key: string]: unknown };
     message['@context'] = 'https://www.w3.org/ns/activitystreams';
 
     const string = JSON.stringify(message);
@@ -135,22 +145,32 @@ export default class {
     ]))).exec();
   }
 
-  async selectLocalAccountByDigestOfCookie(this: Repository, digest: Buffer): Promise<LocalAccount | null> {
+  async selectLocalAccountByDigestOfCookie(
+    this: Repository,
+    digest: Buffer,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ): Promise<LocalAccount | null> {
     const { rows } = await this.pg.query({
       name: 'selectLocalAccountByDigestOfCookie',
       text: 'SELECT local_accounts.* FROM local_accounts JOIN cookies ON local_accounts.id = cookies.account_id WHERE cookies.digest = $1',
       values: [digest]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     return rows[0] ? parse.call(this, rows[0]) : null;
   }
 
-  async selectLocalAccountById(this: Repository, id: string): Promise<LocalAccount | null> {
+  async selectLocalAccountById(
+    this: Repository,
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ): Promise<LocalAccount | null> {
     const { rows } = await this.pg.query({
       name: 'selectLocalAccountById',
       text: 'SELECT * FROM local_accounts WHERE id = $1',
       values: [id],
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     return rows[0] ? parse.call(this, rows[0]) : null;
   }

@@ -14,7 +14,6 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { AbortController } from 'abort-controller';
 import { Request, Response, json } from 'express';
 import { promisify } from 'util';
 import ParsedActivityStreams, {
@@ -46,19 +45,34 @@ const setBody = promisify(json({
 export const get = secure(async ({ params }, response) => {
   const [userpart, host] = params.acct.split('@', 2);
   const { repository } = response.app.locals;
+  let orderedItems;
 
-  const actor = await repository.selectActorByUsernameAndNormalizedHost(
-    userpart, host ? normalizeHost(host) : null);
-  if (!actor) {
-    response.sendStatus(403);
-    return;
+  try {
+    const actor = await repository.selectActorByUsernameAndNormalizedHost(
+      userpart,
+      host ? normalizeHost(host) : null,
+      response.locals.signal,
+      () => abort
+    );
+    if (!actor) {
+      response.sendStatus(403);
+      return;
+    }
+
+    const statuses =
+      await actor.select('statuses', response.locals.signal, () => abort);
+
+    orderedItems = (await Promise.all(statuses.map(status =>
+      status.select('extension', response.locals.signal, () => abort)
+    ))).filter(Boolean as unknown as <T>(value: T | null) => value is T);
+  } catch (error) {
+    if (error == abort) {
+      response.sendStatus(422);
+      return;
+    }
+
+    throw error;
   }
-
-  const statuses = await actor.select('statuses');
-
-  const orderedItems =
-    (await Promise.all(statuses.map(status => status.select('extension'))))
-      .filter(Boolean as unknown as <T>(value: T | null) => value is T);
 
   /*
     ActivityPub
@@ -81,6 +95,7 @@ export const get = secure(async ({ params }, response) => {
 export const post = secure(async (request, response) => {
   const { headers: { origin }, params } = request;
   const { repository } = response.app.locals;
+  const { signal } = response.locals;
 
   if (typeof origin != 'string') {
     response.sendStatus(403);
@@ -97,41 +112,38 @@ export const post = secure(async (request, response) => {
     return;
   }
 
-  const actor = await response.locals.user.select('actor');
-  if (!actor) {
-    response.sendStatus(403);
-    return;
-  }
-
-  if (actor.username != params.acct) {
-    response.sendStatus(403);
-    return;
-  }
-
-  await setBody(request, response);
-
-  const object =
-    new ParsedActivityStreams(repository, request.body, { host: AnyHost });
-
   let result;
 
-  /*
-    ActivityPub
-    6. Client to Server Interactions
-    https://www.w3.org/TR/activitypub/#client-to-server-interactions
-    > The body of the POST request MUST contain a single Activity (which MAY
-    > contain embedded objects), or a single non-Activity object which will
-    > be wrapped in a Create activity by the server.
-  */
   try {
-    const controller = new AbortController;
+    const actor = await response.locals.user.select(
+      'actor', signal, () => abort);
+    if (!actor) {
+      response.sendStatus(403);
+      return;
+    }
 
-    request.on('aborted', () => controller.abort());
+    if (actor.username != params.acct) {
+      response.sendStatus(403);
+      return;
+    }
 
+    await setBody(request, response);
+
+    const object =
+      new ParsedActivityStreams(repository, request.body, { host: AnyHost });
+
+    /*
+      ActivityPub
+      6. Client to Server Interactions
+      https://www.w3.org/TR/activitypub/#client-to-server-interactions
+      > The body of the POST request MUST contain a single Activity (which MAY
+      > contain embedded objects), or a single non-Activity object which will
+      > be wrapped in a Create activity by the server.
+    */
     try {
       result = await object.act(
         actor,
-        controller.signal,
+        signal,
         error => error[unexpectedType] ? fallback : abort);
     } catch (error) {
       if (error != fallback) {
@@ -142,12 +154,12 @@ export const post = secure(async (request, response) => {
         repository,
         actor,
         object,
-        controller.signal,
+        signal,
         () => abort);
       if (result) {
-        result = await result.select('status');
+        result = await result.select('status', signal, () => abort);
         if (result) {
-          result = await result.getUri(() => abort);
+          result = await result.getUri(signal, () => abort);
         }
       }
     }

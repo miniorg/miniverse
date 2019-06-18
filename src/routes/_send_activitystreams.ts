@@ -14,17 +14,21 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { Response } from 'express';
 
 const recovery = {};
 
 export default async (response: Response, object: {
-  toActivityStreams(recover: (error: Error) => unknown): Promise<{ [key: string]: unknown }>;
+  toActivityStreams(
+    signal: AbortSignal,
+    recover: (error: Error) => unknown
+  ): Promise<{ [key: string]: unknown }>;
 }) => {
   let message;
 
   try {
-    message = await object.toActivityStreams(() => recovery);
+    message = await object.toActivityStreams(response.locals.signal, () => recovery);
   } catch (error) {
     if (error == recovery) {
       response.sendStatus(500);

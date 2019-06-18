@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import { createPrivateKey, generateKeyPair } from 'crypto';
 import { join } from 'path';
 import { promisify } from 'util';
@@ -27,6 +28,8 @@ import LocalAccount from '../tuples/local_account';
 import Note from '../tuples/note';
 import repository from './repository';
 import { unwrap } from './types';
+
+const { signal } = new AbortController;
 
 const privateKeyDer = createPrivateKey(`-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGT
@@ -98,7 +101,7 @@ export async function fabricateLocalAccount(properties?: {
       name: '',
       summary: ''
     }, properties && properties.actor)
-  }), recover);
+  }), signal, recover);
 
   expect(recover).not.toHaveBeenCalled();
 
@@ -140,7 +143,7 @@ export async function fabricateRemoteAccount(properties?: {
         publicKeyEncoding: { format: 'der', type: 'pkcs1' }
       })).publicKey,
     }, properties && properties.publicKey),
-  }), recover);
+  }), signal, recover);
 
   expect(recover).not.toHaveBeenCalled();
 
@@ -151,18 +154,18 @@ export async function fabricateFollow(properties?: {
   readonly actor?: Actor;
   readonly object?: Actor;
 }) {
+  const recover = jest.fn();
   const [actor, object] = await Promise.all([
     fabricateLocalAccount()
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap),
     fabricateLocalAccount()
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap)
   ]);
 
-  const recover = jest.fn();
   const follow = await repository.insertFollow(Object.assign(
-    { actor, object }, properties), recover);
+    { actor, object }, properties), signal, recover);
 
   expect(recover).not.toHaveBeenCalled();
 
@@ -194,13 +197,13 @@ export async function fabricateNote(properties?: {
   }, properties, {
     status: Object.assign({
       published: new Date,
-      actor: await account.select('actor'),
+      actor: await account.select('actor', signal, recover),
       uri: remote ? `https://ReMoTe.إختبار/NoTe/${generateId()}` : null
     }, properties && properties.status),
     inReplyTo: Object.assign(
       { id: null, uri: null },
       properties && properties.inReplyTo)
-  }), recover);
+  }), signal, recover);
 
   expect(recover).not.toHaveBeenCalled();
 
@@ -219,19 +222,19 @@ export async function fabricateAnnounce(properties?: {
   readonly status?: StatusProperties;
   readonly object?: Note;
 }) {
+  const recover = jest.fn();
   const [actor, object] = await Promise.all([
-    fabricateLocalAccount().then(account => account.select('actor')),
+    fabricateLocalAccount().then(account => account.select('actor', signal, recover)),
     fabricateNote()
   ]);
 
-  const recover = jest.fn();
   const announce = await repository.insertAnnounce(Object.assign({
     object
   }, properties, {
     status: Object.assign(
       { published: new Date, actor, uri: null },
       properties && properties.status)
-  }), recover);
+  }), signal, recover);
 
   expect(recover).not.toHaveBeenCalled();
 
@@ -246,34 +249,40 @@ export async function fabricateCookie(properties?: {
   readonly account?: LocalAccount;
   readonly digest?: Buffer;
 }) {
-  return repository.insertCookie(Object.assign({
+  const recover = jest.fn();
+  const cookie = await repository.insertCookie(Object.assign({
     repository,
     account: await fabricateLocalAccount(),
     digest: Buffer.from('digest')
-  }, properties));
+  }, properties), signal, recover);
+  expect(recover).not.toHaveBeenCalled();
+  return cookie;
 }
 
 export async function fabricateDirtyDocument(
   uuid = '00000000-0000-1000-8000-010000000000',
   format = 'js'
 ) {
-  return repository.insertDirtyDocument(uuid, format);
+  const recover = jest.fn();
+  const dirty =
+    await repository.insertDirtyDocument(uuid, format, signal, recover);
+  return dirty;
 }
 
 export async function fabricateDocument(dirty?: DirtyDocument, url?: string) {
+  const recover = jest.fn();
+
   if (!dirty) {
     dirty = await repository.insertDirtyDocument(
-      '00000000-0000-1000-8000-010000000000', 'js');
+      '00000000-0000-1000-8000-010000000000', 'js', signal, recover);
   }
 
   if (!url) {
     url = `https://ReMoTe.إختبار/DoCuMeNt/${generateId()}`;
   }
 
-  const recover = jest.fn();
-
   const [document] = await Promise.all([
-    repository.insertDocument(dirty, url, recover),
+    repository.insertDocument(dirty, url, signal, recover),
     repository.s3.service.upload({
       Bucket: repository.s3.bucket,
       Body: join(__dirname, __filename),
@@ -290,16 +299,16 @@ export async function fabricateLike(properties?: {
   readonly actor?: Actor;
   readonly object?: Note;
 }) {
+  const recover = jest.fn();
   const [actor, object] = await Promise.all([
     fabricateLocalAccount()
-      .then(account => account.select('actor'))
+      .then(account => account.select('actor', signal, recover))
       .then(unwrap),
     fabricateNote()
   ]);
 
-  const recover = jest.fn();
   const like = await repository.insertLike(Object.assign(
-    { actor, object }, properties), recover);
+    { actor, object }, properties), signal, recover);
 
   expect(recover).not.toHaveBeenCalled();
 

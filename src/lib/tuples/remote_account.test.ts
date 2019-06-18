@@ -14,9 +14,12 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import { createPublicKey } from 'crypto';
 import repository from '../test/repository';
 import RemoteAccount from './remote_account';
+
+const { signal } = new AbortController;
 
 describe('create', () => {
   test('creates and resolves with an account', async () => {
@@ -42,9 +45,8 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `).export({ format: 'der', type: 'pkcs1' })
       }
-    }, recover);
+    }, signal, recover);
 
-    expect(recover).not.toHaveBeenCalled();
     expect(account).toBeInstanceOf(RemoteAccount);
     expect(account).toHaveProperty('repository', repository);
     expect(account).toHaveProperty(['actor', 'repository'], repository);
@@ -67,7 +69,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `).export({ format: 'der', type: 'pkcs1' }));
 
-    await expect(repository.selectRemoteAccountById(account.id))
+    await expect(repository.selectRemoteAccountById(account.id, signal, recover))
       .resolves
       .toHaveProperty('publicKeyDer', createPublicKey(`-----BEGIN RSA PUBLIC KEY-----
 MIIBCgKCAQEA0Rdj53hR4AdsiRcqt1zdgQHfIIJEmJ01vbALJaZXq951JSGTrcO6
@@ -78,6 +80,8 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 +DHYFaVXQy60WzCEFjiQPZ8XdNQKvDyjKwIDAQAB
 -----END RSA PUBLIC KEY-----
 `).export({ format: 'der', type: 'pkcs1' }));
+
+    expect(recover).not.toHaveBeenCalled();
   });
 
   test('rejects if username is invalid', async () => {
@@ -104,6 +108,6 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `).export({ format: 'der', type: 'pkcs1' })
       }
-    }, () => recovery)).rejects.toBe(recovery);
+    }, signal, () => recovery)).rejects.toBe(recovery);
   });
 });

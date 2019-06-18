@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import Actor from '../tuples/actor';
 import Announce from '../tuples/announce';
 import Note from '../tuples/note';
@@ -54,20 +55,31 @@ function parseExtension(this: Repository, {
 }
 
 export default class {
-  async deleteStatusByUriAndAttributedTo(this: Repository, uri: URI, attributedTo: Actor) {
+  async deleteStatusByUriAndAttributedTo(
+    this: Repository,
+    uri: URI,
+    attributedTo: Actor,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) {
     await this.pg.query({
       name: 'deleteStatusByUriAndAttributedTo',
       text: 'SELECT delete_status($1, $2)',
       values: [uri.id, attributedTo.id]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
   }
 
-  async selectRecentStatusesIncludingExtensionsByActorId(this: Repository, actorId: string): Promise<Status[]> {
+  async selectRecentStatusesIncludingExtensionsByActorId(
+    this: Repository,
+    actorId: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ): Promise<Status[]> {
     const { rows } = await this.pg.query({
       name: 'selectRecentStatusesIncludingExtensionsByActorId',
       text: 'SELECT statuses.*, announces.object_id AS announce_object_id, notes.in_reply_to_id AS note_in_reply_to_id, notes.summary AS note_summary, notes.content AS note_content FROM statuses LEFT OUTER JOIN announces USING (id) JOIN notes ON COALESCE(announces.object_id, statuses.id) = notes.id WHERE statuses.actor_id = $1 ORDER BY statuses.id DESC',
       values: [actorId]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     return (rows as any[]).map(row => new Status({
       repository: this,
@@ -78,7 +90,12 @@ export default class {
     }));
   }
 
-  async selectRecentStatusesIncludingExtensionsAndActorsFromInbox(this: Repository, actorId: string): Promise<Status[]> {
+  async selectRecentStatusesIncludingExtensionsAndActorsFromInbox(
+    this: Repository,
+    actorId: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ): Promise<Status[]> {
     const ids = await this.redis.client.zrevrange(
       `${this.redis.prefix}inbox:${actorId}`, 0, -1);
 
@@ -86,7 +103,7 @@ export default class {
       name: 'selectRecentStatusesIncludingExtensionsAndActorsFromInbox',
       text: 'SELECT statuses.*, announces.object_id AS announce_object_id, notes.in_reply_to_id AS note_in_reply_to_id, notes.summary AS note_summary, notes.content AS note_content, actors.username AS actor_username, actors.host AS actor_host, actors.name AS actor_name, actors.summary AS actor_summary FROM statuses LEFT OUTER JOIN announces USING (id) JOIN notes ON COALESCE(announces.object_id, statuses.id) = notes.id JOIN actors ON statuses.actor_id = actors.id WHERE statuses.id = ANY($1)',
       values: [ids]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     return (ids as string[])
       .map(id => (rows as any[]).find(row => row.id == id)).filter(Boolean).map(row => new Status({
@@ -105,12 +122,17 @@ export default class {
       }));
   }
 
-  async selectStatusById(this: Repository, id: string): Promise<Status | null> {
+  async selectStatusById(
+    this: Repository,
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ): Promise<Status | null> {
     const { rows } = await this.pg.query({
       name: 'selectStatusById',
       text: 'SELECT actor_id FROM statuses WHERE id = $1',
       values: [id]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     return rows[0] ? new Status({
       repository: this,
@@ -120,12 +142,17 @@ export default class {
     }) : null;
   }
 
-  async selectStatusIncludingExtensionById(this: Repository, id: string): Promise<Status | null> {
+  async selectStatusIncludingExtensionById(
+    this: Repository,
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ): Promise<Status | null> {
     const { rows } = await this.pg.query({
       name: 'selectStatusIncludingExtensionById',
       text: 'SELECT statuses.*, announces.object_id AS announce_object_id, notes.summary AS note_summary, notes.content AS note_content FROM statuses LEFT OUTER JOIN announces USING (id) JOIN notes ON COALESCE(announces.object_id, statuses.id) = notes.id WHERE statuses.id = $1',
       values: [id]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     return rows[0] ? new Status({
       repository: this,

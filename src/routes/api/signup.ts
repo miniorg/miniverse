@@ -48,7 +48,7 @@ export const post = secure(async (request, response) => {
       salt,
       serverKey,
       storedKey
-    }, () => recovery);
+    }, response.locals.signal, () => recovery);
   } catch (error) {
     if (error == recovery) {
       response.sendStatus(422);

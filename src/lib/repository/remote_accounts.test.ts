@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import { createPublicKey, generateKeyPair } from 'crypto';
 import { promisify } from 'util';
 import {
@@ -26,6 +27,7 @@ import RemoteAccount from '../tuples/remote_account';
 import { conflict } from '.';
 
 const promisifiedGenerateKeyPair = promisify(generateKeyPair);
+const { signal } = new AbortController;
 
 async function testInsertAndQuery(query: (account: RemoteAccount) => Promise<RemoteAccount>) {
   const inserted = await fabricateRemoteAccount({
@@ -67,13 +69,24 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
   return queried;
 }
 
-test('inserts account and allows to query one by key URI', () =>
-  testInsertAndQuery(account => account.select('publicKeyURI').then(uri =>
-    repository.selectRemoteAccountByKeyUri(unwrap(uri))).then(unwrap)));
+test('inserts account and allows to query one by key URI', async () => {
+  const recover = jest.fn();
 
-test('inserts account and allows to query one by its id', () =>
-  testInsertAndQuery(({ id }) =>
-    repository.selectRemoteAccountById(id).then(unwrap)));
+  await testInsertAndQuery(account =>
+    account.select('publicKeyURI', signal, recover).then(uri =>
+      repository.selectRemoteAccountByKeyUri(unwrap(uri), signal, recover)).then(unwrap));
+
+  expect(recover).not.toHaveBeenCalled();
+});
+
+test('inserts account and allows to query one by its id', async () => {
+  const recover = jest.fn();
+
+  await testInsertAndQuery(({ id }) =>
+    repository.selectRemoteAccountById(id, signal, recover).then(unwrap));
+
+  expect(recover).not.toHaveBeenCalled();
+});
 
 test('inserts accounts with common inbox URI', async () => {
   await expect(fabricateRemoteAccount({
@@ -92,7 +105,7 @@ test('inserts accounts with inbox whose URI is reserved for note inReplyTo', asy
   const reply = await repository.insertNote({
     status: {
       published: new Date,
-      actor: unwrap(await account.select('actor')),
+      actor: unwrap(await account.select('actor', signal, recover)),
       uri: null
     },
     summary: null,
@@ -101,7 +114,7 @@ test('inserts accounts with inbox whose URI is reserved for note inReplyTo', asy
     attachments: [],
     hashtags: [],
     mentions: []
-  }, recover);
+  }, signal, recover);
 
   expect(recover).not.toHaveBeenCalled();
 
@@ -117,7 +130,7 @@ test('inserts accounts with key whose URI is reserved for note inReplyTo', async
   const reply = await repository.insertNote({
     status: {
       published: new Date,
-      actor: unwrap(await account.select('actor')),
+      actor: unwrap(await account.select('actor', signal, recover)),
       uri: null
     },
     summary: null,
@@ -126,7 +139,7 @@ test('inserts accounts with key whose URI is reserved for note inReplyTo', async
     attachments: [],
     hashtags: [],
     mentions: []
-  }, recover);
+  }, signal, recover);
 
   expect(recover).not.toHaveBeenCalled();
 
@@ -136,17 +149,28 @@ test('inserts accounts with key whose URI is reserved for note inReplyTo', async
 });
 
 describe('selectRemoteAccountById', () => {
-  test('returns null if remote account is not associated', () =>
-    expect(repository.selectRemoteAccountById('0')).resolves.toBe(null));
+  test('returns null if remote account is not associated', async () => {
+    const recover = jest.fn();
+
+    await expect(repository.selectRemoteAccountById('0', signal, recover))
+      .resolves.toBe(null);
+
+    expect(recover).not.toHaveBeenCalled();
+  });
 });
 
 describe('selectRemoteAccountByKeyUri', () => {
-  test('returns null if not found', () =>
-    expect(repository.selectRemoteAccountByKeyUri({
+  test('returns null if not found', async () => {
+    const recover = jest.fn();
+
+    await expect(repository.selectRemoteAccountByKeyUri({
       id: '0',
       allocated: true,
       uri: '0'
-    })).resolves.toBe(null));
+    }, signal, recover)).resolves.toBe(null);
+
+    expect(recover).not.toHaveBeenCalled();
+  });
 });
 
 test('rejects when inserting remote account with conflicting URI', async () => {
@@ -169,7 +193,7 @@ test('rejects when inserting remote account with conflicting URI', async () => {
         publicKeyEncoding: { format: 'der', type: 'pkcs1' }
       })).publicKey,
     }
-  }, recover);
+  }, signal, recover);
 
   expect(recover).not.toHaveBeenCalled();
 
@@ -189,7 +213,7 @@ test('rejects when inserting remote account with conflicting URI', async () => {
         publicKeyEncoding: { format: 'der', type: 'pkcs1' }
       })).publicKey,
     }
-  }, error => {
+  }, signal, error => {
     expect(error[conflict]).toBe(true);
     return recovery;
   })).rejects.toBe(recovery);

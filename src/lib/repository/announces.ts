@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import Announce, { Seed } from '../tuples/announce';
 import Status from '../tuples/status';
 import URI from '../tuples/uri';
@@ -23,41 +24,42 @@ export default class {
   async insertAnnounce(
     this: Repository,
     { status, object }: Seed,
-    recover: (error: Error & { [conflict]: boolean }) => unknown
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string; [conflict]?: boolean }) => unknown
   ) {
-    let result;
+    const { rows: [{ insert_announce }]} = await this.pg.query({
+      name: 'insertAnnounce',
+      text: 'SELECT insert_announce($1, $2, $3, $4)',
+      values: [
+        status.published,
+        status.uri,
+        status.actor.id,
+        object.id
+      ]
+    }, signal, error => {
+      if (error.name == 'AbortError') {
+        return recover(error);
+      }
 
-    try {
-      result = await this.pg.query({
-        name: 'insertAnnounce',
-        text: 'SELECT insert_announce($1, $2, $3, $4)',
-        values: [
-          status.published,
-          status.uri,
-          status.actor.id,
-          object.id
-        ]
-      });
-    } catch (error) {
       if (error.code == '23502') {
-        throw recover(Object.assign(
+        return recover(Object.assign(
           new Error('uri conflicts.'),
           { [conflict]: true }));
       }
 
-      throw error;
-    }
+      return error;
+    });
 
     return new Announce({
       repository: this,
       status: new Status({
         repository: this,
-        id: result.rows[0].insert_announce,
+        id: insert_announce,
         published: status.published,
         actor: status.actor,
         uri: status.uri == null ? null : new URI({
           repository: this,
-          id: result.rows[0].insert_announce,
+          id: insert_announce,
           uri: status.uri,
           allocated: true
         })

@@ -14,8 +14,11 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortController } from 'abort-controller';
 import repository from '../test/repository';
 import Relation from './relation';
+
+const { signal } = new AbortController;
 
 describe('constructor', () => {
   test('sets properties', () => {
@@ -79,8 +82,12 @@ describe('select', () => {
     C.references = { reference: { query, id: 'id' } };
 
     const i = new C({ repository });
-    await expect(i.select('reference')).resolves.toBe(reference);
-    await expect(i.select('reference')).resolves.toBe(reference);
+    const recover = jest.fn();
+    await expect(i.select('reference', signal, recover))
+      .resolves.toBe(reference);
+    await expect(i.select('reference', signal, recover))
+      .resolves.toBe(reference);
+    expect(recover).not.toHaveBeenCalled();
     expect(query).toHaveBeenCalledTimes(1);
   });
 
@@ -98,7 +105,10 @@ describe('select', () => {
     };
 
     const i = new C({ repository });
-    await expect(i.select('reference')).resolves.toBe(reference);
+    const recover = jest.fn();
+    await expect(i.select('reference', signal, recover))
+      .resolves.toBe(reference);
+    expect(recover).not.toHaveBeenCalled();
     expect('undefined' in reference).toBe(false);
   });
 
@@ -117,7 +127,10 @@ describe('select', () => {
     };
 
     const i = new C({ repository });
-    await expect(i.select('reference')).resolves.toBe(reference);
+    const recover = jest.fn();
+    await expect(i.select('reference', signal, recover))
+      .resolves.toBe(reference);
+    expect(recover).not.toHaveBeenCalled();
     expect(reference.inverseOf).toBe(i);
   });
 
@@ -128,16 +141,20 @@ describe('select', () => {
     C.references = { reference: { query, id: 'id' } };
 
     const i = new C({ repository });
-    await i.select('reference');
-    expect(query).toHaveBeenCalledWith(i);
+    const recover = jest.fn();
+    await i.select('reference', signal, recover);
+    expect(query).toHaveBeenCalledWith(i, signal, recover);
   });
 });
 
-test('caches and returns reference given to constructor', () => {
+test('caches and returns reference given to constructor', async () => {
   class C extends Relation<{}, { reference: { id: {} } }> {}
   C.references = { reference: { id: 'id' } };
 
   const reference = { id: {} };
   const i = new C({ repository, reference });
-  return expect(i.select('reference')).resolves.toBe(reference);
+  const recover = jest.fn();
+  await expect(i.select('reference', signal, recover))
+    .resolves.toBe(reference);
+  expect(recover).not.toHaveBeenCalled();
 });

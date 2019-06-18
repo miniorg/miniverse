@@ -14,16 +14,22 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import URI from '../tuples/uri';
 import Repository from '.';
 
 export default class {
-  async selectURIById(this: Repository, id: string): Promise<URI | null> {
+  async selectURIById(
+    this: Repository,
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ): Promise<URI | null> {
     const { rows } = await this.pg.query({
       name: 'selectURIById',
       text: 'SELECT * FROM uris WHERE id = $1',
       values: [id]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     return rows[0] ? new URI({
       repository: this,
@@ -33,12 +39,17 @@ export default class {
     }) : null;
   }
 
-  async selectAllocatedURI(this: Repository, uri: string): Promise<URI | null> {
+  async selectAllocatedURI(
+    this: Repository,
+    uri: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ): Promise<URI | null> {
     const { rows } = await this.pg.query({
       name: 'selectAllocatedURI',
       text: 'SELECT * FROM uris WHERE uri = $1 AND allocated',
       values: [uri]
-    });
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
 
     return rows[0] ? new URI({
       repository: this,

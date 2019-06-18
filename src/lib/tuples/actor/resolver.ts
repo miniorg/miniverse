@@ -40,12 +40,19 @@ export async function lookup(repository: Repository, resource: string, signal: A
 }
 
 export default class extends Base {
-  static async fromUsernameAndNormalizedHost(repository: Repository, username: string, normalizedHost: null | string, signal: AbortSignal, recover: (error: Error & {
-    [temporaryError]?: boolean;
-    [unexpectedType]?: boolean;
-  }) => unknown) {
+  static async fromUsernameAndNormalizedHost(
+    repository: Repository,
+    username: string,
+    normalizedHost: null | string,
+    signal: AbortSignal,
+    recover: (error: Error & {
+      name?: string;
+      [temporaryError]?: boolean;
+      [unexpectedType]?: boolean;
+    }) => unknown
+  ) {
     const actor = await repository.selectActorByUsernameAndNormalizedHost(
-      username, normalizedHost);
+      username, normalizedHost, signal, recover);
 
     if (normalizedHost) {
       if (actor) {
@@ -96,7 +103,7 @@ export default class extends Base {
         }
 
         const actor = await repository.selectActorByUsernameAndNormalizedHost(
-          username, normalizedHost);
+          username, normalizedHost, signal, recover);
         if (actor) {
           return actor;
         }
@@ -108,18 +115,25 @@ export default class extends Base {
     return actor;
   }
 
-  static async fromKeyUri(repository: Repository, keyUri: string, signal: AbortSignal, recover: (error: Error & {
-    [temporaryError]?: boolean;
-    [unexpectedType]?: boolean;
-  }) => unknown) {
-    const keyUriEntity = await repository.selectAllocatedURI(keyUri);
+  static async fromKeyUri(
+    repository: Repository,
+    keyUri: string,
+    signal: AbortSignal,
+    recover: (error: Error & {
+      name?: string;
+      [temporaryError]?: boolean;
+      [unexpectedType]?: boolean;
+    }) => unknown
+  ) {
+    const keyUriEntity = await repository.selectAllocatedURI(
+      keyUri, signal, recover);
 
     if (keyUriEntity) {
-      const account =
-        await repository.selectRemoteAccountByKeyUri(keyUriEntity);
+      const account = await repository.selectRemoteAccountByKeyUri(
+        keyUriEntity, signal, recover);
 
       if (account) {
-        return account.select('actor');
+        return account.select('actor', signal, recover);
       }
 
       throw recover(new Error('Key owner not found.'));

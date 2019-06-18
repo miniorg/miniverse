@@ -28,11 +28,18 @@ const actorTypes =
   ['Application', 'Group', 'Organization', 'Person', 'Service'];
 
 export default class extends Base {
-  static async createFromHostAndParsedActivityStreams(repository: Repository, host: string, object: ParsedActivityStreams, signal: AbortSignal, recover: (error: Error & {
-    [conflict]?: boolean;
-    [temporaryError]?: boolean;
-    [unexpectedType]?: boolean;
-  }) => unknown) {
+  static async createFromHostAndParsedActivityStreams(
+    repository: Repository,
+    host: string,
+    object: ParsedActivityStreams,
+    signal: AbortSignal,
+    recover: (error: Error & {
+      name?: string;
+      [conflict]?: boolean;
+      [temporaryError]?: boolean;
+      [unexpectedType]?: boolean;
+    }) => unknown
+  ) {
     const type = await object.getType(signal, recover);
     if (!actorTypes.some(type.has, type)) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Application, Group, Organization, Person or Service.'), { [unexpectedType]: true }));
@@ -119,15 +126,21 @@ export default class extends Base {
       uri: id,
       inbox: { uri: inboxId },
       publicKey: { uri: publicKeyId, publicKeyDer }
-    }, recover);
+    }, signal, recover);
 
-    return account.select('actor');
+    return account.select('actor', signal, recover);
   }
 
-  static async fromParsedActivityStreams(repository: Repository, object: ParsedActivityStreams, signal: AbortSignal, recover: (error: Error & {
-    [temporaryError]?: boolean;
-    [unexpectedType]?: boolean;
-  }) => unknown) {
+  static async fromParsedActivityStreams(
+    repository: Repository,
+    object: ParsedActivityStreams,
+    signal: AbortSignal,
+    recover: (error: Error & {
+      name?: string;
+      [temporaryError]?: boolean;
+      [unexpectedType]?: boolean;
+    }) => unknown
+  ) {
     const localUserPrefix = `https://${domainToASCII(repository.host)}/@`;
     const uri = await object.getId(recover);
 
@@ -137,18 +150,21 @@ export default class extends Base {
 
     if (uri.startsWith(localUserPrefix)) {
       return repository.selectActorByUsernameAndNormalizedHost(
-        decodeURIComponent(uri.slice(localUserPrefix.length)), null);
+        decodeURIComponent(uri.slice(localUserPrefix.length)),
+        null,
+        signal,
+        recover);
     }
 
-    const uriEntity = await repository.selectAllocatedURI(uri);
+    const uriEntity = await repository.selectAllocatedURI(uri, signal, recover);
 
     if (uriEntity) {
-      const account = await repository.selectRemoteAccountById(uriEntity.id);
+      const account = await repository.selectRemoteAccountById(uriEntity.id, signal, recover);
       if (!account) {
         throw recover(new Error('Account not found.'));
       }
 
-      const actor = await account.select('actor');
+      const actor = await account.select('actor', signal, recover);
       if (!actor) {
         throw recover(new Error('actor not found.'));
       }
@@ -191,14 +207,14 @@ export default class extends Base {
         throw error;
       }
 
-      const uriEntity = await repository.selectAllocatedURI(uri);
+      const uriEntity = await repository.selectAllocatedURI(uri, signal, recover);
       if (uriEntity) {
-        const account = await repository.selectRemoteAccountById(uriEntity.id);
+        const account = await repository.selectRemoteAccountById(uriEntity.id, signal, recover);
         if (!account) {
           throw recover(new Error('Account not found.'));
         }
   
-        const actor = account.select('actor');
+        const actor = account.select('actor', signal, recover);
         if (!actor) {
           throw recover(new Error('actor not found.'));
         }

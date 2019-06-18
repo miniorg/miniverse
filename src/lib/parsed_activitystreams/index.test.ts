@@ -643,9 +643,10 @@ describe('act', () => {
     const announce = await fabricateAnnounce(
       { status: { uri: 'https://ReMoTe.إختبار/' } });
 
-    const status = unwrap(await announce.select('status'));
-    const actor = unwrap(await status.select('actor'));
     const recover = jest.fn();
+
+    const status = unwrap(await announce.select('status', signal, recover));
+    const actor = unwrap(await status.select('actor', signal, recover));
 
     await expect(activity.act(actor, signal, recover))
       .resolves
@@ -655,18 +656,18 @@ describe('act', () => {
   });
 
   test('performs announce activity', async () => {
+    const recover = jest.fn();
+
     const activity = new ParsedActivityStreams(
       repository, 'https://ReMoTe.إختبار/', AnyHost);
 
     const [actor] = await Promise.all([
       fabricateRemoteAccount()
-        .then(account => account.select('actor'))
+        .then(account => account.select('actor', signal, recover))
         .then(unwrap),
       fabricateNote(
         { status: { uri: 'https://NoTe.إختبار/' } })
     ]);
-
-    const recover = jest.fn();
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -683,11 +684,12 @@ describe('act', () => {
   });
 
   test('performs create activity', async () => {
+    const recover = jest.fn();
+
     const activity = new ParsedActivityStreams(
       repository, 'https://ReMoTe.إختبار/', AnyHost);
     const account = await fabricateRemoteAccount();
-    const actor = unwrap(await account.select('actor'));
-    const recover = jest.fn();
+    const actor = unwrap(await account.select('actor', signal, recover));
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -709,42 +711,46 @@ describe('act', () => {
   });
 
   test('performs delete activity', async () => {
+    const recover = jest.fn();
+
     const activity = new ParsedActivityStreams(
       repository, 'https://ReMoTe.إختبار/', AnyHost);
 
     const note = await fabricateNote(
       { status: { uri: 'https://NoTe.إختبار/' } });
 
-    const status = unwrap(await note.select('status'));
-    const actor = unwrap(await status.select('actor'));
+    const status = unwrap(await note.select('status', signal, recover));
+    const actor = unwrap(await status.select('actor', signal, recover));
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'Delete',
       object: 'https://NoTe.إختبار/'
     }, async () => {
-      const recover = jest.fn();
       await expect(activity.act(actor, signal, recover)).resolves.toBe(null);
-      expect(recover).not.toHaveBeenCalled();
 
-      await expect(repository.selectRecentStatusesIncludingExtensionsByActorId(status.actorId))
-        .resolves
-        .toEqual([]);
+      await expect(repository.selectRecentStatusesIncludingExtensionsByActorId(
+        status.actorId,
+        signal,
+        recover
+      )).resolves.toEqual([]);
+
+      expect(recover).not.toHaveBeenCalled();
     });
   });
 
   test('performs follow activity', async () => {
+    const recover = jest.fn();
+
     const activity = new ParsedActivityStreams(
       repository, 'https://ReMoTe.إختبار/', AnyHost);
 
     const [actor] = await Promise.all([
       fabricateLocalAccount()
-        .then(account => account.select('actor'))
+        .then(account => account.select('actor', signal, recover))
         .then(unwrap),
       fabricateLocalAccount({ actor: { username: '被行動者' } })
     ]);
-
-    const recover = jest.fn();
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -756,17 +762,17 @@ describe('act', () => {
   });
 
   test('performs like activity', async () => {
+    const recover = jest.fn();
+
     const activity = new ParsedActivityStreams(
       repository, 'https://ReMoTe.إختبار/', AnyHost);
 
     const [actor] = await Promise.all([
       fabricateLocalAccount()
-        .then(account => account.select('actor'))
+        .then(account => account.select('actor', signal, recover))
         .then(unwrap),
       fabricateNote({ status: { uri: 'https://NoTe.إختبار/' } })
     ]);
-
-    const recover = jest.fn();
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -778,15 +784,17 @@ describe('act', () => {
   });
 
   test('performs undo activity', async () => {
+    const recover = jest.fn();
+
     const activity = new ParsedActivityStreams(
       repository, 'https://ReMoTe.إختبار/', AnyHost);
 
     const [actor, object] = await Promise.all([
       fabricateLocalAccount()
-        .then(account => account.select('actor'))
+        .then(account => account.select('actor', signal, recover))
         .then(unwrap),
       fabricateLocalAccount({ actor: { username: '被行動者' } })
-        .then(account => account.select('actor'))
+        .then(account => account.select('actor', signal, recover))
         .then(unwrap),
     ]);
 
@@ -800,30 +808,30 @@ describe('act', () => {
         object: 'https://xn--kgbechtv/@%E8%A2%AB%E8%A1%8C%E5%8B%95%E8%80%85'
       }
     }, async () => {
-      const recover = jest.fn();
-
       await expect(activity.act(actor, signal, recover)).resolves.toBe(null);
       expect(recover).not.toHaveBeenCalled();
 
-      await expect(repository.selectActorsByFolloweeId(object.id))
-        .resolves
-        .toEqual([]);
+      await expect(repository.selectActorsByFolloweeId(
+        object.id,
+        signal,
+        recover
+      )).resolves.toEqual([]);
     });
   });
 
   describe('if actor is specified', () => {
     test('accepts if actor matches', async () => {
+      const recover = jest.fn();
+
       const activity = new ParsedActivityStreams(
         repository, 'https://ReMoTe.إختبار/', AnyHost);
 
       const [actor] = await Promise.all([
         fabricateLocalAccount({ actor: { username: '行動者' } })
-          .then(account => account.select('actor'))
+          .then(account => account.select('actor', signal, recover))
           .then(unwrap),
         fabricateLocalAccount({ actor: { username: '被行動者' } })
       ]);
-
-      const recover = jest.fn();
 
       await testLoading({
         '@context': 'https://www.w3.org/ns/activitystreams',
@@ -836,18 +844,23 @@ describe('act', () => {
     });
 
     test('rejects if actor mismatches', async () => {
+      const recover = jest.fn();
+      const { signal } = new AbortController;
+
       const activity = new ParsedActivityStreams(
         repository, 'https://ReMoTe.إختبار/', AnyHost);
 
       const [expectedActor] = await Promise.all([
         fabricateLocalAccount()
-          .then(account => account.select('actor'))
+          .then(account => account.select('actor', signal, recover))
           .then(unwrap),
         fabricateLocalAccount({ actor: { username: '被行動者' } }),
         fabricateLocalAccount({ actor: { username: '行動者' } })
       ]);
 
       const recovery = {};
+
+      expect(recover).not.toHaveBeenCalled();
 
       await testLoading({
         '@context': 'https://www.w3.org/ns/activitystreams',

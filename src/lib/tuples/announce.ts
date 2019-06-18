@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { AbortSignal } from 'abort-controller';
+import { AbortController, AbortSignal } from 'abort-controller';
 import { Announce as ActivityStreams } from '../generated_activitystreams';
 import ParsedActivityStreams from '../parsed_activitystreams';
 import Repository from '../repository';
@@ -60,26 +60,32 @@ export default class Announce extends Relation<Properties, References> {
   readonly objectId!: string;
   readonly status?: Reference<Status | null>;
 
-  async toActivityStreams(recover: (error: Error) => unknown): Promise<ActivityStreams> {
+  async toActivityStreams(
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ): Promise<ActivityStreams> {
     const [[id, published], object] = await Promise.all([
-      this.select('status').then(status => {
+      this.select('status', signal, recover).then(status => {
         if (!status) {
           throw recover(new Error('status not found.'));
         }
 
-        return Promise.all([status.getUri(recover), status.published]);
+        return Promise.all([
+          status.getUri(signal, recover),
+          status.published
+        ]);
       }),
-      this.select('object').then(async object => {
+      this.select('object', signal, recover).then(async object => {
         if (!object) {
           throw recover(new Error('object not found.'));
         }
 
-        const status = await object.select('status');
+        const status = await object.select('status', signal, recover);
         if (!status) {
           throw recover(new Error('object\'s status not found.'));
         }
 
-        return status.getUri(recover);
+        return status.getUri(signal, recover);
       }),
     ]);
 
@@ -89,15 +95,16 @@ export default class Announce extends Relation<Properties, References> {
   static async create(
     repository: Repository,
     seed: Seed,
-    recover: (error: Error) => unknown
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
   ) {
-    const announce = await repository.insertAnnounce(seed, recover);
-    const status = await announce.select('status');
+    const announce = await repository.insertAnnounce(seed, signal, recover);
+    const status = await announce.select('status', signal, recover);
     if (!status) {
       throw new Error('status propagation failed.');
     }
 
-    await postStatus(repository, status, recover);
+    await postStatus(repository, status, (new AbortController).signal, recover);
 
     return announce;
   }
@@ -108,6 +115,7 @@ export default class Announce extends Relation<Properties, References> {
     actor: Actor,
     signal: AbortSignal,
     recover: (error: Error & {
+      name?: string;
       [temporaryError]?: boolean;
       [unexpectedType]?: boolean;
     }) => unknown
@@ -160,7 +168,7 @@ export default class Announce extends Relation<Properties, References> {
         uri: typeof uri == 'string' ? uri : null
       },
       object: objectObject
-    }, recover);
+    }, signal, recover);
   }
 }
 

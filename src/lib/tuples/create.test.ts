@@ -31,6 +31,8 @@ const { signal } = new AbortController;
 describe('Create', () => {
   describe('toActivityStreams', () => {
     test('resolves with ActivityStreams representation', async () => {
+      const recover = jest.fn();
+
       const account = await fabricateRemoteAccount({
         actor: { username: 'username' },
         uri: 'https://ReMoTe.xn--kgbechtv/'
@@ -39,7 +41,7 @@ describe('Create', () => {
       const object = await fabricateNote({
         status: {
           published: new Date('2000-01-01T00:00:00.000Z'),
-          actor: unwrap(await account.select('actor'))
+          actor: unwrap(await account.select('actor', signal, recover))
         },
         content: '内容',
         attachments: [],
@@ -48,9 +50,8 @@ describe('Create', () => {
       });
 
       const instance = new Create({ repository, object });
-      const recover = jest.fn();
 
-      await expect(instance.toActivityStreams(recover)).resolves.toEqual({
+      await expect(instance.toActivityStreams(signal, recover)).resolves.toEqual({
         type: 'Create',
         object: {
           type: 'Note',
@@ -72,6 +73,8 @@ describe('Create', () => {
 
   describe('createFromParsedActivityStreams', () => {
     test('creates from parsed ActivityStreams', async () => {
+      const recover = jest.fn();
+
       const activity = new ParsedActivityStreams(repository, {
         '@context': 'https://www.w3.org/ns/activitystreams',
         type: 'Create',
@@ -86,23 +89,23 @@ describe('Create', () => {
       }, AnyHost);
 
       const account = await fabricateLocalAccount();
-      const actor = unwrap(await account.select('actor'));
-      const recover = jest.fn();
+      const actor = unwrap(await account.select('actor', signal, recover));
       const create = unwrap(await Create.createFromParsedActivityStreams(
         repository, activity, actor, signal, recover));
 
-      const object = unwrap(await create.select('object'));
+      const object = unwrap(await create.select('object', signal, recover));
 
       expect(recover).not.toHaveBeenCalled();
       expect(create).toBeInstanceOf(Create);
       expect(object).toBeInstanceOf(Note);
-      await expect(object.select('status'))
+      await expect(object.select('status', signal, recover))
         .resolves
         .toHaveProperty('actorId', actor.id);
       expect(object.content).toBe('');
     });
 
     test('rejects if type is not Create', async () => {
+      const recover = jest.fn();
       const activity = new ParsedActivityStreams(repository, {
         '@context': 'https://www.w3.org/ns/activitystreams',
         object: {
@@ -115,8 +118,10 @@ describe('Create', () => {
       }, AnyHost);
 
       const account = await fabricateLocalAccount();
-      const actor = unwrap(await account.select('actor'));
+      const actor = unwrap(await account.select('actor', signal, recover));
       const recovery = {};
+
+      expect(recover).not.toHaveBeenCalled();
 
       await expect(Create.createFromParsedActivityStreams(
         repository, activity, actor, signal, error => {
@@ -129,6 +134,8 @@ describe('Create', () => {
 
 describe('create', () => {
   test('creates note', async () => {
+    const recover = jest.fn();
+
     const object = new ParsedActivityStreams(repository, {
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'Note',
@@ -140,10 +147,9 @@ describe('create', () => {
     }, AnyHost);
 
     const account = await fabricateLocalAccount();
-    const actor = unwrap(await account.select('actor'));
-    const recover = jest.fn();
+    const actor = unwrap(await account.select('actor', signal, recover));
     const note = unwrap(await create(repository, actor, object, signal, recover));
-    const status = unwrap(await note.select('status'));
+    const status = unwrap(await note.select('status', signal, recover));
 
     expect(recover).not.toHaveBeenCalled();
     expect(note).toBeInstanceOf(Note);
@@ -153,6 +159,8 @@ describe('create', () => {
 
   describe('if attributedTo is specified', () => {
     test('accepts if attributedTo matches', async () => {
+      const recover = jest.fn();
+
       const object = new ParsedActivityStreams(repository, {
         '@context': 'https://www.w3.org/ns/activitystreams',
         type: 'Note',
@@ -165,10 +173,9 @@ describe('create', () => {
       }, AnyHost);
 
       const account = await fabricateLocalAccount({ actor: { username: '' } });
-      const actor = unwrap(await account.select('actor'));
-      const recover = jest.fn();
+      const actor = unwrap(await account.select('actor', signal, recover));
       const note = unwrap(await create(repository, actor, object, signal, recover));
-      const status = unwrap(await note.select('status'));
+      const status = unwrap(await note.select('status', signal, recover));
 
       expect(recover).not.toHaveBeenCalled();
       expect(note).toBeInstanceOf(Note);
@@ -177,6 +184,8 @@ describe('create', () => {
     });
 
     test('does not accept if attributedTo mismatches', async () => {
+      const recover = jest.fn();
+
       const object = new ParsedActivityStreams(repository, {
         '@context': 'https://www.w3.org/ns/activitystreams',
         type: 'Note',
@@ -189,10 +198,12 @@ describe('create', () => {
 
       const [expectedAttributedTo] = await Promise.all([
         fabricateLocalAccount({ actor: { username: '仮定された行動者' } })
-          .then(account => account.select('actor'))
+          .then(account => account.select('actor', signal, recover))
           .then(unwrap),
         fabricateLocalAccount({ actor: { username: '' } })
       ]);
+
+      expect(recover).not.toHaveBeenCalled();
 
       const recovery = {};
 

@@ -14,7 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Pool } from 'pg';
+import { AbortSignal } from 'abort-controller';
 import { Analytics } from '../session/types';
 import Actor from '../tuples/actor';
 import Announce, {
@@ -56,6 +56,7 @@ import LocalAccounts from './local_accounts';
 import Mentions from './mentions';
 import RemoteAccounts from './remote_accounts';
 import Notes from './notes';
+import Pg, { Config } from './pg';
 import Statuses from './statuses';
 import Subscribers, { Listen } from './subscribers';
 import Syslog from './syslog';
@@ -84,7 +85,7 @@ export interface Options {
   readonly content: Content;
   readonly host: string;
   readonly fingerHost?: string;
-  readonly pg: Pool;
+  readonly pg: Config;
   readonly redis: { readonly prefix?: string; readonly url?: string };
   readonly s3: {
     readonly service: S3;
@@ -117,7 +118,7 @@ export default class Repository implements
     this.listeners = Object.create(null);
     this.host = host;
     this.fingerHost = fingerHost || host;
-    this.pg = pg;
+    this.pg = new Pg(pg);
     this.s3 = s3;
   
     this.redis = {
@@ -150,18 +151,38 @@ export default class Repository implements
     });
   }
 
-  readonly selectActorById!:
-  (id: string) => Promise<Actor | null>;
-  readonly selectActorByUsernameAndNormalizedHost!:
-  (username: string, normalizedHost: string | null) => Promise<Actor | null>;
-  readonly selectActorsByFolloweeId!:
-  (id: string) => Promise<Actor[]>;
-  readonly selectActorsMentionedByNoteId!:
-  (id: string) => Promise<Actor[]>;
+  end() {
+    this.redis.client.disconnect();
+    this.redis.subscriber.disconnect();
+    return this.pg.end();
+  }
+
+  readonly selectActorById!: (
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<Actor | null>;
+  readonly selectActorByUsernameAndNormalizedHost!: (
+    username: string,
+    normalizedHost: string | null,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<Actor | null>;
+  readonly selectActorsByFolloweeId!: (
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<Actor[]>;
+  readonly selectActorsMentionedByNoteId!: (
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<Actor[]>;
 
   readonly insertAnnounce!: (
     seed: AnnounceSeed,
-    recover: (error: Error & { [conflict]: boolean }) => unknown
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string; [conflict]?: boolean }) => unknown
   ) => Promise<Announce>;
 
   readonly insertChallenge!:
@@ -169,106 +190,193 @@ export default class Repository implements
   readonly selectChallengeByDigest!:
   (digest: Buffer) => Promise<Challenge | null>;
 
-  readonly insertCookie!: ({ account, digest }: {
-    readonly account: LocalAccount;
-    readonly digest: Buffer;
-  }) => Promise<Cookie>;
+  readonly insertCookie!: (
+    { account, digest }: {
+      readonly account: LocalAccount;
+      readonly digest: Buffer;
+    },
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<Cookie>;
 
   readonly insertDocument!: (
     dirty: DirtyDocument,
     url: string,
-    recover: (error: Error & { [conflict]: boolean }) => unknown
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string; [conflict]: boolean }) => unknown
   ) => Promise<Document>;
-  readonly selectDocumentById!:
-  (id: string) => Promise<Document | null>;
-  readonly selectDocumentsByAttachedNoteId!:
-  (id: string) => Promise<Document[]>;
+  readonly selectDocumentById!: (
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<Document | null>;
+  readonly selectDocumentsByAttachedNoteId!: (
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<Document[]>;
 
-  readonly deleteFollowByActorAndObject!:
-  (actor: Actor, object: Actor) => Promise<void>;
+  readonly deleteFollowByActorAndObject!: (
+    actor: Actor,
+    object: Actor,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<void>;
   readonly insertFollow!: (
     seed: FollowSeed,
-    recover: (error: Error) => unknown
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
   ) => Promise<Follow>;
-  readonly selectFollowIncludingActorAndObjectById!:
-  (id: string) => Promise<Follow | null>;
+  readonly selectFollowIncludingActorAndObjectById!: (
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<Follow | null>;
 
-  readonly selectHashtagsByNoteId!:
-  (noteId: string) => Promise<Hashtag[]>;
+  readonly selectHashtagsByNoteId!: (
+    noteId: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<Hashtag[]>;
 
-  readonly deleteLikeByActorAndObject!:
-  (actor: Actor, object: Note) => Promise<void>;
+  readonly deleteLikeByActorAndObject!: (
+    actor: Actor,
+    object: Note,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<void>;
   readonly insertLike!: (
     seed: LikeSeed,
-    recover: (error: Error) => unknown
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
   ) => Promise<Like>;
-  readonly selectLikeById!:
-  (id: string) => Promise<Like | null>;
+  readonly selectLikeById!: (
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<Like | null>;
 
   readonly getInboxChannel!:
   (accountOrActor: LocalAccount | Actor) => string;
   readonly insertLocalAccount!: (
     seed: LocalAccountSeed & { readonly privateKeyDer: Buffer },
-    recover: (error: Error & { [conflict]: boolean }) => unknown
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string; [conflict]: boolean }) => unknown
   ) => Promise<LocalAccount>;
-  readonly insertIntoInboxes!:
-  (accountOrActors: (LocalAccount | Actor)[], item: Status) => Promise<void>;
-  readonly selectLocalAccountByDigestOfCookie!:
-  (digest: Buffer) => Promise<LocalAccount | null>;
-  readonly selectLocalAccountById!:
-  (id: string) => Promise<LocalAccount | null>;
+  readonly insertIntoInboxes!: (
+    accountOrActors: (LocalAccount | Actor)[],
+    item: Status,
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ) => Promise<void>;
+  readonly selectLocalAccountByDigestOfCookie!: (
+    digest: Buffer,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<LocalAccount | null>;
+  readonly selectLocalAccountById!: (
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<LocalAccount | null>;
 
-  readonly selectMentionsIncludingActorsByNoteId!:
-  (id: string) => Promise<Mention[]>;
+  readonly selectMentionsIncludingActorsByNoteId!: (
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<Mention[]>;
 
   readonly insertNote!: (
     seed: NoteSeed,
-    recover: (error: Error & { [conflict]: boolean }) => unknown
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string; [conflict]?: boolean }) => unknown
   ) => Promise<Note>;
-  readonly selectNoteById!:
-  (id: string) => Promise<Note | null>;
+  readonly selectNoteById!: (
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string}) => unknown
+  ) => Promise<Note | null>;
 
   readonly insertRemoteAccount!: (
     seed: RemoteAccountSeed,
-    recover: (error: Error & { [conflict]: boolean }) => unknown
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string; [conflict]?: boolean }) => unknown
   ) => Promise<RemoteAccount>;
-  readonly selectRemoteAccountById!:
-  (id: string) => Promise<RemoteAccount | null>;
-  readonly selectRemoteAccountByKeyUri!:
-  (uri: URI) => Promise<RemoteAccount | null>;
+  readonly selectRemoteAccountById!: (
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<RemoteAccount | null>;
+  readonly selectRemoteAccountByKeyUri!: (
+    uri: URI,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<RemoteAccount | null>;
 
-  readonly deleteStatusByUriAndAttributedTo!:
-  (uri: URI, attributedTo: Actor) => Promise<void>;
-  readonly selectRecentStatusesIncludingExtensionsByActorId!:
-  (actorId: string) => Promise<Status[]>;
-  readonly selectRecentStatusesIncludingExtensionsAndActorsFromInbox!:
-  (actorId: string) => Promise<Status[]>;
-  readonly selectStatusById!:
-  (id: string) => Promise<Status | null>;
-  readonly selectStatusIncludingExtensionById!:
-  (id: string) => Promise<Status | null>;
+  readonly deleteStatusByUriAndAttributedTo!: (
+    uri: URI,
+    attributedTo: Actor,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<void>;
+  readonly selectRecentStatusesIncludingExtensionsByActorId!: (
+    actorId: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<Status[]>;
+  readonly selectRecentStatusesIncludingExtensionsAndActorsFromInbox!: (
+    actorId: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<Status[]>;
+  readonly selectStatusById!: (
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<Status | null>;
+  readonly selectStatusIncludingExtensionById!: (
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<Status | null>;
 
   readonly subscribe!:
   (channel: string, listen: Listen) => Promise<void>;
   readonly unsubscribe!:
   (channel: string, listen: Listen) => Promise<void>;
 
-  readonly deleteUnlinkedDocumentsByIds!:
-  (ids: string[]) => Promise<void>;
-  readonly selectUnlinkedDocuments!:
-  () => Promise<{ id: string; uuid: string; format: string }[]>;
+  readonly deleteUnlinkedDocumentsByIds!: (
+    ids: string[],
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<void>;
+  readonly selectUnlinkedDocuments!: (
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<{ id: string; uuid: string; format: string }[]>;
 
-  readonly deleteDirtyDocument!:
-  (dirty: DirtyDocument) => Promise<void>;
+  readonly deleteDirtyDocument!: (
+    dirty: DirtyDocument,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<void>;
   readonly insertDirtyDocument!: (
     uuid: string,
-    format: string
+    format: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
   ) => Promise<DirtyDocument>;
 
-  readonly selectURIById!:
-  (id: string) => Promise<URI | null>;
-  readonly selectAllocatedURI!:
-  (uri: string) => Promise<URI | null>;
+  readonly selectURIById!: (
+    id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<URI | null>;
+  readonly selectAllocatedURI!: (
+    uri: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<URI | null>;
 
   readonly analytics: Analytics;
   readonly captcha: Captcha;
@@ -276,7 +384,7 @@ export default class Repository implements
   readonly content: Content;
   readonly host: string;
   readonly fingerHost: string;
-  readonly pg: Pool;
+  readonly pg: Pg;
   readonly redis: RedisRepository;
   readonly s3: {
     readonly service: S3;

@@ -14,12 +14,16 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { AbortSignal } from 'abort-controller';
 import { Any, OrderedCollectionPage } from '../generated_activitystreams';
 
 const recovery = {};
 
 interface ToActivityStreams {
-  toActivityStreams(recover: (error: Error) => unknown): Promise<Any>;
+  toActivityStreams(
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ): Promise<Any>;
 }
 
 export default class {
@@ -29,17 +33,24 @@ export default class {
     this.orderedItems = orderedItems;
   }
 
-  async toActivityStreams(): Promise<OrderedCollectionPage> {
+  async toActivityStreams(
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ): Promise<OrderedCollectionPage> {
     return {
       type: 'OrderedCollectionPage',
       orderedItems: (await Promise.all(this.orderedItems.map(
-        item => item.toActivityStreams(() => recovery).catch(error => {
+        item => item.toActivityStreams(
+          signal,
+          error => error.name == 'AbortError' ? recover(error) : recovery
+        ).catch(error => {
           if (error != recovery) {
             throw error;
           }
 
           return recovery;
-        })))).filter(item => item != recovery) as Any[]
+        })
+      ))).filter(item => item != recovery) as Any[]
     };
   }
 }

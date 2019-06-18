@@ -32,11 +32,17 @@ type Properties = { objectId: string } | { objectId?: string; object: Note };
 export const unexpectedObjectType = Symbol();
 export const unexpectedType = Symbol();
 
-export async function create(repository: Repository, attributedTo: Actor, object: ParsedActivityStreams, signal: AbortSignal, recover: (error: Error) => unknown) {
+export async function create(
+  repository: Repository,
+  attributedTo: Actor,
+  object: ParsedActivityStreams,
+  signal: AbortSignal,
+  recover: (error: Error) => unknown
+) {
   const [actual, expected] = await Promise.all([
     object.getAttributedTo(signal, recover)
       .then(actual => actual && actual.getId(recover)),
-    attributedTo.getUri(recover)
+    attributedTo.getUri(signal, recover)
   ]);
 
   if (actual && actual != expected) {
@@ -50,15 +56,18 @@ export default class Create extends Relation<Properties, References> {
   readonly object?: Reference<Note | null>;
   readonly objectId!: string;
 
-  async toActivityStreams(recover: (error: Error) => unknown): Promise<ActivityStreams> {
-    const object = await this.select('object');
+  async toActivityStreams(
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ): Promise<ActivityStreams> {
+    const object = await this.select('object', signal, recover);
     if (!object) {
       throw recover(new Error('object not found.'));
     }
 
     return {
       type: 'Create',
-      object: await object.toActivityStreams(recover)
+      object: await object.toActivityStreams(signal, recover)
     };
   }
 
