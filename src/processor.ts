@@ -18,4 +18,13 @@ import Repository from './lib/repository';
 import options from './options';
 import processJobs from './subsystems/processor';
 
-processJobs(new Repository(options));
+const repository = new Repository(options);
+
+function terminate() {
+  repository.end();
+}
+
+process.on('SIGINT', terminate);
+process.on('SIGTERM', terminate);
+
+processJobs(repository);
