@@ -25,4 +25,13 @@ if (!process.env.NO_PROCESSOR) {
   processJobs(repository);
 }
 
-serve(repository, Number(process.env.PORT));
+const server = serve(repository).listen(Number(process.env.PORT));
+server.on('error', repository.console.error);
+
+function terminate() {
+  const paused = repository.queue.pause(true);
+  server.close(() => paused.then(() => repository.end()));
+}
+
+process.on('SIGINT', terminate);
+process.on('SIGTERM', terminate);

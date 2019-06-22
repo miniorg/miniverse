@@ -47,7 +47,7 @@ export interface Response extends express.Response {
   };
 }
 
-export default function (repository: Repository, port: number): Application {
+export default function (repository: Repository): Application {
   const application = express();
 
   application.locals.repository = repository;
@@ -148,8 +148,6 @@ export default function (repository: Repository, port: number): Application {
         };
       }
     }));
-
-  application.listen(port).on('error', repository.console.error);
 
   return application;
 }
