@@ -14,6 +14,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { mediaType } from '@hapi/accept';
 import Actor from '../../lib/tuples/actor';
 import { normalizeHost } from '../../lib/tuples/uri';
 import secure from '../_secure';
@@ -21,19 +22,33 @@ import sendActivityStreams from '../_send_activitystreams';
 
 const recovery = {};
 
-export const get = secure(async (request, response, next) => {
-  const accepted = request.accepts([
-    'html',
+export const get = secure(async ({ params, headers }, response, next) => {
+  /*
+    ActivityPub
+    https://www.w3.org/TR/activitypub/
+    > Servers MAY use HTTP content negotiation as defined in [RFC7231] to select
+    > the type of data to return in response to a request, but MUST present the
+    > ActivityStreams object representation in response to
+    > application/ld+json; profile="https://www.w3.org/ns/activitystreams",
+    > and SHOULD also present the ActivityStreams representation in response to
+    > application/activity+json as well.
+  */
+  /*
+    Avoid accepts method of express.Response because parameters such as
+    "profile" confuses it.
+  */
+  const accepted = mediaType(headers.accept, [
+    'text/html',
     'application/activity+json',
     'application/ld+json'
   ]);
 
-  if (!(['application/activity+json', 'application/ld+json'] as unknown[]).includes(accepted)) {
+  if (accepted == '' || accepted.startsWith('text/html')) {
     next();
     return;
   }
 
-  const acct = decodeURIComponent(request.params.acct);
+  const acct = decodeURIComponent(params.acct);
   const atIndex = acct.lastIndexOf('@');
   let actor;
   let username;
