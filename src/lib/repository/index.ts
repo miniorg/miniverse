@@ -151,7 +151,8 @@ export default class Repository implements
     });
   }
 
-  end() {
+  async end() {
+    await this.queue.close();
     this.redis.client.disconnect();
     this.redis.subscriber.disconnect();
     return this.pg.end();
