@@ -53,18 +53,20 @@ interface Content {
   readonly body?: Body | unknown[];
 }
 
-export const AnyHost = {};
-export const NoHost = {};
+export const anyHost = Symbol();
+export const noHost = Symbol();
 export const unexpectedType = Symbol();
 
+type Host = typeof anyHost | typeof noHost | string;
+
 export default class ParsedActivityStreams {
-  readonly normalizedHost: object | string;
+  readonly normalizedHost: Host;
   readonly referenceId: null | string;
   content: Promise<Content & { readonly body: Body | unknown[] }> | null;
   readonly repository: Repository;
   readonly parentContent: Promise<Content>;
 
-  constructor(repository: Repository, body: Body | string | unknown[], normalizedHost: object | string, parentContent: Promise<Content> = Promise.resolve({
+  constructor(repository: Repository, body: Body | string | unknown[], normalizedHost: Host, parentContent: Promise<Content> = Promise.resolve({
     context: null,
     resolver: new Resolver
   })) {
@@ -82,7 +84,7 @@ export default class ParsedActivityStreams {
 
         this.normalizedHost = normalizeHost(host);
 
-        if ([AnyHost, this.normalizedHost].includes(normalizedHost)) {
+        if ([anyHost, this.normalizedHost].includes(normalizedHost)) {
           this.referenceId = null;
           this.content = parentContent.then(({ resolver, context }) => ({
             resolver,

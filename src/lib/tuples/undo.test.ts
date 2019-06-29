@@ -15,7 +15,7 @@
 */
 
 import { AbortController } from 'abort-controller';
-import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
+import ParsedActivityStreams, { anyHost } from '../parsed_activitystreams';
 import {
   fabricateAnnounce,
   fabricateFollow,
@@ -41,7 +41,7 @@ describe('createFromParsedActivityStreams', () => {
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'Undo',
       object: { type: 'Announce', id: 'https://NoTe.xn--kgbechtv/' }
-    }, AnyHost);
+    }, anyHost);
 
     await Undo.createFromParsedActivityStreams(repository, activity, actor, signal, recover);
 
@@ -61,7 +61,7 @@ describe('createFromParsedActivityStreams', () => {
         type: 'Follow',
         object: 'https://xn--kgbechtv/@%E8%A2%AB%E8%A1%8C%E5%8B%95%E8%80%85'
       }
-    }, AnyHost);
+    }, anyHost);
 
     const [actor, object] = await Promise.all([
       fabricateLocalAccount()
@@ -97,7 +97,7 @@ describe('createFromParsedActivityStreams', () => {
     const activity = new ParsedActivityStreams(repository, {
       '@context': 'https://www.w3.org/ns/activitystreams',
       object: { type: 'Announce', id: 'https://NoTe.xn--kgbechtv/' }
-    }, AnyHost);
+    }, anyHost);
 
     const recovery = {};
 
@@ -115,7 +115,7 @@ describe('createFromParsedActivityStreams', () => {
         type: 'Unknown',
         object: 'https://xn--kgbechtv/@%E8%A2%AB%E8%A1%8C%E5%8B%95%E8%80%85'
       }
-    }, AnyHost);
+    }, anyHost);
 
     const [actor] = await Promise.all([
       fabricateLocalAccount(),
@@ -141,7 +141,7 @@ describe('createFromParsedActivityStreams', () => {
         type: 'Follow',
         object: 'https://xn--kgbechtv/@%E8%A2%AB%E8%A1%8C%E5%8B%95%E8%80%85'
       }
-    }, AnyHost);
+    }, anyHost);
 
     const objectAccount =
       await fabricateLocalAccount({ actor: { username: '被行動者' } });

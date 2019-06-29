@@ -15,7 +15,7 @@
 */
 
 import { AbortController } from 'abort-controller';
-import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
+import ParsedActivityStreams, { anyHost } from '../parsed_activitystreams';
 import {
   fabricateAnnounce,
   fabricateFollow,
@@ -143,7 +143,7 @@ describe('createFromParsedActivityStreams', () => {
         published: '2000-01-01T00:00:00.000Z',
         to: 'https://www.w3.org/ns/activitystreams#Public',
         object: 'https://ReMoTe.xn--kgbechtv/oBjEcT'
-      }, AnyHost),
+      }, anyHost),
       actor,
       signal,
       recover));
@@ -187,7 +187,7 @@ describe('createFromParsedActivityStreams', () => {
         id: 'https://ReMoTe.xn--kgbechtv/AnNoUnCe',
         to: 'https://www.w3.org/ns/activitystreams#Public',
         object: 'https://ReMoTe.xn--kgbechtv/oBjEcT'
-      }, AnyHost),
+      }, anyHost),
       actor,
       signal,
       error => {
@@ -214,7 +214,7 @@ describe('createFromParsedActivityStreams', () => {
         published: '2000-01-01T00:00:00.000Z',
         to: [],
         object: 'https://ReMoTe.xn--kgbechtv/oBjEcT'
-      }, AnyHost),
+      }, anyHost),
       actor,
       signal,
       recover)).resolves.toBe(null);

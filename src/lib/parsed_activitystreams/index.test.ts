@@ -24,7 +24,7 @@ import {
 } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
-import ParsedActivityStreams, { AnyHost } from './index';
+import ParsedActivityStreams, { anyHost } from './index';
 import Resolver from './resolver';
 import nock = require('nock');
 
@@ -44,7 +44,7 @@ async function testLoading(object: nock.ReplyBody, callback: () => Promise<unkno
 describe('constructor', () => {
   test('sets properties according to given string', () => {
     const object =
-      new ParsedActivityStreams(repository, 'https://ReMoTe.إختبار/', AnyHost);
+      new ParsedActivityStreams(repository, 'https://ReMoTe.إختبار/', anyHost);
 
     expect(object).toHaveProperty('referenceId', 'https://ReMoTe.إختبار/');
     expect(object).toHaveProperty('normalizedHost', 'remote.xn--kgbechtv');
@@ -53,7 +53,7 @@ describe('constructor', () => {
 
   test('sets properties according to given object', () => {
     const body = { id: 'https://ReMoTe.إختبار/' };
-    const object = new ParsedActivityStreams(repository, body, AnyHost);
+    const object = new ParsedActivityStreams(repository, body, anyHost);
 
     expect(object).toHaveProperty('referenceId', null);
     expect(object).toHaveProperty('normalizedHost', 'remote.xn--kgbechtv');
@@ -98,7 +98,7 @@ describe('constructor', () => {
 
   test('sets repository', () => {
     const object =
-      new ParsedActivityStreams(repository, 'https://ReMoTe.إختبار/', AnyHost);
+      new ParsedActivityStreams(repository, 'https://ReMoTe.إختبار/', anyHost);
 
     expect(object).toHaveProperty('repository', repository);
   });
@@ -107,7 +107,7 @@ describe('constructor', () => {
     const resolver = new Resolver([['https://ReMoTe.إختبار/', null]]);
     const content = Promise.resolve({ resolver, context: null });
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost, content);
+      repository, 'https://ReMoTe.إختبار/', anyHost, content);
 
     const recovery = {};
 
@@ -120,7 +120,7 @@ describe('getActor', () => {
   test('loads and returns actor', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -137,7 +137,7 @@ describe('getAttachment', () => {
   test('loads and returns attachment', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -155,7 +155,7 @@ describe('getAttributedTo', () => {
   test('loads and returns attributedTo', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -172,7 +172,7 @@ describe('getContent', () => {
   test('loads and returns content', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -187,7 +187,7 @@ describe('getContext', () => {
   test('loads string context and returns set', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams'
@@ -200,7 +200,7 @@ describe('getContext', () => {
   test('loads array context and returns set', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': ['https://www.w3.org/ns/activitystreams']
@@ -215,7 +215,7 @@ describe('getHref', () => {
   test('loads and returns href', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -231,7 +231,7 @@ describe('getItems', () => {
   test('loads and returns ordered items of ordered collection', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -246,7 +246,7 @@ describe('getItems', () => {
   test('loads and returns items of collection', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -263,7 +263,7 @@ describe('getItems', () => {
     const object = new ParsedActivityStreams(
       repository,
       ['https://ReMoTe.إختبار/item'],
-      AnyHost);
+      anyHost);
 
     await expect((await object.getItems(signal, recover))[0])
       .toHaveProperty('referenceId', 'https://ReMoTe.إختبار/item');
@@ -274,7 +274,7 @@ describe('getItems', () => {
   test('loads and returns itself if it is not a collection nor an array', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams'
@@ -290,7 +290,7 @@ describe('getId', () => {
   test('resolves id property if an instance of Object is given', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, { id: 'https://ReMoTe.إختبار/' }, AnyHost);
+      repository, { id: 'https://ReMoTe.إختبار/' }, anyHost);
 
     await expect(object.getId(recover)).resolves.toBe('https://ReMoTe.إختبار/');
     expect(recover).not.toHaveBeenCalled();
@@ -299,7 +299,7 @@ describe('getId', () => {
   test('resolves itself if string is given', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await expect(object.getId(recover)).resolves.toBe('https://ReMoTe.إختبار/');
     expect(recover).not.toHaveBeenCalled();
@@ -310,7 +310,7 @@ describe('getInbox', () => {
   test('loads and returns inbox', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -327,7 +327,7 @@ describe('getInReplyTo', () => {
   test('loads and returns inReplyTo', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -344,7 +344,7 @@ describe('getName', () => {
   test('loads and returns name', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -359,7 +359,7 @@ describe('getObject', () => {
   test('loads and returns object', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -376,7 +376,7 @@ describe('getOwner', () => {
   test('loads and returns object', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -393,7 +393,7 @@ describe('getPreferredUsername', () => {
   test('loads and returns content', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -410,7 +410,7 @@ describe('getPublicKey', () => {
   test('loads and returns public key', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -427,7 +427,7 @@ describe('getPublicKeyPem', () => {
   test('loads and returns public key PEM', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -459,7 +459,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 describe('getPublished', () => {
   test('loads and returns published date', () => {
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     return testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -475,7 +475,7 @@ describe('getPublished', () => {
   test('loads and returns published date, null', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -490,7 +490,7 @@ describe('getSummary', () => {
   test('loads and returns content', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -505,7 +505,7 @@ describe('getTag', () => {
   test('loads and returns tag', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -523,7 +523,7 @@ describe('getTo', () => {
   test('loads and returns to in a collection', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -538,7 +538,7 @@ describe('getTo', () => {
   test('returns public collection', async () => {
     const recover = jest.fn();
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     await testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -565,7 +565,7 @@ describe('getTo', () => {
 describe('getType', () => {
   test('loads, normalizes an array into a set, and returns it', () => {
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     return testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -585,7 +585,7 @@ describe('getType', () => {
 
   test('loads, normalizes a string into a set, and returns it', () => {
     const object = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     return testLoading({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -614,7 +614,7 @@ describe('getUrl', () => {
   ]) {
     test(description, async () => {
       const object = new ParsedActivityStreams(
-        repository, 'https://ReMoTe.إختبار/', AnyHost);
+        repository, 'https://ReMoTe.إختبار/', anyHost);
 
       return testLoading({
         '@context': 'https://www.w3.org/ns/activitystreams',
@@ -638,7 +638,7 @@ describe('getUrl', () => {
 describe('act', () => {
   test('resolves known URI', async () => {
     const activity = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     const announce = await fabricateAnnounce(
       { status: { uri: 'https://ReMoTe.إختبار/' } });
@@ -659,7 +659,7 @@ describe('act', () => {
     const recover = jest.fn();
 
     const activity = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     const [actor] = await Promise.all([
       fabricateRemoteAccount()
@@ -687,7 +687,7 @@ describe('act', () => {
     const recover = jest.fn();
 
     const activity = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
     const account = await fabricateRemoteAccount();
     const actor = unwrap(await account.select('actor', signal, recover));
 
@@ -714,7 +714,7 @@ describe('act', () => {
     const recover = jest.fn();
 
     const activity = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     const note = await fabricateNote(
       { status: { uri: 'https://NoTe.إختبار/' } });
@@ -743,7 +743,7 @@ describe('act', () => {
     const recover = jest.fn();
 
     const activity = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     const [actor] = await Promise.all([
       fabricateLocalAccount()
@@ -765,7 +765,7 @@ describe('act', () => {
     const recover = jest.fn();
 
     const activity = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     const [actor] = await Promise.all([
       fabricateLocalAccount()
@@ -787,7 +787,7 @@ describe('act', () => {
     const recover = jest.fn();
 
     const activity = new ParsedActivityStreams(
-      repository, 'https://ReMoTe.إختبار/', AnyHost);
+      repository, 'https://ReMoTe.إختبار/', anyHost);
 
     const [actor, object] = await Promise.all([
       fabricateLocalAccount()
@@ -824,7 +824,7 @@ describe('act', () => {
       const recover = jest.fn();
 
       const activity = new ParsedActivityStreams(
-        repository, 'https://ReMoTe.إختبار/', AnyHost);
+        repository, 'https://ReMoTe.إختبار/', anyHost);
 
       const [actor] = await Promise.all([
         fabricateLocalAccount({ actor: { username: '行動者' } })
@@ -848,7 +848,7 @@ describe('act', () => {
       const { signal } = new AbortController;
 
       const activity = new ParsedActivityStreams(
-        repository, 'https://ReMoTe.إختبار/', AnyHost);
+        repository, 'https://ReMoTe.إختبار/', anyHost);
 
       const [expectedActor] = await Promise.all([
         fabricateLocalAccount()

@@ -15,7 +15,7 @@
 */
 
 import { AbortController } from 'abort-controller';
-import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
+import ParsedActivityStreams, { anyHost } from '../parsed_activitystreams';
 import {
   fabricateFollow,
   fabricateNote,
@@ -241,7 +241,7 @@ describe('createFromParsedActivityStreams', () => {
           { type: 'Hashtag', name: '名前' },
           { type: 'Mention', href: 'https://xn--kgbechtv/@MeNtIoNeD' }
         ]
-      }, AnyHost),
+      }, anyHost),
       object,
       signal,
       recover));
@@ -280,7 +280,7 @@ describe('createFromParsedActivityStreams', () => {
         content: '内容',
         attachment: [],
         tag: []
-      }, AnyHost),
+      }, anyHost),
       null,
       signal,
       recover)).resolves.toHaveProperty(['status', 'actorId'], account.id);
@@ -301,7 +301,7 @@ describe('createFromParsedActivityStreams', () => {
         content: '内容',
         attachment: [],
         tag: []
-      }, AnyHost),
+      }, anyHost),
       unwrap(await account.select('actor', signal, recover)),
       signal,
       recover)).resolves.toBe(null);
@@ -325,7 +325,7 @@ describe('createFromParsedActivityStreams', () => {
         content: '',
         attachment: [],
         tag: []
-      }, AnyHost),
+      }, anyHost),
       null,
       signal,
       error => {
@@ -360,7 +360,7 @@ describe('createFromParsedActivityStreams', () => {
         content: '',
         attachment: [],
         tag: []
-      }, AnyHost),
+      }, anyHost),
       null,
       signal,
       recover)).resolves.toHaveProperty('inReplyToId', inReplyToId);
@@ -385,7 +385,7 @@ describe('createFromParsedActivityStreams', () => {
         content: '',
         attachment: [],
         tag: []
-      }, AnyHost),
+      }, anyHost),
       null,
       signal,
       recover));
@@ -410,7 +410,7 @@ describe('fromParsedActivityStreams', () => {
       new ParsedActivityStreams(
         repository,
         'https://xn--kgbechtv/@/' + id,
-        AnyHost),
+        anyHost),
       null,
       signal,
       recover)).resolves.toHaveProperty('content', '内容');
@@ -432,7 +432,7 @@ describe('fromParsedActivityStreams', () => {
       new ParsedActivityStreams(
         repository,
         'https://xn--kgbechtv/@incorrect/' + note.id,
-        AnyHost),
+        anyHost),
       null,
       signal,
       () => recovery)).rejects.toBe(recovery);
@@ -451,7 +451,7 @@ describe('fromParsedActivityStreams', () => {
       new ParsedActivityStreams(
         repository,
         'https://NoTe.xn--kgbechtv/',
-        AnyHost),
+        anyHost),
       null,
       signal,
       recover)).resolves.toHaveProperty('content', '内容');
@@ -473,7 +473,7 @@ describe('fromParsedActivityStreams', () => {
         content: '',
         attachment: [],
         tag: []
-      }, AnyHost),
+      }, anyHost),
       actor,
       signal,
       recover);

@@ -16,7 +16,7 @@
 
 import { AbortController } from 'abort-controller';
 import { createPublicKey } from 'crypto';
-import ParsedActivityStreams, { AnyHost } from '../../parsed_activitystreams';
+import ParsedActivityStreams, { anyHost } from '../../parsed_activitystreams';
 import {
   fabricateLocalAccount,
   fabricateRemoteAccount
@@ -55,7 +55,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `
         }
-      }, AnyHost), signal, recover);
+      }, anyHost), signal, recover);
 
     expect(recover).not.toHaveBeenCalled();
     expect(actor).toBeInstanceOf(Actor);
@@ -122,7 +122,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `
         }
-      }, AnyHost), signal, error => {
+      }, anyHost), signal, error => {
         expect(error[unexpectedType]).toBe(true);
         return recovery;
       })).rejects.toBe(recovery);
@@ -154,7 +154,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `
         }
-      }, AnyHost), signal, () => recovery)).rejects.toBe(recovery);
+      }, anyHost), signal, () => recovery)).rejects.toBe(recovery);
   });
 
   test('rejects if its context does not include https://w3id.org/security/v1', () => {
@@ -182,7 +182,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `
         }
-      }, AnyHost), signal, () => recovery)).rejects.toBe(recovery);
+      }, anyHost), signal, () => recovery)).rejects.toBe(recovery);
   });
 });
 
@@ -199,7 +199,7 @@ describe('fromParsedActivityStreams', () => {
       new ParsedActivityStreams(
         repository,
         'https://xn--kgbechtv/@UsErNaMe',
-        AnyHost), signal, recover))
+        anyHost), signal, recover))
       .resolves.toHaveProperty('id', id);
 
     expect(recover).not.toHaveBeenCalled();
@@ -210,7 +210,7 @@ describe('fromParsedActivityStreams', () => {
 
     await expect(Actor.fromParsedActivityStreams(
       repository,
-      new ParsedActivityStreams(repository, 'https://xn--kgbechtv/@UsErNaMe', AnyHost),
+      new ParsedActivityStreams(repository, 'https://xn--kgbechtv/@UsErNaMe', anyHost),
       signal,
       recover))
       .resolves
@@ -226,7 +226,7 @@ describe('fromParsedActivityStreams', () => {
 
     await expect(Actor.fromParsedActivityStreams(
       repository,
-      new ParsedActivityStreams(repository, 'https://ReMoTe.إختبار/', AnyHost),
+      new ParsedActivityStreams(repository, 'https://ReMoTe.إختبار/', anyHost),
       signal,
       recover))
       .resolves
@@ -277,7 +277,7 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `
         }
-      }, AnyHost), signal, recover)).resolves.toHaveProperty(
+      }, anyHost), signal, recover)).resolves.toHaveProperty(
         ['account', 'uri', 'uri'],
         'https://remote.xn--kgbechtv/@preferred%20username');
     } finally {
