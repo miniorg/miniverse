@@ -15,7 +15,7 @@
 */
 
 import { AbortController } from 'abort-controller';
-import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
+import ParsedActivityStreams, { anyHost } from '../parsed_activitystreams';
 import {
   fabricateFollow,
   fabricateLocalAccount,
@@ -128,7 +128,7 @@ describe('createFromParsedActivityStreams', () => {
 
       // See if it accepts IDNA-encoded domain and percent-encoded path.
       object: 'https://xn--kgbechtv/@%E8%A2%AB%E8%A1%8C%E5%8B%95%E8%80%85'
-    }, AnyHost);
+    }, anyHost);
 
     const follow = await Follow.createFromParsedActivityStreams(
       repository, activity, actor, signal, recover);
@@ -157,7 +157,7 @@ describe('createFromParsedActivityStreams', () => {
     const activity = new ParsedActivityStreams(repository, {
       type: 'Follow',
       object: 'https://xn--kgbechtv/@OBJECT'
-    }, AnyHost);
+    }, anyHost);
 
     const follow = await Follow.createFromParsedActivityStreams(
       repository, activity, actor, signal, recover);
@@ -179,7 +179,7 @@ describe('createFromParsedActivityStreams', () => {
 
     const activity = new ParsedActivityStreams(repository, {
       object: 'https://xn--kgbechtv/@OBJECT'
-    }, AnyHost);
+    }, anyHost);
 
     const recover = jest.fn();
 
@@ -209,7 +209,7 @@ describe('createFromParsedActivityStreams', () => {
     const activity = new ParsedActivityStreams(repository, {
       type: 'Follow',
       object: 'https://ObJeCt.إختبار/'
-    }, AnyHost);
+    }, anyHost);
 
     await expect(Follow.createFromParsedActivityStreams(
       repository, activity, actor, signal, recover)).resolves.toBeInstanceOf(Follow);

@@ -15,7 +15,7 @@
 */
 
 import { AbortController } from 'abort-controller';
-import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
+import ParsedActivityStreams, { anyHost } from '../parsed_activitystreams';
 import {
   fabricateLike,
   fabricateLocalAccount,
@@ -102,7 +102,7 @@ describe('createFromParsedActivityStreams', () => {
     const like = await Like.createFromParsedActivityStreams(
       repository,
       new ParsedActivityStreams(
-        repository, { type: 'Like', object: objectUri }, AnyHost),
+        repository, { type: 'Like', object: objectUri }, anyHost),
       actor,
       (new AbortController).signal,
       recover);
@@ -134,7 +134,7 @@ describe('createFromParsedActivityStreams', () => {
       new ParsedActivityStreams(repository, {
         type: 'https://test.xn--kgbechtv/',
         object: objectUri
-      }, AnyHost),
+      }, anyHost),
       unwrap(actor),
       (new AbortController).signal,
       error => {

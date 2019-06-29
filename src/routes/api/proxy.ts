@@ -17,7 +17,7 @@
 import { Request, Response, urlencoded } from 'express';
 import { promisify } from 'util';
 import ParsedActivityStreams, {
-  NoHost
+  noHost
 } from '../../lib/parsed_activitystreams';
 import Actor from '../../lib/tuples/actor';
 import secure from '../_secure';
@@ -33,7 +33,7 @@ export const post = secure(async (request, response) => {
 
   const { body } = request;
   const { repository } = response.app.locals;
-  const parsed = new ParsedActivityStreams(repository, body.id, NoHost);
+  const parsed = new ParsedActivityStreams(repository, body.id, noHost);
   let actor;
 
   try {

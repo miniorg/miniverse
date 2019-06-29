@@ -15,7 +15,7 @@
 */
 
 import { AbortController } from 'abort-controller';
-import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
+import ParsedActivityStreams, { anyHost } from '../parsed_activitystreams';
 import {
   fabricateLocalAccount,
   fabricateNote,
@@ -86,7 +86,7 @@ describe('Create', () => {
           attachment: [],
           tag: []
         }
-      }, AnyHost);
+      }, anyHost);
 
       const account = await fabricateLocalAccount();
       const actor = unwrap(await account.select('actor', signal, recover));
@@ -115,7 +115,7 @@ describe('Create', () => {
           content: '',
           tag: []
         }
-      }, AnyHost);
+      }, anyHost);
 
       const account = await fabricateLocalAccount();
       const actor = unwrap(await account.select('actor', signal, recover));
@@ -144,7 +144,7 @@ describe('create', () => {
       content: '',
       attachment: [],
       tag: []
-    }, AnyHost);
+    }, anyHost);
 
     const account = await fabricateLocalAccount();
     const actor = unwrap(await account.select('actor', signal, recover));
@@ -170,7 +170,7 @@ describe('create', () => {
         content: '',
         attachment: [],
         tag: []
-      }, AnyHost);
+      }, anyHost);
 
       const account = await fabricateLocalAccount({ actor: { username: '' } });
       const actor = unwrap(await account.select('actor', signal, recover));
@@ -194,7 +194,7 @@ describe('create', () => {
         attributedTo: 'https://xn--kgbechtv/@',
         content: '',
         tag: []
-      }, AnyHost);
+      }, anyHost);
 
       const [expectedAttributedTo] = await Promise.all([
         fabricateLocalAccount({ actor: { username: '仮定された行動者' } })

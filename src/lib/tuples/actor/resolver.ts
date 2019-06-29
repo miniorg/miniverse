@@ -16,7 +16,7 @@
 
 import { AbortSignal } from 'abort-controller';
 import { URL } from 'url';
-import ParsedActivityStreams, { AnyHost } from '../../parsed_activitystreams';
+import ParsedActivityStreams, { anyHost } from '../../parsed_activitystreams';
 import Repository, { conflict } from '../../repository';
 import { fetch, temporaryError } from '../../transfer';
 import { encodeAcctUserpart } from '../uri';
@@ -79,7 +79,7 @@ export default class extends Base {
       const host = firstFinger.subject.split('@', 2)[1];
       const { href } = firstFinger.links.find(({ rel }) => rel == 'self');
       const activityStreams =
-        new ParsedActivityStreams(repository, href, AnyHost);
+        new ParsedActivityStreams(repository, href, anyHost);
 
       await lookup(repository, href, signal, recover).then(secondFinger => {
         if (firstFinger.subject != secondFinger.subject) {
@@ -144,7 +144,7 @@ export default class extends Base {
       throw recover(new Error('Key owner not found.'));
     }
 
-    const key = new ParsedActivityStreams(repository, keyUri, AnyHost);
+    const key = new ParsedActivityStreams(repository, keyUri, anyHost);
     const owner = await key.getOwner(signal, recover);
     if (!owner) {
       throw recover(new Error('Key owner unspecified.'));

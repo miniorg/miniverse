@@ -15,7 +15,7 @@
 */
 
 import { AbortController } from 'abort-controller';
-import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
+import ParsedActivityStreams, { anyHost } from '../parsed_activitystreams';
 import { fabricateDocument, fabricateDirtyDocument } from '../test/fabricator';
 import repository from '../test/repository';
 import { unwrap } from '../test/types';
@@ -87,7 +87,7 @@ describe('fromParsedActivityStreams', () => {
     const object = new ParsedActivityStreams(repository, {
       type: 'Document',
       url: 'https://DoCuMeNt.إختبار/'
-    }, AnyHost);
+    }, anyHost);
     const recover = jest.fn();
     let created;
 
@@ -107,7 +107,7 @@ describe('fromParsedActivityStreams', () => {
     const object = new ParsedActivityStreams(repository, {
       type: 'Document',
       url: 'https://DoCuMeNt.إختبار/'
-    }, AnyHost);
+    }, anyHost);
     const recover = jest.fn();
     let created;
 
@@ -130,7 +130,7 @@ describe('fromParsedActivityStreams', () => {
     const object = new ParsedActivityStreams(repository, {
       type: 'https://TyPe.إختبار/',
       url: 'https://DoCuMeNt.إختبار/'
-    }, AnyHost);
+    }, anyHost);
     const recovery = {};
 
     nock('https://DoCuMeNt.إختبار').get('/').reply(200, svg);
@@ -150,7 +150,7 @@ describe('fromParsedActivityStreams', () => {
     const object = new ParsedActivityStreams(repository, {
       type: 'Document',
       url: { type: 'https://TyPe.إختبار/', href: 'https://DoCuMeNt.إختبار/' }
-    }, AnyHost);
+    }, anyHost);
 
     nock('https://DoCuMeNt.إختبار').get('/').reply(200, svg);
 

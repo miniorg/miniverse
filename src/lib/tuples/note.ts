@@ -21,7 +21,7 @@ import {
   Hashtag as ActivityStreamsHashtag,
   Mention as ActivityStreamsMention
 } from '../generated_activitystreams';
-import ParsedActivityStreams, { NoHost } from '../parsed_activitystreams';
+import ParsedActivityStreams, { noHost } from '../parsed_activitystreams';
 import Repository, { conflict } from '../repository';
 import { postStatus, temporaryError } from '../transfer';
 import Actor from './actor';
@@ -110,7 +110,7 @@ function attachmentFromActivityStreams(repository: Repository, attachment: (Pars
       throw error;
     }
 
-    if (type.has('Document')) {
+    if (type && type.has('Document')) {
       return Document.fromParsedActivityStreams(repository, element, signal, () => attachmentError).catch(error => {
         if (error == attachmentError) {
           return null;
@@ -170,7 +170,7 @@ function tagFromActivityStreams(repository: Repository, nullableTag: (ParsedActi
         return null;
       }
 
-      const parsed = new ParsedActivityStreams(repository, href, NoHost);
+      const parsed = new ParsedActivityStreams(repository, href, noHost);
       return Actor.fromParsedActivityStreams(repository, parsed, signal, () => tagError).catch(error => {
         if (error != tagError) {
           throw error;
@@ -360,7 +360,7 @@ export default class Note extends Relation<Properties, References> {
     }) => unknown
   ) {
     const type = await object.getType(signal, recover);
-    if (!type.has('Note')) {
+    if (!type || !type.has('Note')) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Note.'), { [unexpectedType]: true }));
     }
 

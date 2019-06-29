@@ -15,7 +15,7 @@
 */
 
 import { AbortController } from 'abort-controller';
-import ParsedActivityStreams, { AnyHost } from '../parsed_activitystreams';
+import ParsedActivityStreams, { anyHost } from '../parsed_activitystreams';
 import {
   fabricateDirtyDocument,
   fabricateDocument,
@@ -39,7 +39,7 @@ describe('createFromParsedActivityStreams', () => {
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'Delete',
       object: 'https://ReMoTe.إختبار/'
-    }, AnyHost);
+    }, anyHost);
 
     await expect(Delete.createFromParsedActivityStreams(
       repository, activityStreams, actor, signal, recover)).resolves.toBeInstanceOf(Delete);
@@ -70,7 +70,7 @@ describe('createFromParsedActivityStreams', () => {
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'Delete',
       object: 'https://ReMoTe.إختبار/'
-    }, AnyHost);
+    }, anyHost);
 
     await expect(Delete.createFromParsedActivityStreams(
       repository, activityStreams, actor, signal, recover)).resolves.toBeInstanceOf(Delete);
@@ -99,7 +99,7 @@ describe('createFromParsedActivityStreams', () => {
     const activityStreams = new ParsedActivityStreams(repository, {
       '@context': 'https://www.w3.org/ns/activitystreams',
       object: 'https://ReMoTe.إختبار/'
-    }, AnyHost);
+    }, anyHost);
 
     await expect(Delete.createFromParsedActivityStreams(
       repository,

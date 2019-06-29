@@ -17,7 +17,7 @@
 import { Request, Response, json } from 'express';
 import { promisify } from 'util';
 import ParsedActivityStreams, {
-  AnyHost,
+  anyHost,
   unexpectedType
 } from '../../lib/parsed_activitystreams';
 import { create } from '../../lib/tuples/create';
@@ -130,7 +130,7 @@ export const post = secure(async (request, response) => {
     await setBody(request, response);
 
     const object =
-      new ParsedActivityStreams(repository, request.body, { host: AnyHost });
+      new ParsedActivityStreams(repository, request.body, anyHost);
 
     /*
       ActivityPub
