@@ -67,7 +67,7 @@ export default class Create extends Relation<Properties, References> {
       throw recover(new Error('Unexpected object type. Expected Document.'));
     }
 
-    return `https://${domainToASCII(this.repository.host)}/${object.id}`;
+    return `https://${domainToASCII(this.repository.host)}/${object.uuid}`;
   }
 
   async toActivityStreams(

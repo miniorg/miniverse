@@ -25,8 +25,8 @@ export const get = secure(async ({ params }, response) => {
   let object;
 
   try {
-    object = await repository.selectDocumentById(
-      params.id, response.locals.signal, () => recovery);
+    object = await repository.selectDocumentByUUID(
+      params.uuid, response.locals.signal, () => recovery);
   } catch (error) {
     if (error != recovery) {
       throw error;

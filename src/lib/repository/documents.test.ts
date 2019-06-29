@@ -22,7 +22,7 @@ import { conflict } from '.';
 
 const { signal } = new AbortController;
 
-test('inserts document with URL and allows to query it by id or UUID and format', async () => {
+test('inserts document with URL and allows to query it by id or UUID', async () => {
   const recover = jest.fn();
   const { id } = await repository.insertDocumentWithUrl(
     await repository.insertDirtyDocument(
@@ -33,8 +33,8 @@ test('inserts document with URL and allows to query it by id or UUID and format'
 
   for (const queried of await Promise.all([
     repository.selectDocumentById(id, signal, recover),
-    repository.selectDocumentByUUIDAndFormat(
-      '00000000-0000-1000-8000-010000000000', 'png', signal, recover)
+    repository.selectDocumentByUUID(
+      '00000000-0000-1000-8000-010000000000', signal, recover)
   ])) {
     expect(queried).toHaveProperty('repository', repository);
     expect(queried).toHaveProperty('id', id);
@@ -45,7 +45,7 @@ test('inserts document with URL and allows to query it by id or UUID and format'
   expect(recover).not.toHaveBeenCalled();
 });
 
-test('inserts document without URL and allows to query it by id or UUID and format', async () => {
+test('inserts document without URL and allows to query it by id or UUID', async () => {
   const recover = jest.fn();
   const { id } = await repository.insertDocumentWithoutUrl(
     await repository.insertDirtyDocument(
@@ -55,8 +55,8 @@ test('inserts document without URL and allows to query it by id or UUID and form
 
   for (const queried of await Promise.all([
     repository.selectDocumentById(id, signal, recover),
-    repository.selectDocumentByUUIDAndFormat(
-      '00000000-0000-1000-8000-010000000000', 'png', signal, recover)
+    repository.selectDocumentByUUID(
+      '00000000-0000-1000-8000-010000000000', signal, recover)
   ])) {
     expect(queried).toHaveProperty('repository', repository);
     expect(queried).toHaveProperty('id', id);

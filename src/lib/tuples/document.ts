@@ -138,7 +138,8 @@ export default class Document extends Relation<Properties, References> {
 
     if (href.startsWith(`${repository.s3.urlPrefix}/`)) {
       const [uuid, format] = href.substr(repository.s3.urlPrefix.length + 1).split('.', 2);
-      return repository.selectDocumentByUUIDAndFormat(uuid, format, signal, recover);
+      const document = await repository.selectDocumentByUUID(uuid, signal, recover);
+      return document && document.format != format ? null : document;
     }
 
     const urlEntity = await repository.selectAllocatedURI(href, signal, recover);

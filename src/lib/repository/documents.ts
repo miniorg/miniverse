@@ -104,17 +104,16 @@ export default class {
     return rows[0] ? parse.call(this, rows[0]) : null;
   }
 
-  async selectDocumentByUUIDAndFormat(
+  async selectDocumentByUUID(
     this: Repository,
     uuid: string,
-    format: string,
     signal: AbortSignal,
     recover: (error: Error & { name: string }) => unknown
   ) {
     const { rows } = await this.pg.query({
       name: 'selectDocumentByUUIDAndFormat',
-      text: 'SELECT * FROM documents WHERE uuid = $1 AND format = $2',
-      values: [uuid, format]
+      text: 'SELECT * FROM documents WHERE uuid = $1',
+      values: [uuid]
     }, signal, recover);
 
     return rows[0] ? parse.call(this, rows[0]) : null;

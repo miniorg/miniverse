@@ -216,9 +216,8 @@ export default class Repository implements
     signal: AbortSignal,
     recover: (error: Error & { name: string }) => unknown
   ) => Promise<Document | null>;
-  readonly selectDocumentByUUIDAndFormat!: (
+  readonly selectDocumentByUUID!: (
     uuid: string,
-    format: string,
     signal: AbortSignal,
     recover: (error: Error & { name: string }) => unknown
   ) => Promise<Document | null>;

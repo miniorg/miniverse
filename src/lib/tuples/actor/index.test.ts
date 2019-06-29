@@ -139,7 +139,10 @@ ka4wL4+Pn6kvt+9NH+dYHZAY2elf5rPWDCpOjcVw3lKXKCv0jp9nwU4svGxiB0te
 -----END RSA PUBLIC KEY-----
 `,
       },
-      endpoints: { proxyUrl: 'https://xn--kgbechtv/api/proxy' },
+      endpoints: {
+        proxyUrl: 'https://xn--kgbechtv/api/proxy',
+        uploadMedia: 'https://xn--kgbechtv/api/uploadMedia'
+      },
       'miniverse:salt': 'c2FsdA=='
     });
 
