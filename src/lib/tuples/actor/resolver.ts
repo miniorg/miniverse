@@ -22,7 +22,12 @@ import { fetch, temporaryError } from '../../transfer';
 import { encodeAcctUserpart } from '../uri';
 import Base, { unexpectedType } from './base';
 
-export async function lookup(repository: Repository, resource: string, signal: AbortSignal, recover: (error: Error & { [temporaryError]?: boolean }) => unknown) {
+export async function lookup(
+  repository: Repository,
+  resource: string,
+  signal: AbortSignal,
+  recover: (error: Error & { [temporaryError]?: boolean }) => unknown
+): Promise<{ [key: string]: unknown }> {
   const { pathname, protocol, origin } = new URL(resource);
 
   const webFingerOrigin = protocol == 'acct:' ?
@@ -36,7 +41,7 @@ export async function lookup(repository: Repository, resource: string, signal: A
     { signal },
     recover);
 
-  return response.json() as { [key: string]: unknown };
+  return response.json();
 }
 
 export default class extends Base {

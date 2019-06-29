@@ -30,7 +30,7 @@ import nock = require('nock');
 
 const { signal } = new AbortController;
 
-async function testLoading(object: unknown, callback: () => Promise<unknown> | unknown) {
+async function testLoading(object: nock.ReplyBody, callback: () => Promise<unknown> | unknown) {
   const get = nock('https://ReMoTe.إختبار').get('/').reply(200, object);
 
   try {
@@ -575,7 +575,7 @@ describe('getType', () => {
       ]
     }, async () => {
       const recover = jest.fn();
-      const type = await object.getType(signal, recover);
+      const type = unwrap(await object.getType(signal, recover));
 
       expect(recover).not.toHaveBeenCalled();
       expect(type).toBeInstanceOf(Set);
@@ -592,7 +592,7 @@ describe('getType', () => {
       type: 'Add'
     }, async () => {
       const recover = jest.fn();
-      const type = await object.getType(signal, recover);
+      const type = unwrap(await object.getType(signal, recover));
 
       expect(recover).not.toHaveBeenCalled();
       expect(type).toBeInstanceOf(Set);
@@ -629,7 +629,7 @@ describe('getUrl', () => {
 
         expect(recover).not.toHaveBeenCalled();
         expect(type).toBeInstanceOf(Set);
-        expect(Array.from(type)).toEqual(['Link']);
+        expect(Array.from(unwrap(type))).toEqual(['Link']);
       });
     });
   }

@@ -34,7 +34,7 @@ function find(ids: unknown[], context: unknown, body: unknown): { context: unkno
   }
 
   if (ids.includes(indexer.id)) {
-    return { context, body };
+    return { context, body: indexer };
   }
 
   for (const key in body) {

@@ -71,5 +71,5 @@ export default async function(repository: Repository, { data }: Job<Data>, signa
     throw recover(new Error('object\'s actor\'s inboxURI not found.'));
   }
 
-  await postToInbox(repository, sender, inboxURI, like, signal, recover);
+  await postToInbox(repository, sender, inboxURI, like as any, signal, recover);
 }

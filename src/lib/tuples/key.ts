@@ -18,6 +18,7 @@ import { AbortSignal } from 'abort-controller';
 import { createPublicKey } from 'crypto';
 import { verifySignature } from 'http-signature';
 import { domainToASCII } from 'url';
+import { Key as ActivityStreams } from '../generated_activitystreams';
 import Actor from './actor';
 import LocalAccount from './local_account';
 import Relation, { Reference } from './relation';
@@ -108,7 +109,7 @@ export default class Key extends Relation<Properties, { owner: Actor | null }> {
   async toActivityStreams(
     signal: AbortSignal,
     recover: (error: Error & { name?: string }) => unknown
-  ) {
+  ): Promise<ActivityStreams> {
     const [id, owner, key] = await Promise.all([
       this.getUri(signal, recover),
       this.select('owner', signal, recover).then(owner => {
@@ -121,16 +122,21 @@ export default class Key extends Relation<Properties, { owner: Actor | null }> {
       this.selectPrivateKeyDer(signal, recover)
     ]);
 
-    return {
-      id,
-      type: 'Key',
-      owner,
-      publicKeyPem: createPublicKey({
-        format: 'der',
-        type: 'pkcs1',
-        key
-      }).export({ format: 'pem', type: 'pkcs1' })
-    };
+    if (!owner) {
+      throw recover(new Error('owner\'s uri not found.'));
+    }
+
+    const publicKeyPem = createPublicKey({
+      format: 'der',
+      type: 'pkcs1',
+      key
+    }).export({ format: 'pem', type: 'pkcs1' });
+
+    if (typeof publicKeyPem != 'string') {
+      throw new Error('Invalid public key.');
+    }
+
+    return { id, type: 'Key', owner, publicKeyPem };
   }
 }
 

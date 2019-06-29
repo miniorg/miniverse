@@ -62,5 +62,5 @@ export default async function (repository: Repository, { data }: Job<Data>, sign
     throw recover(new Error('object\'s inbox not found.'));
   }
 
-  await postToInbox(repository, sender, inboxURI, follow, signal, recover);
+  await postToInbox(repository, sender, inboxURI, follow as any, signal, recover);
 }

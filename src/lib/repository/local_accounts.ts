@@ -15,6 +15,10 @@
 */
 
 import { AbortSignal } from 'abort-controller';
+import {
+  Announce as AnnounceActivityStreams,
+  Note as NoteActivityStreams
+} from '../generated_activitystreams';
 import Actor from '../tuples/actor';
 import LocalAccount, { Seed } from '../tuples/local_account';
 import Status from '../tuples/status';
@@ -123,7 +127,10 @@ export default class {
       throw recover(new Error('extension not found.'));
     }
 
-    const message = await extension.toActivityStreams(signal, recover) as { [key: string]: unknown };
+    const message: (AnnounceActivityStreams | NoteActivityStreams) & {
+      '@context'?: string;
+    } = await extension.toActivityStreams(signal, recover);
+
     message['@context'] = 'https://www.w3.org/ns/activitystreams';
 
     const string = JSON.stringify(message);

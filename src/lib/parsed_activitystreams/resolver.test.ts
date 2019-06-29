@@ -21,7 +21,7 @@ import nock = require('nock');
 
 const { signal } = new AbortController;
 
-function testLoading(body: unknown, callback: () => Promise<unknown>) {
+function testLoading(body: nock.ReplyBody, callback: () => Promise<unknown>) {
   return async () => {
     /*
       ActivityPub

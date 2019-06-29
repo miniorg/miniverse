@@ -115,7 +115,12 @@ export async function postToInbox<T>(
   repository: Repository,
   sender: LocalAccount,
   { uri }: URI,
-  object: { toActivityStreams(signal: AbortSignal, recover: (error: T) => unknown): { [key: string]: unknown } },
+  object: {
+    toActivityStreams(
+      signal: AbortSignal,
+      recover: (error: T) => unknown
+    ): Promise<{ [key: string]: unknown }>;
+  },
   signal: AbortSignal,
   recover: (error: Error & { name?: string; [temporaryError]?: boolean } | T) => unknown
 ) {
