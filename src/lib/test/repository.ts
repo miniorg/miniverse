@@ -25,7 +25,6 @@ const database = `${process.env.PGDATABASE || process.env.USER}_test_${process.e
 
 const testRepository = new Repository({
   analytics: {},
-  captcha: {secret: '', site: '', verifier: ''},
   console,
   content: { frame: {}, image: {}, script: { sources: [] } },
   fingerHost: 'FiNgEr.إختبار',

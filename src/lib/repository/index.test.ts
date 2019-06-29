@@ -20,7 +20,6 @@ import S3 = require('aws-sdk/clients/s3');
 test('defaults finger host to host', async () => {
   const repository = new Repository({
     analytics: {},
-    captcha: { secret: '', site: '', verifier: '' },
     console,
     content: { frame: {}, image: {}, script: { sources: [] } },
     host: 'إختبار',
@@ -39,7 +38,6 @@ test('defaults finger host to host', async () => {
 test('allows to override finger host', async () => {
   const repository = new Repository({
     analytics: {},
-    captcha: { secret: '', site: '', verifier: '' },
     console,
     content: { frame: {}, image: {}, script: { sources: [] } },
     fingerHost: 'إختبار',

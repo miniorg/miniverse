@@ -150,7 +150,7 @@ export async function signin(session: Session, givenFetch: typeof fetch, usernam
   return user;
 }
 
-export async function signup(session: Session, givenFetch: typeof fetch, username: string, password: string, captcha: string) {
+export async function signup(session: Session, givenFetch: typeof fetch, username: string, password: string) {
   const encoder = new TextEncoder;
   const salt = crypto.getRandomValues(new Uint8Array(64));
   const encodedPassword = encoder.encode(password);
@@ -163,7 +163,7 @@ export async function signup(session: Session, givenFetch: typeof fetch, usernam
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/octet-stream' },
-    body: new Blob([salt, serverKey, storedKey, captcha, '\0', username])
+    body: new Blob([salt, serverKey, storedKey, '\0', username])
   });
 
   return await fetchActor(session, givenFetch, username) as LocalActor;

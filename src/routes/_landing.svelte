@@ -23,11 +23,6 @@
   <form on:submit='{signup}'>
     <input name='username' placeholder='Username' type='text' />
     <input name='password' placeholder='Password' type='password' />
-    {#if $session.captcha}
-      <div class='coinhive-captcha' data-hashes='1024' data-key={$session.captcha}>
-        <em>Loading Captcha...<br>If it doesn't load, please disable Adblock!</em>
-      </div>
-    {/if}
     <button>Sign up</button>
   </form>
 </div>
@@ -55,11 +50,9 @@
   function signup(event) {
     const username = event.target.elements.username.value;
     const password = event.target.elements.password.value;
-    const captcha = event.target.elements['coinhive-captcha-token'] &&
-      event.target.elements['coinhive-captcha-token'].value;
 
     event.preventDefault();
-    sessionSignup(get(session), fetch, username, password, captcha).then(
+    sessionSignup(get(session), fetch, username, password).then(
       user => session.update(
         sessionValue => Object.assign({ user }, sessionValue)));
   }

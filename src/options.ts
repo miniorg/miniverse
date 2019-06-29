@@ -30,11 +30,6 @@ if (!process.env.HOST) {
 
 export default {
   analytics: { trackingId: process.env.ANALYTICS_TRACKING_ID },
-  captcha: {
-    secret: process.env.CAPTCHA_SECRET || null,
-    site: process.env.CAPTCHA_SITE || null,
-    verifier: process.env.CAPTCHA_VERIFIER || null
-  },
   console,
   content: {
     frame: { sourceList: process.env.CONTENT_FRAME_SOURCE_LIST },

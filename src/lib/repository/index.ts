@@ -66,12 +66,6 @@ import Bull = require('bull');
 import Redis = require('ioredis');
 import S3 = require('aws-sdk/clients/s3');
 
-interface Captcha {
-  readonly secret: string | null;
-  readonly site: string | null;
-  readonly verifier: string | null;
-}
-
 interface Content {
   readonly frame: { readonly sourceList?: string };
   readonly image: { readonly sourceList?: string };
@@ -80,7 +74,6 @@ interface Content {
 
 export interface Options {
   readonly analytics: Analytics;
-  readonly captcha: Captcha;
   readonly console: Console;
   readonly content: Content;
   readonly host: string;
@@ -110,9 +103,8 @@ export default class Repository implements
     Likes, LocalAccounts, Mentions, Notes,
     RemoteAccounts, Statuses, Subscribers, UnlinkedDocuments,
     URIs {
-  constructor({ analytics, captcha, console, content, host, fingerHost, pg, s3, redis }: Options) {
+  constructor({ analytics, console, content, host, fingerHost, pg, s3, redis }: Options) {
     this.analytics = analytics;
-    this.captcha = captcha;
     this.console = new Syslog(console);
     this.content = content;
     this.listeners = Object.create(null);
@@ -390,7 +382,6 @@ export default class Repository implements
   ) => Promise<URI | null>;
 
   readonly analytics: Analytics;
-  readonly captcha: Captcha;
   readonly console: Syslog;
   readonly content: Content;
   readonly host: string;

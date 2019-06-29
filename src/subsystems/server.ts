@@ -139,7 +139,6 @@ export default function (repository: Repository): Application {
 
         return {
           analytics: repository.analytics,
-          captcha: repository.captcha.site,
           endpoints: { proxyUrl: `https://${host}/api/proxy` },
           nonce: locals.nonce,
           scripts: repository.content.script.sources,
