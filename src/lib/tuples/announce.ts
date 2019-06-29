@@ -122,7 +122,7 @@ export default class Announce extends Relation<Properties, References> {
   ) {
     const type = await object.getType(signal, recover);
 
-    if (!type.has('Announce')) {
+    if (!type || !type.has('Announce')) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Announce.'), { [unexpectedType]: true }));
     }
 

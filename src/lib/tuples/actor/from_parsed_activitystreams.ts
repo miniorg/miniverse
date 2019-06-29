@@ -41,7 +41,7 @@ export default class extends Base {
     }) => unknown
   ) {
     const type = await object.getType(signal, recover);
-    if (!actorTypes.some(type.has, type)) {
+    if (!type || !actorTypes.some(type.has, type)) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Application, Group, Organization, Person or Service.'), { [unexpectedType]: true }));
     }
 
