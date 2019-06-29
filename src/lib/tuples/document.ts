@@ -117,7 +117,7 @@ export default class Document extends Relation<Properties, References> {
     }) => unknown
   ) {
     const type = await object.getType(signal, recover);
-    if (!type.has('Document')) {
+    if (!type || !type.has('Document')) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Document.'), { [unexpectedType]: true }));
     }
 
@@ -127,7 +127,7 @@ export default class Document extends Relation<Properties, References> {
     }
 
     const urlType = await url.getType(signal, recover);
-    if (!urlType.has('Link')) {
+    if (!urlType || !urlType.has('Link')) {
       throw recover(new Error('Unsupported url type. Expected Link.'));
     }
 
