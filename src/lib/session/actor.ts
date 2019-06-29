@@ -14,8 +14,6 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Fetch } from 'isomorphism/fetch';
-import { URLSearchParams } from 'url';
 import { OrderedCollection } from '../generated_activitystreams';
 import { Account } from '../generated_webfinger';
 import { postOutbox } from './fetch';
@@ -34,12 +32,12 @@ interface Actor {
   outbox: OrderedCollection & { readonly id: string } | string;
 }
 
-export async function fetch({ endpoints, fingerHost }: Session, fetch: Fetch, acct: string) {
+async function fetchActor({ endpoints, fingerHost }: Session, givenFetch: typeof fetch, acct: string) {
   const remote = acct.includes('@');
   const encodedAcct = encodeURIComponent(remote ?
     acct : `${acct}@${fingerHost}`);
 
-  const finger = await fetch(
+  const finger = await givenFetch(
     '/.well-known/webfinger?resource=acct:' + encodedAcct);
 
   if ([404, 410].includes(finger.status)) {
@@ -53,16 +51,18 @@ export async function fetch({ endpoints, fingerHost }: Session, fetch: Fetch, ac
   }
 
   const activityStreams = await (remote ?
-    fetch(endpoints.proxyUrl,
+    givenFetch(endpoints.proxyUrl,
       { method: 'POST', headers, body: new URLSearchParams({ id: link.href }) }) :
-    fetch(link.href, { headers }));
+    givenFetch(link.href, { headers }));
 
   return [404, 410].includes(activityStreams.status) ? null : activityStreams.json();
 }
 
-export async function fetchOutbox(fetch: Fetch, actor: Actor) {
+export { fetchActor as fetch }
+
+export async function fetchOutbox(givenFetch: typeof fetch, actor: Actor) {
   const id = typeof actor.outbox == 'string' ? actor.outbox : actor.outbox.id;
-  const fetched = await fetch(id, {
+  const fetched = await givenFetch(id, {
     headers: { Accept: 'application/activity+json;q=0.9,application/ld+json;q=0.8' }
   });
 
@@ -72,8 +72,8 @@ export async function fetchOutbox(fetch: Fetch, actor: Actor) {
   actor.outbox = outbox;
 }
 
-export async function follow(session: Session, fetch: Fetch, { id }: Actor) {
-  await postOutbox(session, fetch, {
+export async function follow(session: Session, givenFetch: typeof fetch, { id }: Actor) {
+  await postOutbox(session, givenFetch, {
     '@context': 'https://www.w3.org/ns/activitystreams',
     type: 'Follow',
     object: id,

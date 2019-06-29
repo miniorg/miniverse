@@ -41,7 +41,8 @@ export interface Actor {
 
 export interface Create {
   type: string;
-  object: Note;
+  id?: string;
+  object: Document | Note;
 }
 
 export interface Document {
@@ -52,6 +53,7 @@ export interface Document {
 
 export interface Endpoints {
   proxyUrl: string;
+  uploadMedia: string;
 }
 
 export interface Follow {

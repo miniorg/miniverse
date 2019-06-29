@@ -34,6 +34,7 @@ import Follow, {
 import Like, {
   unexpectedType as unexpectedLikeType
 } from '../tuples/like';
+import Note from '../tuples/note';
 import Undo, {
   unexpectedType as unexpectedUndoType
 } from '../tuples/undo';
@@ -323,6 +324,10 @@ export default class ParsedActivityStreams {
         actor,
         signal,
         error => error[unexpectedAnnounceType] ? unexpectedTypeReported : recover(error));
+
+      if (!created) {
+        return null;
+      }
     } catch (error) {
       if (error != unexpectedTypeReported) {
         throw error;
@@ -338,10 +343,10 @@ export default class ParsedActivityStreams {
       }
 
       created = await created.select('object', signal, recover);
-    }
 
-    if (!created) {
-      return null;
+      if (!(created instanceof Note)) {
+        return null;
+      }
     }
 
     created = await created.select('status', signal, recover);

@@ -14,18 +14,30 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Fetch } from 'isomorphism/fetch';
-import { postOutbox } from './fetch';
+import { postOutbox, uploadMedia } from './fetch';
 import Session from './types';
 
-export async function create(session: Session, fetch: Fetch, content: string) {
-  await postOutbox(session, fetch, {
+export async function create(session: Session, givenFetch: typeof fetch, content: string, document?: Blob) {
+  const attachment = [];
+
+  if (document) {
+    const data = new FormData;
+    data.set('file', document);
+    const { headers } = await uploadMedia(session, givenFetch, data);
+    const location = headers.get('Location');
+
+    if (location) {
+      attachment.push((await (await fetch(location)).json()).object);
+    }
+  }
+
+  await postOutbox(session, givenFetch, {
     '@context': 'https://www.w3.org/ns/activitystreams',
     type: 'Note',
     published: new Date,
     to: 'https://www.w3.org/ns/activitystreams#Public',
     content,
-    attachment: [],
+    attachment,
     tag: []
   });
 }

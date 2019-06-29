@@ -37,7 +37,7 @@
   import {
     signin as sessionSignin,
     signup as sessionSignup
-  } from 'isomorphism/session/identity';
+  } from '../lib/session/identity';
 
   const { session } = stores();
 

@@ -31,10 +31,7 @@ module.exports = {
     mode,
     devtool: 'source-map',
     resolve: {
-      alias: {
-        isomorphism: join(__dirname, 'src/lib/isomorphism/browser'),
-        url: join(__dirname, 'src/lib/isomorphism/browser/url')
-      },
+      alias: { isomorphism: join(__dirname, 'src/lib/isomorphism/browser') },
       extensions
     },
     module: {
@@ -119,6 +116,17 @@ module.exports = {
           }
         }, {
           test: /\.ts$/,
+          include: join(__dirname, 'src/lib/session'),
+          use: {
+            loader: 'ts-loader',
+            options: {
+              configFile: 'node-session.tsconfig.json',
+              instance: 'session'
+            }
+          }
+        }, {
+          test: /\.ts$/,
+          exclude: join(__dirname, 'src/lib/session'),
           use: {
             loader: 'ts-loader',
             options: { configFile: 'node.tsconfig.json' }

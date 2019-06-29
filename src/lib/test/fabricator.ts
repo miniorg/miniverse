@@ -277,12 +277,10 @@ export async function fabricateDocument(dirty?: DirtyDocument, url?: string) {
       '00000000-0000-1000-8000-010000000000', 'js', signal, recover);
   }
 
-  if (!url) {
-    url = `https://ReMoTe.إختبار/DoCuMeNt/${generateId()}`;
-  }
-
   const [document] = await Promise.all([
-    repository.insertDocument(dirty, url, signal, recover),
+    url ?
+      repository.insertDocumentWithUrl(dirty, url, signal, recover) :
+      repository.insertDocumentWithoutUrl(dirty, signal, recover),
     repository.s3.service.upload({
       Bucket: repository.s3.bucket,
       Body: join(__dirname, __filename),

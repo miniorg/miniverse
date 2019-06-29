@@ -35,7 +35,7 @@ export interface User {
 
 export default interface Session {
   readonly analytics: Analytics;
-  readonly endpoints: Endpoints;
+  readonly endpoints: { readonly proxyUrl: string };
   readonly fingerHost: string;
   readonly nonce: string;
   readonly user: User | null;

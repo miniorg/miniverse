@@ -29,7 +29,7 @@ function parse(this: Repository, { id, uuid, format }: {
 }
 
 export default class {
-  async insertDocument(
+  async insertDocumentWithUrl(
     this: Repository,
     dirty: DirtyDocument,
     url: string,
@@ -37,7 +37,7 @@ export default class {
     recover: (error: Error & { name?: string; [conflict]?: boolean }) => unknown
   ) {
     const { rows: [{ insert_document_with_url: id }] } = await this.pg.query({
-      name: 'insertDocument',
+      name: 'insertDocumentWithUrl',
       text: 'SELECT insert_document_with_url($1, $2)',
       values: [dirty.id, url]
     }, signal, error => {
@@ -68,6 +68,27 @@ export default class {
     });
   }
 
+  async insertDocumentWithoutUrl(
+    this: Repository,
+    dirty: DirtyDocument,
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string; [conflict]?: boolean }) => unknown
+  ) {
+    const { rows: [{ insert_document_without_url: id }] } = await this.pg.query({
+      name: 'insertDocumentWithoutUrl',
+      text: 'SELECT insert_document_without_url($1)',
+      values: [dirty.id]
+    }, signal, error => error.name == 'AbortError' ? recover(error) : error);
+
+    return new Document({
+      repository: this,
+      id,
+      uuid: dirty.uuid,
+      format: dirty.format,
+      url: null,
+    });
+  }
+
   async selectDocumentById(
     this: Repository,
     id: string,
@@ -78,6 +99,22 @@ export default class {
       name: 'selectDocumentById',
       text: 'SELECT * FROM documents WHERE id = $1',
       values: [id]
+    }, signal, recover);
+
+    return rows[0] ? parse.call(this, rows[0]) : null;
+  }
+
+  async selectDocumentByUUIDAndFormat(
+    this: Repository,
+    uuid: string,
+    format: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) {
+    const { rows } = await this.pg.query({
+      name: 'selectDocumentByUUIDAndFormat',
+      text: 'SELECT * FROM documents WHERE uuid = $1 AND format = $2',
+      values: [uuid, format]
     }, signal, recover);
 
     return rows[0] ? parse.call(this, rows[0]) : null;

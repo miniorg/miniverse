@@ -101,7 +101,7 @@ describe('Create', () => {
       await expect(object.select('status', signal, recover))
         .resolves
         .toHaveProperty('actorId', actor.id);
-      expect(object.content).toBe('');
+      expect(object).toHaveProperty('content', '');
     });
 
     test('rejects if type is not Create', async () => {

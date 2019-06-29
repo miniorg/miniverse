@@ -142,7 +142,10 @@ export default class Base extends Relation<Properties, References>
       summary: this.summary,
       inbox: id + '/inbox',
       outbox: id + '/outbox',
-      endpoints: { proxyUrl: `https://${asciiHost}/api/proxy` },
+      endpoints: {
+        proxyUrl: `https://${asciiHost}/api/proxy`,
+        uploadMedia: `https://${asciiHost}/api/uploadMedia`
+      },
       publicKey,
       'miniverse:salt': account.salt.toString('base64')
     };

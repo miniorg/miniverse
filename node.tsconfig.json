@@ -3,7 +3,6 @@
   "compilerOptions": {
     "lib": ["es2017"],
     "module": "CommonJS",
-    "paths": { "isomorphism/*": ["src/lib/isomorphism/node/*"] },
     "target": "ES2017",
     "types": []
   },

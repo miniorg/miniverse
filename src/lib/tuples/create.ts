@@ -15,19 +15,21 @@
 */
 
 import { AbortSignal } from 'abort-controller';
+import { domainToASCII } from 'url';
 import { Create as ActivityStreams } from '../generated_activitystreams';
 import ParsedActivityStreams from '../parsed_activitystreams';
 import Repository from '../repository';
 import { temporaryError } from '../transfer';
 import Actor from './actor';
+import Document from './document';
 import Note from './note';
 import Relation, { Reference } from './relation';
 
 interface References {
-  object: Note | null;
+  object: Document | Note | null;
 }
 
-type Properties = { objectId: string } | { objectId?: string; object: Note };
+type Properties = { objectId: string } | { objectId?: string; object: Document | Note };
 
 export const unexpectedObjectType = Symbol();
 export const unexpectedType = Symbol();
@@ -53,8 +55,20 @@ export async function create(
 }
 
 export default class Create extends Relation<Properties, References> {
-  readonly object?: Reference<Note | null>;
+  readonly object?: Reference<Document | Note | null>;
   readonly objectId!: string;
+
+  async getId(
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string }) => unknown
+  ) {
+    const object = await this.select('object', signal, recover);
+    if (!(object instanceof Document)) {
+      throw recover(new Error('Unexpected object type. Expected Document.'));
+    }
+
+    return `https://${domainToASCII(this.repository.host)}/${object.id}`;
+  }
 
   async toActivityStreams(
     signal: AbortSignal,
@@ -63,6 +77,14 @@ export default class Create extends Relation<Properties, References> {
     const object = await this.select('object', signal, recover);
     if (!object) {
       throw recover(new Error('object not found.'));
+    }
+
+    if (object instanceof Document) {
+      return {
+        type: 'Create',
+        id: await this.getId(signal, recover),
+        object: await object.toActivityStreams()
+      };
     }
 
     return {

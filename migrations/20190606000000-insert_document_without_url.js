@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2018  Miniverse authors
+  Copyright (C) 2019  Miniverse authors
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU Affero General Public License as published by
@@ -14,11 +14,19 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { RequestInit, Response } from 'node-fetch';
+exports.up = (db, callback) => db.runSql(`
+CREATE FUNCTION insert_document_without_url(dirty_id integer)
+    RETURNS bigint LANGUAGE plpgsql AS $_$
+  DECLARE id bigint;
+  BEGIN
+    INSERT INTO documents (uuid, format) SELECT uuid, format
+      FROM dirty_documents WHERE dirty_documents.id = $1
+      RETURNING documents.id INTO id;
 
-export type Fetch = (url: string | Request, init?: RequestInit & {
-  credentials?: 'omit' | 'same-origin' | 'include';
-  mode?: 'navigate' | 'same-origin' | 'no-cors' | 'cors';
-}) => Promise<Response>;
+    DELETE FROM dirty_documents WHERE dirty_documents.id = $1;
 
-export { Response };
+    RETURN id;
+  END
+$_$;`, callback);
+
+exports._meta = { version: 1 };

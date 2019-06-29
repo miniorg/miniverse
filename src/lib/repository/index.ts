@@ -200,14 +200,25 @@ export default class Repository implements
     recover: (error: Error & { name: string }) => unknown
   ) => Promise<Cookie>;
 
-  readonly insertDocument!: (
+  readonly insertDocumentWithUrl!: (
     dirty: DirtyDocument,
     url: string,
     signal: AbortSignal,
     recover: (error: Error & { name?: string; [conflict]: boolean }) => unknown
   ) => Promise<Document>;
+  readonly insertDocumentWithoutUrl!: (
+    dirty: DirtyDocument,
+    signal: AbortSignal,
+    recover: (error: Error & { name?: string; [conflict]: boolean }) => unknown
+  ) => Promise<Document>;
   readonly selectDocumentById!: (
     id: string,
+    signal: AbortSignal,
+    recover: (error: Error & { name: string }) => unknown
+  ) => Promise<Document | null>;
+  readonly selectDocumentByUUIDAndFormat!: (
+    uuid: string,
+    format: string,
     signal: AbortSignal,
     recover: (error: Error & { name: string }) => unknown
   ) => Promise<Document | null>;

@@ -1,13 +1,12 @@
 {
   "extends": "./base.tsconfig",
   "compilerOptions": {
-    "lib": ["es2017", "dom"],
-    "types": ["webpack-env"]
+    "module": "CommonJS",
+    "target": "ES2017",
+    "types": []
   },
   "include": [
-    "src/client.ts",
     "src/lib/session",
-    "src/sapper.d.ts",
     "src/svelte.d.ts"
   ]
 }

@@ -14,10 +14,9 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Fetch } from 'isomorphism/fetch';
-import { LocalActor } from '../../../generated_activitystreams';
-import { fetch as fetchActor } from '../../../session/actor';
-import Session from '../../../session/types';
+import { LocalActor } from '../generated_activitystreams';
+import { fetch as fetchActor } from './actor';
+import Session from './types';
 
 /*
   RFC 5802 - Salted Challenge Response Authentication Mechanism (SCRAM) SASL and GSS-API Mechanisms
@@ -89,13 +88,13 @@ function xor(buffer0: ArrayBuffer, buffer1: ArrayBuffer) {
   return array0;
 }
 
-export async function signin(session: Session, fetch: Fetch, username: string, password: string) {
+export async function signin(session: Session, givenFetch: typeof fetch, username: string, password: string) {
   const encoder = new TextEncoder;
   const encodedClientKeyMessage = encoder.encode('Client Key');
   const encodedServerKeyMessage = encoder.encode('Server Key');
   const encodedPassword = encoder.encode(password);
-  const user = await fetchActor(session, fetch, username) as LocalActor;
-  const saltResponse = await fetch('data:;base64,' + user['miniverse:salt']);
+  const user = await fetchActor(session, givenFetch, username) as LocalActor;
+  const saltResponse = await givenFetch('data:;base64,' + user['miniverse:salt']);
   const salt = await saltResponse.arrayBuffer();
 
   const asyncSaltedPassword = iterateHash(encodedPassword, salt, 16384);
@@ -117,7 +116,7 @@ export async function signin(session: Session, fetch: Fetch, username: string, p
 
   const clientNonce = crypto.getRandomValues(new Uint8Array(64));
   const serverNonceUri = 'data:;base64,' + session.nonce;
-  const serverNonceResponse = await fetch(serverNonceUri);
+  const serverNonceResponse = await givenFetch(serverNonceUri);
   const serverNonce = await serverNonceResponse.arrayBuffer();
 
   const { target: auth } = await new Promise((resolve, reject) => {
@@ -132,7 +131,7 @@ export async function signin(session: Session, fetch: Fetch, username: string, p
   const clientSignature = await hmac(await asyncHashedClientKey, auth.result);
   const clientProof = xor(clientSignature, await asyncClientKey);
 
-  const response = await fetch('/api/signin', {
+  const response = await givenFetch('/api/signin', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/octet-stream' },
@@ -151,7 +150,7 @@ export async function signin(session: Session, fetch: Fetch, username: string, p
   return user;
 }
 
-export async function signup(session: Session, fetch: Fetch, username: string, password: string, captcha: string) {
+export async function signup(session: Session, givenFetch: typeof fetch, username: string, password: string, captcha: string) {
   const encoder = new TextEncoder;
   const salt = crypto.getRandomValues(new Uint8Array(64));
   const encodedPassword = encoder.encode(password);
@@ -160,12 +159,12 @@ export async function signup(session: Session, fetch: Fetch, username: string, p
   const serverKey = await hmac(saltedPassword, encoder.encode('Server Key'));
   const storedKey = await hash(clientKey);
 
-  await fetch('/api/signup', {
+  await givenFetch('/api/signup', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/octet-stream' },
     body: new Blob([salt, serverKey, storedKey, captcha, '\0', username])
   });
 
-  return await fetchActor(session, fetch, username) as LocalActor;
+  return await fetchActor(session, givenFetch, username) as LocalActor;
 }

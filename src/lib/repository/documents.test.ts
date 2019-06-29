@@ -22,28 +22,54 @@ import { conflict } from '.';
 
 const { signal } = new AbortController;
 
-test('inserts and allows to query documents by id', async () => {
+test('inserts document with URL and allows to query it by id or UUID and format', async () => {
   const recover = jest.fn();
-  const inserted = await repository.insertDocument(
+  const { id } = await repository.insertDocumentWithUrl(
     await repository.insertDirtyDocument(
       '00000000-0000-1000-8000-010000000000', 'png', signal, recover),
     'https://إختبار/',
     signal,
     recover);
 
-  const queried =
-    await repository.selectDocumentById(inserted.id, signal, recover);
+  for (const queried of await Promise.all([
+    repository.selectDocumentById(id, signal, recover),
+    repository.selectDocumentByUUIDAndFormat(
+      '00000000-0000-1000-8000-010000000000', 'png', signal, recover)
+  ])) {
+    expect(queried).toHaveProperty('repository', repository);
+    expect(queried).toHaveProperty('id', id);
+    expect(queried).toHaveProperty('uuid', '00000000-0000-1000-8000-010000000000');
+    expect(queried).toHaveProperty('format', 'png');
+  }
 
   expect(recover).not.toHaveBeenCalled();
-  expect(queried).toHaveProperty('repository', repository);
-  expect(queried).toHaveProperty('id', inserted.id);
-  expect(queried).toHaveProperty('uuid', '00000000-0000-1000-8000-010000000000');
-  expect(queried).toHaveProperty('format', 'png');
+});
+
+test('inserts document without URL and allows to query it by id or UUID and format', async () => {
+  const recover = jest.fn();
+  const { id } = await repository.insertDocumentWithoutUrl(
+    await repository.insertDirtyDocument(
+      '00000000-0000-1000-8000-010000000000', 'png', signal, recover),
+    signal,
+    recover);
+
+  for (const queried of await Promise.all([
+    repository.selectDocumentById(id, signal, recover),
+    repository.selectDocumentByUUIDAndFormat(
+      '00000000-0000-1000-8000-010000000000', 'png', signal, recover)
+  ])) {
+    expect(queried).toHaveProperty('repository', repository);
+    expect(queried).toHaveProperty('id', id);
+    expect(queried).toHaveProperty('uuid', '00000000-0000-1000-8000-010000000000');
+    expect(queried).toHaveProperty('format', 'png');
+  }
+
+  expect(recover).not.toHaveBeenCalled();
 });
 
 test('inserts document with URL and allows to query the URL', async () => {
   const recover = jest.fn();
-  const inserted = await repository.insertDocument(
+  const inserted = await repository.insertDocumentWithUrl(
     await fabricateDirtyDocument(),
     'https://إختبار/',
     signal,
@@ -61,10 +87,9 @@ test('inserts document with URL and allows to query the URL', async () => {
 
 test('inserts and allows to query documents by attached note id', async () => {
   const recover = jest.fn();
-  const inserted = await repository.insertDocument(
+  const inserted = await repository.insertDocumentWithoutUrl(
     await repository.insertDirtyDocument(
       '00000000-0000-1000-8000-010000000000', 'png', signal, recover),
-    'https://إختبار/',
     signal,
     recover);
 
@@ -83,7 +108,7 @@ test('rejects when inserting document with conflicting URI', async () => {
   const recover = jest.fn();
   const recovery = {};
 
-  await repository.insertDocument(
+  await repository.insertDocumentWithUrl(
     await fabricateDirtyDocument(),
     'https://إختبار/',
     signal,
@@ -91,7 +116,7 @@ test('rejects when inserting document with conflicting URI', async () => {
 
   expect(recover).not.toHaveBeenCalled();
 
-  await expect(repository.insertDocument(
+  await expect(repository.insertDocumentWithUrl(
     await fabricateDirtyDocument(),
     'https://إختبار/',
     signal,

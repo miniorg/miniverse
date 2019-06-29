@@ -43,7 +43,7 @@ export const get = secure(async ({ params, headers }, response, next) => {
     'application/ld+json'
   ]);
 
-  if (accepted == '' || accepted.startsWith('text/html')) {
+  if (!accepted || accepted.startsWith('text/html')) {
     next();
     return;
   }

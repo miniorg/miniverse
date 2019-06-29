@@ -14,19 +14,31 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Fetch } from 'isomorphism/fetch';
 import Session from './types';
 
-export function postOutbox({ user }: Session, fetch: Fetch, body: unknown) {
+export function postOutbox({ user }: Session, givenFetch: typeof fetch, body: unknown) {
   if (!user) {
     throw new Error('Not signed in.');
   }
 
-  return fetch(user.outbox, {
+  return givenFetch(user.outbox, {
     mode: 'cors',
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/activity+json' },
     body: JSON.stringify(body)
+  });
+}
+
+export function uploadMedia({ user }: Session, givenFetch: typeof fetch, body: FormData) {
+  if (!user) {
+    throw new Error('Not signed in.');
+  }
+
+  return givenFetch(user.endpoints.uploadMedia, {
+    mode: 'cors',
+    method: 'POST',
+    credentials: 'same-origin',
+    body
   });
 }

@@ -14,12 +14,11 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Fetch } from 'isomorphism/fetch';
 import { postOutbox } from './fetch';
 import Session from './types';
 
-export async function announce(session: Session, fetch: Fetch, object: string) {
-  await postOutbox(session, fetch, {
+export async function announce(session: Session, givenFetch: typeof fetch, object: string) {
+  await postOutbox(session, givenFetch, {
     '@context': 'https://www.w3.org/ns/activitystreams',
     type: 'Announce',
     published: new Date,

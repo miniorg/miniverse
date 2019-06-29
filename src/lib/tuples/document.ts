@@ -52,16 +52,27 @@ export default class Document extends Relation<Properties, References> {
 
   static async create(
     repository: Repository,
-    url: string,
+    source: NodeJS.ReadableStream | string,
     signal: AbortSignal,
     recover: (error: Error & {
       name?: string;
       [temporaryError]?: boolean;
     }) => unknown
   ) {
+    let filePromise;
+    let url;
+
+    if (typeof source == 'string') {
+      filePromise = fetch(repository, source, { signal }, recover);
+      url = source;
+    } else {
+      filePromise = Promise.resolve({ body: source });
+      url = null;
+    }
+
     const [uuid, { data, info: { format } }] = await Promise.all([
       generateUuid(),
-      fetch(repository, url, { signal }, recover).then(({ body }) =>
+      filePromise.then(({ body }) =>
         body.pipe(sharp()).toBuffer({ resolveWithObject: true }))
     ]);
 
@@ -77,8 +88,13 @@ export default class Document extends Relation<Properties, References> {
         Key: `${repository.s3.keyPrefix}${uuid}.${format}`
       }).promise();
 
-      return await repository.insertDocument(
-        dirty, url, controller.signal, recover);
+      if (url) {
+        return await repository.insertDocumentWithUrl(
+          dirty, url, controller.signal, recover);
+      }
+
+      return await repository.insertDocumentWithoutUrl(
+        dirty, controller.signal, recover);
     } catch (error) {
       await repository.s3.service.deleteObject({
         Bucket: repository.s3.bucket,
@@ -118,6 +134,11 @@ export default class Document extends Relation<Properties, References> {
     const href = await url.getHref(signal, recover);
     if (typeof href != 'string') {
       throw recover(new Error('Unsupported url\'s href type. Expected string.'));
+    }
+
+    if (href.startsWith(`${repository.s3.urlPrefix}/`)) {
+      const [uuid, format] = href.substr(repository.s3.urlPrefix.length + 1).split('.', 2);
+      return repository.selectDocumentByUUIDAndFormat(uuid, format, signal, recover);
     }
 
     const urlEntity = await repository.selectAllocatedURI(href, signal, recover);

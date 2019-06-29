@@ -17,6 +17,7 @@
 <h1>{$session.user.preferredUsername}</h1>
 <form on:submit='{post}'>
   <textarea name='content'></textarea>
+  <input name='document' type='file' />
   <button>Post</button>
 </form>
 <form on:submit='{announce}'>
@@ -36,16 +37,17 @@
   import { get } from 'svelte/store';
   import { stores } from '@sapper/app';
   import { listenEventSource } from 'isomorphism/session/event_source';
+  import { create as createNote } from '../lib/session/note';
   import { announce as sessionAnnounce } from '../lib/session/announce';
   import { like as sessionLike } from '../lib/session/like';
-  import { create as createNote } from '../lib/session/note';
 
   const { session } = stores();
   const inbox = listenEventSource();
 
   function post(event) {
     event.preventDefault();
-    createNote(get(session), fetch, event.target.elements.content.value);
+    const { content, document } = event.target.elements;
+    createNote(get(session), fetch, content.value, document.files[0]);
   }
 
   function announce(event) {
