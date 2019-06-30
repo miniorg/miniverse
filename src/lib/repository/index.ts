@@ -91,6 +91,7 @@ export interface Options {
 interface RedisRepository {
   readonly prefix: string;
   readonly url?: string;
+  bclient?: Redis.Redis;
   readonly client: Redis.Redis;
   readonly subscriber: Redis.Redis;
 }
@@ -124,7 +125,11 @@ export default class Repository implements
       createClient: (function(this: RedisRepository, type: 'bclient' | 'client' | 'subscriber') {
         switch (type) {
           case 'bclient':
-            return new Redis(this.url);
+            if (!this.bclient) {
+              this.bclient = new Redis(this.url);
+            }
+
+            return this.bclient;
 
           case 'client':
             return this.client;
@@ -145,6 +150,11 @@ export default class Repository implements
 
   async end() {
     await this.queue.close();
+
+    if (this.redis.bclient) {
+      this.redis.bclient.disconnect();
+    }
+
     this.redis.client.disconnect();
     this.redis.subscriber.disconnect();
     return this.pg.end();
