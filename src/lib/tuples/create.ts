@@ -98,7 +98,7 @@ export default class Create extends Relation<Properties, References> {
     [unexpectedType]?: boolean;
   }) => unknown) {
     const type = await activity.getType(signal, recover);
-    if (!type.has('Create')) {
+    if (!type || !type.has('Create')) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Create.'), { [unexpectedType]: true }));
     }
 

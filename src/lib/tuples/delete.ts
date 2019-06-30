@@ -35,7 +35,7 @@ export default class Delete {
   ) {
     const type = await activity.getType(signal, recover);
 
-    if (!type.has('Delete')) {
+    if (!type || !type.has('Delete')) {
       throw recover(Object.assign(
         new Error('Unsupported type. Expected Delete.'),
         { [unexpectedType]: true }));

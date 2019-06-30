@@ -100,7 +100,7 @@ export default class Like extends Relation<Properties, References> {
     }) => unknown
   ) {
     const type = await activity.getType(signal, recover);
-    if (!type.has('Like')) {
+    if (!type || !type.has('Like')) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Like.'), { [unexpectedType]: true }));
     }
 

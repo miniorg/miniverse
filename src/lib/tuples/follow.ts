@@ -109,7 +109,7 @@ export default class Follow extends Relation<Properties, References> {
     }) => unknown
   ) {
     const type = await activity.getType(signal, recover);
-    if (!type.has('Follow')) {
+    if (!type || !type.has('Follow')) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Follow.'), { [unexpectedType]: true }));
     }
 

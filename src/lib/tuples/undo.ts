@@ -37,7 +37,7 @@ export default class Undo {
   ) {
     const type = await activity.getType(signal, recover);
 
-    if (!type.has('Undo')) {
+    if (!type || !type.has('Undo')) {
       throw recover(Object.assign(new Error('Unsupported type. Expected Undo.'), { [unexpectedType]: true }));
     }
 
@@ -48,48 +48,58 @@ export default class Undo {
 
     const objectType = await object.getType(signal, recover);
 
-    if (objectType.has('Announce')) {
-      const id = await object.getId(recover);
-      if (typeof id != 'string') {
-        throw recover(new Error('Unsupported id type.'));
+    if (objectType) {
+      if (objectType.has('Announce')) {
+        const id = await object.getId(recover);
+        if (typeof id != 'string') {
+          throw recover(new Error('Unsupported id type.'));
+        }
+
+        const uriEntity = await repository.selectAllocatedURI(id, signal, recover);
+        if (!uriEntity) {
+          throw recover(new Error('uri not found.'));
+        }
+
+        await repository.deleteStatusByUriAndAttributedTo(uriEntity, actor, signal, recover);
+
+        return new this;
       }
 
-      const uriEntity = await repository.selectAllocatedURI(id, signal, recover);
-      if (!uriEntity) {
-        throw recover(new Error('uri not found.'));
+      if (objectType.has('Follow')) {
+        const objectActorActivityStreams = await object.getObject(signal, recover);
+        if (!objectActorActivityStreams) {
+          throw recover(new Error('object\'s object unspecified.'));
+        }
+
+        const objectActor = await Actor.fromParsedActivityStreams(
+          repository, objectActorActivityStreams, signal, recover);
+        if (!objectActor) {
+          throw recover(new Error('object\'s actor not found.'));
+        }
+
+        await repository.deleteFollowByActorAndObject(actor, objectActor, signal, recover);
+
+        return new this;
       }
 
-      await repository.deleteStatusByUriAndAttributedTo(uriEntity, actor, signal, recover);
-    } else if (objectType.has('Follow')) {
-      const objectActorActivityStreams = await object.getObject(signal, recover);
-      if (!objectActorActivityStreams) {
-        throw recover(new Error('object\'s object unspecified.'));
-      }
+      if (objectType.has('Like')) {
+        const noteActivityStreams = await object.getObject(signal, recover);
+        if (!noteActivityStreams) {
+          throw recover(new Error('object\'s object unspecified.'));
+        }
 
-      const objectActor = await Actor.fromParsedActivityStreams(
-        repository, objectActorActivityStreams, signal, recover);
-      if (!objectActor) {
-        throw recover(new Error('object\'s actor not found.'));
-      }
+        const note = await Note.fromParsedActivityStreams(
+          repository, noteActivityStreams, null, signal, recover);
+        if (!note) {
+          throw recover(new Error('object\'s object not found.'));
+        }
 
-      await repository.deleteFollowByActorAndObject(actor, objectActor, signal, recover);
-    } else if (objectType.has('Like')) {
-      const noteActivityStreams = await object.getObject(signal, recover);
-      if (!noteActivityStreams) {
-        throw recover(new Error('object\'s object unspecified.'));
-      }
+        await repository.deleteLikeByActorAndObject(actor, note, signal, recover);
 
-      const note = await Note.fromParsedActivityStreams(
-        repository, noteActivityStreams, null, signal, recover);
-      if (!note) {
-        throw recover(new Error('object\'s object not found.'));
+        return new this;
       }
-
-      await repository.deleteLikeByActorAndObject(actor, note, signal, recover);
-    } else {
-      throw recover(new Error('Unsupported object type. Expected Announce, Follow or Like.'));
     }
 
-    return new this;
+    throw recover(new Error('Unsupported object type. Expected Announce, Follow or Like.'));
   }
 }
