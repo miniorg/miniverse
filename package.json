@@ -24,7 +24,7 @@
   },
   "homepage": "https://github.com/miniorg/miniverse#readme",
   "dependencies": {
-    "@hapi/accept": "^3.2.2",
+    "@hapi/accept": "^5.0.1",
     "abort-controller": "^3.0.0",
     "aws-sdk": "^2.485.0",
     "body-parser": "^1.19.0",
