@@ -38,7 +38,7 @@
     "ioredis": "^4.10.0",
     "node-fetch": "https://github.com/miniorg/node-fetch/releases/download/v2.3.0-miniverse-r0/node-fetch-2.3.0.tgz",
     "pg": "^7.11.0",
-    "sanitize-html": "^1.20.1",
+    "sanitize-html": "^2.3.2",
     "sapper": "^0.27.4",
     "sharp": "^0.22.1",
     "svelte": "^3.6.1",
